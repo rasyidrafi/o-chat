@@ -43,6 +43,7 @@ const App: React.FC = () => {
   const [settingsUnsubscribe, setSettingsUnsubscribe] = useState<(() => void) | null>(null);
 
   const chat = useChat();
+  const chat = useChat(settings);
 
   const loadGuestSettings = (): AppSettings => ({
     theme: (localStorage.getItem('theme') as Theme) || 'system',

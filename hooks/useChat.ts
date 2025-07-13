@@ -23,6 +23,9 @@ export const useChat = (settings?: AppSettings) => {
 
   const streamingMessageRef = useRef<string>('');
 
+  // Debug log to check if settings are being passed
+  console.log('useChat settings:', settings?.customInstruction);
+
   // Helper function to determine model source
   const getModelSource = (model: string): 'server' | 'byok' => {
     const serverModels = ['gemini-1.5-flash', 'gemini-1.5-flash-8b'];
@@ -262,11 +265,15 @@ export const useChat = (settings?: AppSettings) => {
 
       // Add custom instruction as system message if it exists
       let messagesToSend: ServiceChatMessage[] = historyMessages;
-      if (settings?.customInstruction?.trim()) {
+      console.log('Custom instruction check:', settings?.customInstruction);
+      if (settings?.customInstruction && settings.customInstruction.trim()) {
+        console.log('Adding custom instruction:', settings.customInstruction);
         messagesToSend = [
           { role: 'system', content: settings.customInstruction.trim() },
           ...historyMessages
         ];
+      } else {
+        console.log('No custom instruction to add');
       }
 
       // Define callback functions separately
