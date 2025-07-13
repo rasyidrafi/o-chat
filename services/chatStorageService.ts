@@ -74,8 +74,7 @@ export class ChatStorageService {
       const messages = JSON.parse(stored);
       return messages.map((msg: any) => ({
         ...msg,
-        timestamp: new Date(msg.timestamp),
-        source: msg.source || 'server' // Default to server for existing messages
+        timestamp: new Date(msg.timestamp)
       }));
     } catch (error) {
       console.error('Error loading messages from localStorage:', error);
@@ -153,7 +152,6 @@ export class ChatStorageService {
           id: data.id,
           title: data.title,
           model: data.model,
-          source: data.source || 'server', // Default to server for existing conversations
           createdAt: data.createdAt.toDate(),
           updatedAt: data.updatedAt.toDate(),
           messages

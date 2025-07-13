@@ -46,20 +46,31 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
         try {
             if (user) {
                 // Get conversation counts efficiently
-                const messageCounts = await ChatStorageService.getMessageCounts(user.uid);
-                setBackedByServerCount(messageCounts.server);
-                setByokCount(messageCounts.byok);
+                const chatStats = await ChatStorageService.getUserChatStats(user.uid);
+                setBackedByServerCount(chatStats.serverMessages);
+                setByokCount(chatStats.byokMessages);
                 
             } else {
-                // Get conversation count from localStorage
+                // Get message count from localStorage
                 const conversations = getConversationsFromLocal();
+                let serverMessageCount = 0;
+                let byokMessageCount = 0;
 
-                // Count conversations by source from localStorage
-                const serverConversations = conversations.filter(conv => conv.source === 'server').length;
-                const byokConversations = conversations.filter(conv => conv.source === 'byok').length;
+                // Count user messages by source from localStorage
+                conversations.forEach(conv => {
+                    const messages = getMessagesFromLocal(conv.id);
+                    const userMessages = messages.filter(msg => msg.role === 'user');
+                    userMessages.forEach(msg => {
+                        if (msg.source === 'server') {
+                            serverMessageCount++;
+                        } else if (msg.source === 'byok') {
+                            byokMessageCount++;
+                        }
+                    });
+                });
                 
-                setBackedByServerCount(serverConversations);
-                setByokCount(byokConversations);
+                setBackedByServerCount(serverMessageCount);
+                setByokCount(byokMessageCount);
             }
         } catch (error) {
             console.error('Error loading usage data:', error);
@@ -75,7 +86,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
             const conversations = JSON.parse(stored);
             return conversations.map((conv: any) => ({
                 ...conv,
-                source: conv.source || 'server', // Default to server for existing conversations
                 createdAt: new Date(conv.createdAt),
                 updatedAt: new Date(conv.updatedAt),
             }));
@@ -93,7 +103,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
             const messages = JSON.parse(stored);
             return messages.map((msg: any) => ({
                 ...msg,
-                timestamp: new Date(msg.timestamp)
+                timestamp: new Date(msg.timestamp),
+                source: msg.source || 'server' // Default to server for existing messages
             }));
         } catch (error) {
             console.error('Error loading messages from localStorage:', error);
