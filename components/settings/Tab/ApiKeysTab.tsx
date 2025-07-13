@@ -334,7 +334,7 @@ const ApiKeysTab: React.FC = () => {
 
     // Check if we can add a new provider
     const canAddNewProvider = customProviders.length === 0 || 
-        isProviderValid(customProviders[customProviders.length - 1]);</parameter>
+        isProviderValid(customProviders[customProviders.length - 1]);
 
     return (
         <div>
