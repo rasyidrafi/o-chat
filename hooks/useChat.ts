@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useCallback, useRef } from 'react';
 import { ChatMessage, ChatConversation, StreamingState } from '../types/chat';
 import { ChatService } from '../services/chatService';
