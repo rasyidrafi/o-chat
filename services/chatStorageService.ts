@@ -124,7 +124,7 @@ export class ChatStorageService {
           content: message.content,
           timestamp: Timestamp.fromDate(message.timestamp),
           model: message.model || null,
-          isError: message.isError || false
+          isError: message.isError || false,
           source: message.source || 'server',
           userId: userId
         });
