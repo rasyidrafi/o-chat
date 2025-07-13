@@ -26,17 +26,24 @@ const SuggestionButton: React.FC<SuggestionButtonProps> = ({ icon, label, onClic
   </button>
 );
 
-const PromptSuggestion: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <button className="w-full text-left py-3 px-4 bg-zinc-100 dark:bg-[#2a2a2a] rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+const PromptSuggestion: React.FC<{ 
+  children: React.ReactNode; 
+  onClick?: () => void; 
+}> = ({ children, onClick }) => (
+    <button 
+      onClick={onClick}
+      className="w-full text-left py-3 px-4 bg-zinc-100 dark:bg-[#2a2a2a] rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+    >
         <p className="text-sm text-zinc-900 dark:text-zinc-200">{children}</p>
     </button>
 );
 
 interface WelcomeScreenProps {
   user: FirebaseUser | null;
+  onPromptSelect?: (prompt: string) => void;
 }
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user }) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user, onPromptSelect }) => {
   // State to track the currently selected category
   const [selectedCategory, setSelectedCategory] = useState<Category>('Create');
 
@@ -79,7 +86,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user }) => {
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center">
-      <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white mb-6">How can I help you{user ? `, ${displayName}` : ''}?</h1>
+      <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white mb-6">How can I help you{displayName ? `, ${displayName}` : ''}?</h1>
       
       <div className="flex flex-wrap justify-center gap-4 mb-8">
         {suggestionButtons.map((btn) => (
@@ -95,7 +102,12 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user }) => {
 
       <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3">
         {promptsByCategory[selectedCategory].map((prompt) => (
-          <PromptSuggestion key={prompt}>{prompt}</PromptSuggestion>
+          <PromptSuggestion 
+            key={prompt} 
+            onClick={() => onPromptSelect?.(prompt)}
+          >
+            {prompt}
+          </PromptSuggestion>
         ))}
       </div>
     </div>

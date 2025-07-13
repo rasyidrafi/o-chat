@@ -2,7 +2,7 @@ import React from 'react';
 import { Google, LogIn } from '../../Icons';
 import Button from '../../ui/Button';
 import { User } from 'firebase/auth';
-import { auth, provider } from '../../../firebase';
+import { auth, provider } from '../../../firebase.ts';
 import { signInWithPopup } from 'firebase/auth';
 
 interface AccountTabProps {

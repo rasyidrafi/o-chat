@@ -10,7 +10,7 @@ const Input: React.FC<InputProps> = ({ icon, className, ...props }) => {
             {icon && <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10">{icon}</span>}
             <input
                 {...props}
-                className={`w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors ${icon ? 'pl-10' : ''} ${className}`}
+                className={`w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors ${icon ? 'pl-10' : ''} ${className}`}
             />
         </div>
     );

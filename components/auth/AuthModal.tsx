@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock } from '../Icons';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import { auth } from '../../firebase';
+import { auth } from '../../firebase.ts';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 interface AuthModalProps {

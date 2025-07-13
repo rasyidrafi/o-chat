@@ -4,7 +4,7 @@ import ChatView from './components/ChatView';
 import SettingsPage, { Tab as SettingsTab } from './components/SettingsPage';
 import AuthModal from './components/auth/AuthModal';
 import ConfirmationDialog from './components/ui/ConfirmationDialog';
-import { app, auth, db } from './firebase'; // Import the initialized Firebase app and db
+import { app, auth, db } from './firebase.ts'; // Import the initialized Firebase app and db
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
 

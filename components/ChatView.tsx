@@ -1,11 +1,13 @@
 import React from 'react';
 import WelcomeScreen from './WelcomeScreen';
 import ChatInput from './ChatInput';
+import MessageList from './MessageList';
 import { LinkIcon, MoreHorizontal, SlidersHorizontal, Sun, Moon, Desktop, Menu } from './Icons';
 import { Theme } from '../App';
 import { Tab as SettingsTab } from './SettingsPage';
 import { User as FirebaseUser } from 'firebase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useChat } from '../hooks/useChat';
 
 
 interface ChatViewProps {
@@ -19,12 +21,29 @@ interface ChatViewProps {
 }
 
 const ChatView: React.FC<ChatViewProps> = ({ onMenuClick, toggleSidebar, onOpenSettings, theme, toggleTheme, user, animationsDisabled }) => {
+  const { 
+    currentConversation, 
+    streamingState, 
+    sendMessage, 
+    stopStreaming 
+  } = useChat(user);
+
   const animationProps = {
     initial: { opacity: 0, rotate: -90, scale: 0.5 },
     animate: { opacity: 1, rotate: 0, scale: 1 },
     exit: { opacity: 0, rotate: 90, scale: 0.5 },
     transition: { duration: animationsDisabled ? 0 : 0.3 }
   };
+
+  const handleMessageSend = (message: string, model: string, source: string) => {
+    sendMessage(message, model, source);
+  };
+
+  const handlePromptSelect = (prompt: string) => {
+    sendMessage(prompt, 'gemini-1.5-flash', 'system');
+  };
+
+  const hasMessages = currentConversation && currentConversation.messages.length > 0;
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-[#1c1c1c]">
@@ -70,14 +89,30 @@ const ChatView: React.FC<ChatViewProps> = ({ onMenuClick, toggleSidebar, onOpenS
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 overflow-y-auto">
-        <div className="w-full max-w-3xl mx-auto">
-          <WelcomeScreen user={user} />
-        </div>
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {hasMessages ? (
+          <MessageList
+            messages={currentConversation.messages}
+            animationsDisabled={animationsDisabled}
+            streamingMessageId={streamingState.currentMessageId}
+            onStopStreaming={stopStreaming}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center p-4 md:p-6">
+            <div className="w-full max-w-4xl mx-auto px-0 md:px-2 lg:px-8 xl:px-16">
+              <WelcomeScreen user={user} onPromptSelect={handlePromptSelect} />
+            </div>
+          </div>
+        )}
       </main>
 
-      <footer className="p-4 md:p-6 w-full max-w-4xl mx-auto">
-        <ChatInput />
+      <footer className="p-4 md:p-6">
+        <div className="max-w-4xl mx-auto px-0 md:px-2 lg:px-8 xl:px-16">
+          <ChatInput 
+            onMessageSend={handleMessageSend}
+            disabled={streamingState.isStreaming}
+          />
+        </div>
       </footer>
     </div>
   );
