@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, LogOut, Google, Info, LogIn } from './Icons';
+import React, { useState } from 'react';
+import { ArrowLeft, LogOut, Info } from './Icons';
 import TabButton from './settings/TabButton';
-import SettingsTextarea from './settings/SettingsTextarea';
-import SettingsToggle from './settings/SettingsToggle';
-import CustomDropdown from './ui/CustomDropdown';
-import FontPreview from './settings/FontPreview';
-import ApiKeysTab from './settings/ApiKeysTab';
-import { auth, provider } from '../firebase';
-import { signInWithPopup, User } from 'firebase/auth';
+import ApiKeysTab from './settings/Tab/ApiKeysTab';
+import AccountTab from './settings/Tab/AccountTab';
+import CustomizationTab from './settings/Tab/CustomizationTab';
+import ModelsTab from './settings/Tab/ModelsTab';
+import HistorySyncTab from './settings/Tab/HistorySyncTab';
+import AttachmentsTab from './settings/Tab/AttachmentsTab';
+import ContactUsTab from './settings/Tab/ContactUsTab';
+import { User } from 'firebase/auth';
 import Button from './ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppSettings } from '../App';
@@ -27,138 +28,47 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, onOpenAuthModal, onSignOutClick, settings, updateSettings }) => {
     const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'Customization');
-    
-    // Local state for text area to only save on button click
-    const [customInstruction, setCustomInstruction] = useState(settings.customInstruction);
-    const [isSaved, setIsSaved] = useState(false);
-
-    useEffect(() => {
-        setCustomInstruction(settings.customInstruction);
-    }, [settings.customInstruction]);
-
-    const handleSaveCustomInstruction = () => {
-        updateSettings({ customInstruction });
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 2000);
-    };
-
-    const mainFontOptions = ['Montserrat', 'Lato', 'Open Sans', 'Roboto', 'Source Sans Pro'];
-    const codeFontOptions = ['Berkeley Mono (default)', 'Intel One Mono', 'Atkinson Hyperlegible Mono', 'System Monospace Font'];
 
     const tabs: Tab[] = ['Account', 'Customization', 'History & Sync', 'Models', 'API Keys', 'Attachments', 'Contact Us'];
-    
-    const handleSignIn = async () => {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (error) {
-        console.error("Error signing in with Google:", error);
-      }
-    };
 
     const renderContent = () => {
         let content;
         switch(activeTab) {
-            case 'Customization':
+            case 'Account':
                 content = (
-                    <div>
-                        {/* Customization Section */}
-                        <div>
-                            <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">Customize O-Chat</h2>
-                            <div className="space-y-6 mt-6">
-                                <SettingsTextarea label="Custom Instruction" value={customInstruction} onChange={setCustomInstruction} maxLength={3000} placeholder="You are a helpful assistant..." />
-                            </div>
-                             <div className="flex justify-start items-center gap-3 mt-8">
-                                 <Button onClick={handleSaveCustomInstruction}>{isSaved ? 'Saved!' : 'Save Preferences'}</Button>
-                             </div>
-                        </div>
-
-                        <div className="my-10 border-t border-zinc-200 dark:border-zinc-800"></div>
-                        
-                        {/* Visual Options Section */}
-                        <div>
-                            <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">Visual Options</h2>
-                            <div className="space-y-6 mt-6">
-                               <SettingsToggle 
-                                    label="Hide Personal Information"
-                                    description="Hides your name and email from the UI."
-                                    isOn={settings.hidePersonalInfo}
-                                    onToggle={() => updateSettings({hidePersonalInfo: !settings.hidePersonalInfo})}
-                               />
-                                <SettingsToggle 
-                                    label="Disable External Link Warning"
-                                    description="Skip the confirmation dialog when clicking external links. Note: We cannot guarantee the safety of external links, use this option at your own risk."
-                                    isOn={settings.disableLinkWarning}
-                                    onToggle={() => updateSettings({disableLinkWarning: !settings.disableLinkWarning})}
-                               />
-                               <SettingsToggle 
-                                    label="Disable Animation"
-                                    description="Disables all animations throughout the app for a simpler experience."
-                                    isOn={settings.animationsDisabled}
-                                    onToggle={() => updateSettings({animationsDisabled: !settings.animationsDisabled})}
-                               />
-                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
-                                    <div className="space-y-6">
-                                        <CustomDropdown 
-                                            label="Main Text Font"
-                                            description="Used in general text throughout the app."
-                                            options={mainFontOptions.map(f => f === 'Montserrat' ? `${f} (default)` : f)}
-                                            selected={settings.mainFont === 'Montserrat' ? `${settings.mainFont} (default)` : settings.mainFont}
-                                            onSelect={(option) => updateSettings({mainFont: option.replace(' (default)', '')})}
-                                            animationsDisabled={settings.animationsDisabled}
-                                        />
-                                        <CustomDropdown 
-                                            label="Code Font"
-                                            description="Used in code blocks and inline code in chat messages."
-                                            options={codeFontOptions}
-                                            selected={settings.codeFont}
-                                            onSelect={(option) => updateSettings({codeFont: option})}
-                                            animationsDisabled={settings.animationsDisabled}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium text-zinc-900 dark:text-white">Fonts Preview</h4>
-                                        <FontPreview
-                                            mainFont={settings.mainFont}
-                                            codeFont={settings.codeFont}
-                                        />
-                                    </div>
-                               </div>
-                            </div>
-                        </div>
-                    </div>
+                    <AccountTab 
+                        user={user}
+                        onOpenAuthModal={onOpenAuthModal}
+                        onSignOutClick={onSignOutClick}
+                    />
                 );
                 break;
-            case 'Account':
-                 content = (
-                    <div>
-                        <h2 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-white">Account</h2>
-                        {user ? (
-                           <div className="space-y-4">
-                             <p>You are signed in as <span className="font-semibold">{user.email}</span>.</p>
-                             <Button onClick={onSignOutClick} variant="destructive">
-                                Sign Out
-                             </Button>
-                           </div>
-                        ) : (
-                           <div className="space-y-4">
-                             <p>Sign in to sync your history and preferences across devices.</p>
-                             <div className="flex flex-col sm:flex-row gap-4">
-                                <Button onClick={handleSignIn} className="gap-2 flex-1">
-                                    <Google className="w-5 h-5" />
-                                    Sign in with Google
-                                </Button>
-                                <Button variant="secondary" className="gap-2 flex-1" onClick={onOpenAuthModal}>
-                                    <LogIn className="w-5 h-5" />
-                                    Sign in with Email
-                                </Button>
-                             </div>
-                           </div>
-                        )}
-                    </div>
-                 );
-                 break;
+            case 'Customization':
+                content = (
+                    <CustomizationTab 
+                        settings={settings}
+                        updateSettings={updateSettings}
+                    />
+                );
+                break;
+            case 'Models':
+                content = (
+                    <ModelsTab 
+                        settings={settings}
+                    />
+                );
+                break;
             case 'API Keys':
                 content = <ApiKeysTab />;
+                break;
+            case 'History & Sync':
+                content = <HistorySyncTab />;
+                break;
+            case 'Attachments':
+                content = <AttachmentsTab />;
+                break;
+            case 'Contact Us':
+                content = <ContactUsTab />;
                 break;
             default:
                 content = (

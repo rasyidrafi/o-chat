@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Key } from '../Icons';
-import Button from '../ui/Button';
+import { Key } from '../../Icons';
+import Button from '../../ui/Button';
 
 const ApiProviderCard: React.FC<{
     title: string;
@@ -50,7 +50,7 @@ const ApiKeysTab: React.FC = () => {
         <div>
             <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">API Keys</h2>
             <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                This app offers free chats using Google's Gemini 2.5 Flash. For other models, like those from Anthropic or OpenAI, you will need to provide your own API key below. Your keys are stored securely on your device and are never sent to our servers.
+                This app offers free chats using Google's Gemini 1.5 Flash. For other models, like those from Anthropic or OpenAI, you will need to provide your own API key below. Your keys are stored securely on your device and are never sent to our servers.
             </p>
             <div className="space-y-6">
                 <ApiProviderCard 
