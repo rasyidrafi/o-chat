@@ -85,8 +85,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onChange={handleTextareaChange}
           onKeyPress={handleKeyPress}
           placeholder="Type your message here..."
-          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-2 text-sm max-h-32 overflow-y-auto thin-scrollbar"
-          rows={1}
+          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-2 pb-2 text-sm max-h-32 overflow-y-auto thin-scrollbar"
+          rows={3}
           disabled={disabled}
         />
       </div>
