@@ -58,48 +58,9 @@ const ApiProviderCard: React.FC<{
     placeholder: string;
     consoleName: string;
     providerKey: string;
-    providers: ApiProvider[];
-    onUpdateProviders: (providers: ApiProvider[]) => void;
-}> = ({ title, consoleUrl, placeholder, consoleName, providerKey, providers, onUpdateProviders }) => {
-    const [apiKey, setApiKey] = useState('');
-    const [isSaved, setIsSaved] = useState(false);
-
-    // Load API key from providers array on mount
-    useEffect(() => {
-        const provider = providers.find(p => p.provider === providerKey);
-        if (provider && provider.value) {
-            setApiKey(provider.value);
-            setIsSaved(true);
-        }
-    }, [providers, providerKey]);
-
-    // Check if API key is valid (not empty and trimmed)
-    const isValid = apiKey.trim().length > 0;
-
-    const handleSave = () => {
-        if (isValid) {
-            const updatedProviders = providers.map(p => 
-                p.provider === providerKey 
-                    ? { ...p, value: apiKey.trim() }
-                    : p
-            );
-            onUpdateProviders(updatedProviders);
-            setIsSaved(true);
-        } else {
-            const updatedProviders = providers.map(p => 
-                p.provider === providerKey 
-                    ? { ...p, value: "" }
-                    : p
-            );
-            onUpdateProviders(updatedProviders);
-            setIsSaved(false);
-        }
-    };
-
-    const handleInputChange = (value: string) => {
-        setApiKey(value);
-        setIsSaved(false);
-    };
+    value: string;
+    onChange: (value: string) => void;
+}> = ({ title, consoleUrl, placeholder, consoleName, value, onChange }) => {
 
     return (
         <>
@@ -117,19 +78,11 @@ const ApiProviderCard: React.FC<{
                     </label>
                     <input
                         type="password"
-                        value={apiKey}
-                        onChange={(e) => handleInputChange(e.target.value)}
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
                         placeholder={placeholder}
                         className="flex-1 bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
                     />
-                    <Button 
-                        size="sm" 
-                        onClick={handleSave}
-                        disabled={!isValid}
-                        className={isSaved && isValid ? 'bg-green-500 hover:bg-green-600' : ''}
-                    >
-                        {isSaved && isValid ? 'Saved' : 'Save'}
-                    </Button>
                 </div>
                 
                 {/* Console link line */}
@@ -148,20 +101,9 @@ const OpenAICompatibleProviderCard: React.FC<{
     onUpdate: (provider: ApiProvider) => void;
     onDelete: (providerKey: string) => void;
 }> = ({ provider, onUpdate, onDelete }) => {
-    const [isSaved, setIsSaved] = useState(false);
-
     const handleChange = (field: keyof ApiProvider, value: string) => {
         const updatedProvider = { ...provider, [field]: value };
         onUpdate(updatedProvider);
-        setIsSaved(false);
-    };
-
-    const isValid = provider.provider.trim() && provider.base_url?.trim() && provider.value.trim();
-
-    const handleSave = () => {
-        if (isValid) {
-            setIsSaved(true);
-        }
     };
 
     return (
@@ -220,17 +162,6 @@ const OpenAICompatibleProviderCard: React.FC<{
                         />
                     </div>
                 </div>
-
-                <div className="flex justify-end mt-4">
-                    <Button 
-                        size="sm" 
-                        onClick={handleSave}
-                        disabled={!isValid}
-                        className={isSaved && isValid ? 'bg-green-500 hover:bg-green-600' : ''}
-                    >
-                        {isSaved && isValid ? 'Saved' : 'Save Provider'}
-                    </Button>
-                </div>
             </div>
         </>
     );
@@ -238,6 +169,8 @@ const OpenAICompatibleProviderCard: React.FC<{
 
 const ApiKeysTab: React.FC = () => {
     const [providers, setProviders] = useState<ApiProvider[]>([]);
+    const [hasChanges, setHasChanges] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Load providers from localStorage on mount
     useEffect(() => {
@@ -245,15 +178,12 @@ const ApiKeysTab: React.FC = () => {
         setProviders(loadedProviders);
     }, []);
 
-    // Save providers to localStorage whenever they change
-    useEffect(() => {
-        if (providers.length > 0) {
-            saveProvidersToStorage(providers);
-        }
-    }, [providers]);
-
-    const updateProviders = (updatedProviders: ApiProvider[]) => {
-        setProviders(updatedProviders);
+    // Update individual provider values
+    const updateProviderValue = (providerKey: string, value: string) => {
+        setProviders(prev => prev.map(p => 
+            p.provider === providerKey ? { ...p, value } : p
+        ));
+        setHasChanges(true);
     };
 
     // Get custom providers (where custom: true)
@@ -275,6 +205,7 @@ const ApiKeysTab: React.FC = () => {
             custom: true
         };
         setProviders(prev => [...prev, newProvider]);
+        setHasChanges(true);
     };
 
     const updateProvider = (updatedProvider: ApiProvider) => {
@@ -285,24 +216,52 @@ const ApiKeysTab: React.FC = () => {
                     : provider
             )
         );
+        setHasChanges(true);
     };
 
     const deleteProvider = (providerKey: string) => {
         setProviders(prev => prev.filter(provider => provider.provider !== providerKey));
+        setHasChanges(true);
     };
 
-    // Validation function to check if a provider is complete and valid
-    const isProviderValid = (provider: ApiProvider): boolean => {
-        return !!(
-            provider.provider.trim() &&
-            provider.base_url?.trim() &&
-            provider.value.trim()
-        );
+    // Save all providers to localStorage
+    const handleSaveAll = async () => {
+        setIsSaving(true);
+        try {
+            // Validate custom providers before saving
+            const invalidCustomProviders = customProviders.filter(p => 
+                !p.provider.trim() || !p.base_url?.trim() || !p.value.trim()
+            );
+            
+            if (invalidCustomProviders.length > 0) {
+                alert('Please fill in all fields for custom providers before saving.');
+                setIsSaving(false);
+                return;
+            }
+            
+            saveProvidersToStorage(providers);
+            setHasChanges(false);
+            
+            // Brief delay to show saving state
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+            console.error('Error saving providers:', error);
+            alert('Failed to save providers. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     // Check if we can add a new provider
-    const canAddNewProvider = customProviders.length === 0 || 
-        isProviderValid(customProviders[customProviders.length - 1]);
+    const canAddNewProvider = customProviders.length === 0 || (
+        customProviders[customProviders.length - 1].provider.trim() &&
+        customProviders[customProviders.length - 1].base_url?.trim() &&
+        customProviders[customProviders.length - 1].value.trim()
+    );
+
+    // Get provider values for the built-in providers
+    const anthropicProvider = providers.find(p => p.provider === 'anthropic');
+    const openaiProvider = providers.find(p => p.provider === 'openai');
 
     return (
         <div>
@@ -316,18 +275,16 @@ const ApiKeysTab: React.FC = () => {
                     consoleUrl="https://console.anthropic.com/"
                     placeholder="sk-ant-..."
                     consoleName="Anthropic's Console"
-                    providerKey="anthropic"
-                    providers={providers}
-                    onUpdateProviders={updateProviders}
+                    value={anthropicProvider?.value || ''}
+                    onChange={(value) => updateProviderValue('anthropic', value)}
                 />
                 <ApiProviderCard 
                     title="OpenAI API Key"
                     consoleUrl="https://platform.openai.com/api-keys"
                     placeholder="sk-..."
                     consoleName="OpenAI's Console"
-                    providerKey="openai"
-                    providers={providers}
-                    onUpdateProviders={updateProviders}
+                    value={openaiProvider?.value || ''}
+                    onChange={(value) => updateProviderValue('openai', value)}
                 />
 
                 {/* OpenAI Compatible Providers Section */}
@@ -367,6 +324,31 @@ const ApiKeysTab: React.FC = () => {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Save All Button */}
+                <div className="border-t border-zinc-200 dark:border-zinc-800 pt-6">
+                    <div className="flex justify-end">
+                        <Button 
+                            onClick={handleSaveAll}
+                            disabled={!hasChanges || isSaving}
+                            className={`gap-2 ${!hasChanges ? 'opacity-50' : ''}`}
+                        >
+                            {isSaving ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Saving...
+                                </>
+                            ) : (
+                                'Save All Changes'
+                            )}
+                        </Button>
+                    </div>
+                    {hasChanges && (
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 text-right">
+                            You have unsaved changes
+                        </p>
+                    )}
                 </div>
             </div>
         </div>
