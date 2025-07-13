@@ -6,7 +6,6 @@ import ApiKeysTab from './settings/Tab/ApiKeysTab';
 import AccountTab from './settings/Tab/AccountTab';
 import CustomizationTab from './settings/Tab/CustomizationTab';
 import ModelsTab from './settings/Tab/ModelsTab';
-import HistorySyncTab from './settings/Tab/HistorySyncTab';
 import AttachmentsTab from './settings/Tab/AttachmentsTab';
 import ContactUsTab from './settings/Tab/ContactUsTab';
 import { User } from 'firebase/auth';
@@ -18,7 +17,7 @@ import { db } from '../firebase';
 import { ChatStorageService } from '../services/chatStorageService';
 
 
-export type Tab = 'Account' | 'Customization' | 'History & Sync' | 'Models' | 'API Keys' | 'Attachments' | 'Contact Us';
+export type Tab = 'Account' | 'Customization' | 'Models' | 'API Keys' | 'Attachments' | 'Contact Us';
 
 interface SettingsPageProps {
     onClose: () => void;
@@ -37,7 +36,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
     const [totalConversations, setTotalConversations] = useState(0);
     const [isLoadingUsage, setIsLoadingUsage] = useState(true);
 
-    const tabs: Tab[] = ['Account', 'Customization', 'History & Sync', 'Models', 'API Keys', 'Attachments', 'Contact Us'];
+    const tabs: Tab[] = ['Account', 'Customization', 'Models', 'API Keys', 'Attachments', 'Contact Us'];
 
     // Load message usage data when component mounts
     useEffect(() => {
@@ -148,9 +147,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                 break;
             case 'API Keys':
                 content = <ApiKeysTab />;
-                break;
-            case 'History & Sync':
-                content = <HistorySyncTab />;
                 break;
             case 'Attachments':
                 content = <AttachmentsTab />;
