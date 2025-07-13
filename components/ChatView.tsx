@@ -122,7 +122,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           </div>
         ) : shouldShowWelcome ? (
           <div className="flex-1 flex items-center justify-center p-4 md:p-6">
-            <div className="w-full max-w-4xl mx-auto px-0 md:px-2 lg:px-8 xl:px-16">
+            <div className="w-full max-w-4xl mx-auto px-0 md:px-2 lg:px-8 xl:px-16 pb-24 md:pb-32">
               <WelcomeScreen user={user} onPromptSelect={handlePromptSelect} />
             </div>
           </div>
