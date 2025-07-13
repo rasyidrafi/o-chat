@@ -130,11 +130,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
           <button 
             onClick={handleSendMessage}
             className={`p-1.5 rounded-full transition-colors ${
-              message && !disabled 
+              message.trim() && !disabled 
                 ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700' 
                 : 'bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
             }`}
-            disabled={!message || disabled}
+            disabled={!message.trim() || disabled}
             aria-label={disabled ? "Sending..." : "Send message"}
           >
             {disabled && message ? (
