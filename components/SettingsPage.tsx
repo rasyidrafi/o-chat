@@ -34,6 +34,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
     const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'Customization');
     const [backedByServerCount, setBackedByServerCount] = useState(0);
     const [byokCount, setByokCount] = useState(0);
+    const [totalConversations, setTotalConversations] = useState(0);
 
     const tabs: Tab[] = ['Account', 'Customization', 'History & Sync', 'Models', 'API Keys', 'Attachments', 'Contact Us'];
 
@@ -49,6 +50,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                 const chatStats = await ChatStorageService.getUserChatStats(user.uid);
                 setBackedByServerCount(chatStats.serverMessages);
                 setByokCount(chatStats.byokMessages);
+                setTotalConversations(chatStats.totalConversations);
                 
             } else {
                 // Get message count from localStorage
@@ -71,6 +73,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                 
                 setBackedByServerCount(serverMessageCount);
                 setByokCount(byokMessageCount);
+                setTotalConversations(conversations.length);
             }
         } catch (error) {
             console.error('Error loading usage data:', error);
@@ -214,9 +217,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                            <div className="p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl">
                                <div>
                                    <div className="flex items-center mb-2">
-                                       <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">Message Usage</h3>
+                                       <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">Usage</h3>
                                    </div>
                                    <div className="space-y-4">
+                                       <div>
+                                           <div className="flex justify-between text-xs font-medium mb-1">
+                                                <span className="text-zinc-600 dark:text-zinc-300">Conversations</span>
+                                                <span className="text-zinc-500 dark:text-zinc-400">{totalConversations}</span>
+                                           </div>
+                                           <div className="w-full border-t border-zinc-300 dark:border-zinc-600 my-2"></div>
+                                           <p className="text-xs text-zinc-500 dark:text-zinc-400">{totalConversations} total conversations</p>
+                                       </div>
                                        <div>
                                            <div className="flex justify-between text-xs font-medium mb-1">
                                                 <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
