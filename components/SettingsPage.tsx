@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AppSettings } from '../App';
 import { collection, doc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
+import { ChatStorageService } from '../services/chatStorageService';
 
 
 export type Tab = 'Account' | 'Customization' | 'History & Sync' | 'Models' | 'API Keys' | 'Attachments' | 'Contact Us';
