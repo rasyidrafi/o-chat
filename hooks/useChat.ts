@@ -177,10 +177,6 @@ export const useChat = () => {
     });
     setCurrentConversation(updatedConversation);
     
-    // Save conversation with new messages
-    ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
-      console.error('Error saving conversation with new messages:', error);
-    });
 
     if (source !== 'system') return;
 
