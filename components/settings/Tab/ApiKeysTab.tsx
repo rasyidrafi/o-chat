@@ -35,28 +35,33 @@ const ApiProviderCard: React.FC<{
     };
 
     return (
-        <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6">
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h3>
-                </div>
-                
-                <div className="flex items-center gap-4 flex-1 max-w-2xl">
-                    <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder={placeholder}
-                        className="flex-1 bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                    />
-                    
-                    <a href={consoleUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-pink-500 hover:underline whitespace-nowrap">
-                        Get your API key from {consoleName}
-                    </a>
-                    
-                    <Button size="sm" onClick={handleSave}>Save</Button>
-                </div>
+        <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 space-y-4">
+            {/* Title line */}
+            <div className="flex items-center gap-3">
+                <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h3>
+            </div>
+            
+            {/* Input line */}
+            <div className="flex items-center gap-4">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[80px]">
+                    API Key:
+                </label>
+                <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={placeholder}
+                    className="flex-1 bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                />
+                <Button size="sm" onClick={handleSave}>Save</Button>
+            </div>
+            
+            {/* Console link line */}
+            <div>
+                <a href={consoleUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-pink-500 hover:underline">
+                    Get your API key from {consoleName}
+                </a>
             </div>
         </div>
     );
