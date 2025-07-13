@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Key, Plus, X } from '../../Icons';
 import Button from '../../ui/Button';
 import CustomDropdown from '../../ui/CustomDropdown';
+
+// localStorage keys
+const ANTHROPIC_API_KEY = 'anthropic_api_key';
+const OPENAI_API_KEY = 'openai_api_key';
+const OPENAI_COMPATIBLE_PROVIDERS = 'openai_compatible_providers';
 
 const ApiProviderCard: React.FC<{
     title: string;
@@ -9,8 +15,26 @@ const ApiProviderCard: React.FC<{
     consoleUrl: string;
     placeholder: string;
     consoleName: string;
-}> = ({ title, models, consoleUrl, placeholder, consoleName }) => {
+    storageKey: string;
+}> = ({ title, models, consoleUrl, placeholder, consoleName, storageKey }) => {
     const [apiKey, setApiKey] = useState('');
+
+    // Load API key from localStorage on mount
+    useEffect(() => {
+        const savedKey = localStorage.getItem(storageKey);
+        if (savedKey) {
+            setApiKey(savedKey);
+        }
+    }, [storageKey]);
+
+    const handleSave = () => {
+        if (apiKey.trim()) {
+            localStorage.setItem(storageKey, apiKey.trim());
+        } else {
+            localStorage.removeItem(storageKey);
+        }
+        // Could add a toast notification here
+    };
 
     return (
         <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6">
@@ -39,7 +63,7 @@ const ApiProviderCard: React.FC<{
                 <a href={consoleUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-pink-500 hover:underline">
                     Get your API key from {consoleName}
                 </a>
-                <Button size="sm">Save</Button>
+                <Button size="sm" onClick={handleSave}>Save</Button>
             </div>
         </div>
     );
@@ -150,6 +174,24 @@ const OpenAICompatibleProviderCard: React.FC<{
 const ApiKeysTab: React.FC = () => {
     const [openAIProviders, setOpenAIProviders] = useState<OpenAICompatibleProvider[]>([]);
 
+    // Load OpenAI compatible providers from localStorage on mount
+    useEffect(() => {
+        const savedProviders = localStorage.getItem(OPENAI_COMPATIBLE_PROVIDERS);
+        if (savedProviders) {
+            try {
+                const providers = JSON.parse(savedProviders);
+                setOpenAIProviders(providers);
+            } catch (error) {
+                console.error('Error loading OpenAI compatible providers:', error);
+            }
+        }
+    }, []);
+
+    // Save OpenAI compatible providers to localStorage whenever they change
+    useEffect(() => {
+        localStorage.setItem(OPENAI_COMPATIBLE_PROVIDERS, JSON.stringify(openAIProviders));
+    }, [openAIProviders]);
+
     const addNewProvider = () => {
         const newProvider: OpenAICompatibleProvider = {
             id: Date.now().toString(),
@@ -186,6 +228,7 @@ const ApiKeysTab: React.FC = () => {
                     consoleUrl="https://console.anthropic.com/"
                     placeholder="sk-ant-..."
                     consoleName="Anthropic's Console"
+                    storageKey={ANTHROPIC_API_KEY}
                 />
                 <ApiProviderCard 
                     title="OpenAI API Key"
@@ -193,6 +236,7 @@ const ApiKeysTab: React.FC = () => {
                     consoleUrl="https://platform.openai.com/api-keys"
                     placeholder="sk-..."
                     consoleName="OpenAI's Console"
+                    storageKey={OPENAI_API_KEY}
                 />
 
                 {/* OpenAI Compatible Providers Section */}
