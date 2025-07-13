@@ -67,11 +67,11 @@ export const useChat = () => {
     if (!currentConversation || currentConversation.messages.length === 0) {
       return currentConversation || {
         id: generateId(),
-        title: 'New Chat',
+        title,
         messages: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        model: 'gemini-1.5-flash'
+        model
       };
     }
     
