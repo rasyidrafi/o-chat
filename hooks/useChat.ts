@@ -55,11 +55,13 @@ export const useChat = () => {
   // Handle user login - migrate data if needed
   React.useEffect(() => {
     if (user) {
-      ChatStorageService.handleUserLogin(user);
+      ChatStorageService.handleUserLogin(user).then(() => {
+        // Reload conversations after migration
+        loadConversations();
+      });
     } else {
       ChatStorageService.handleUserLogout();
     }
-  }, [user]);
 
   const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
