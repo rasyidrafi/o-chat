@@ -398,7 +398,7 @@ export const useChat = () => {
     streamingMessageRef.current = '';
   }, [streamingState]);
 
-  const selectConversation = useCallback((conversation: ChatConversation) => {
+  const selectConversation = useCallback((conversation: ChatConversation | null) => {
     setCurrentConversation(conversation);
   }, []);
 
