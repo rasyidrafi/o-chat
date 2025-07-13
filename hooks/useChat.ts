@@ -273,6 +273,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
           { role: 'system', content: settings.customInstruction.trim() },
           ...historyMessages
         ];
+        console.log('Final messages to send:', messagesToSend);
       } else {
         console.log('No custom instruction to add. Settings available:', !!settings, 'Instruction empty:', !settings?.customInstruction?.trim());
       }
