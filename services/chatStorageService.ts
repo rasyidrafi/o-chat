@@ -228,18 +228,23 @@ export class ChatStorageService {
   // Migrate localStorage data to Firestore
   private static async migrateLocalDataToFirestore(userId: string): Promise<void> {
     try {
+      console.log('Starting migration from localStorage to Firestore...');
       const localConversations = this.getConversationsFromLocal();
+      console.log(`Found ${localConversations.length} conversations in localStorage`);
       
       for (const conversation of localConversations) {
         // Load messages for this conversation
         const messages = this.getMessagesFromLocal(conversation.id);
         const fullConversation = { ...conversation, messages };
+        console.log(`Migrating conversation: ${conversation.title} with ${messages.length} messages`);
         
         await this.saveConversationToFirestore(fullConversation, userId);
       }
       
+      console.log('Migration completed successfully');
       // Clear localStorage after successful migration
       this.clearLocalStorage();
+      console.log('localStorage cleared');
     } catch (error) {
       console.error('Error migrating data to Firestore:', error);
       throw error;
@@ -297,20 +302,27 @@ export class ChatStorageService {
   // Handle user login - migrate data if needed
   static async handleUserLogin(user: User): Promise<void> {
     try {
+      console.log('Handling user login, checking for migration...');
       // Check if user has local data to migrate
       const localConversations = this.getConversationsFromLocal();
+      console.log(`Found ${localConversations.length} local conversations`);
       
       if (localConversations.length > 0) {
         // Check if user already has data in Firestore
         const firestoreConversations = await this.getConversationsFromFirestore(user.uid);
+        console.log(`Found ${firestoreConversations.length} Firestore conversations`);
         
         if (firestoreConversations.length === 0) {
           // Migrate local data to Firestore
+          console.log('No Firestore data found, migrating localStorage data...');
           await this.migrateLocalDataToFirestore(user.uid);
         } else {
-          // User has both local and cloud data - this should be handled by the app
-          // For now, we'll keep both and let the app decide
+          // User has both local and cloud data - merge them
+          console.log('Both local and cloud data found, merging...');
+          await this.migrateLocalDataToFirestore(user.uid);
         }
+      } else {
+        console.log('No local data to migrate');
       }
     } catch (error) {
       console.error('Error handling user login:', error);
