@@ -121,16 +121,18 @@ const ChatView: React.FC<ChatViewProps> = ({
             </div>
           </div>
         ) : (
-          <MessageList
-            messages={currentConversation?.messages || []}
-            streamingMessageId={streamingState.currentMessageId}
-            onStopStreaming={stopStreaming}
-            animationsDisabled={animationsDisabled}
-          />
+          <div className="flex-1 relative overflow-hidden">
+            <MessageList
+              messages={currentConversation?.messages || []}
+              streamingMessageId={streamingState.currentMessageId}
+              onStopStreaming={stopStreaming}
+              animationsDisabled={animationsDisabled}
+            />
+          </div>
         )}
       </main>
 
-      <footer className="p-4 md:p-6 pb-0 md:pb-0">
+      <footer className="absolute bottom-0 left-0 right-0 p-4 md:p-6 pb-0 md:pb-0 bg-white dark:bg-[#1c1c1c] z-10">
         <div className="max-w-4xl mx-auto px-0 md:px-2 lg:px-8 xl:px-16">
           <ChatInput 
             onMessageSend={handleSendMessage}
