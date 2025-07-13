@@ -143,20 +143,12 @@ export const useChat = () => {
   const sendMessage = useCallback(async (content: string, model: string, source: string = 'system') => {
     if (!content.trim()) return;
 
-    // Generate title from user message
-    const messageTitle = content.slice(0, 50) + (content.length > 50 ? '...' : '');
-
     // Create or get current conversation
     let conversation = currentConversation;
     if (!conversation) {
+      // Generate title from user message
+      const messageTitle = content.slice(0, 50) + (content.length > 50 ? '...' : '');
       conversation = createNewConversation(messageTitle, model);
-    } else if (conversation.title === 'New Chat') {
-      // Update title if it's still "New Chat"
-      conversation = {
-        ...conversation,
-        title: messageTitle,
-        updatedAt: new Date()
-      };
     }
 
     // Create user message
