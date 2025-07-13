@@ -95,6 +95,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
             const conversations = JSON.parse(stored);
             return conversations.map((conv: any) => ({
                 ...conv,
+                source: conv.source || 'server', // Default to server for existing conversations
                 createdAt: new Date(conv.createdAt),
                 updatedAt: new Date(conv.updatedAt),
             }));
