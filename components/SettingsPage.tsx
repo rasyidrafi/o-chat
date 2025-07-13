@@ -32,8 +32,8 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, onOpenAuthModal, onSignOutClick, settings, updateSettings }) => {
     const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'Customization');
-    const [systemMessageCount, setSystemMessageCount] = useState(0);
-    const [totalConversations, setTotalConversations] = useState(0);
+    const [backedByServerCount, setBackedByServerCount] = useState(0);
+    const [byokCount, setByokCount] = useState(0);
 
     const tabs: Tab[] = ['Account', 'Customization', 'History & Sync', 'Models', 'API Keys', 'Attachments', 'Contact Us'];
 
@@ -46,28 +46,31 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
         try {
             if (user) {
                 // Get conversation counts efficiently
-                const conversationCounts = await ChatStorageService.getConversationCounts(user.uid);
-                setTotalConversations(conversationCounts.byok);
-                
-                // Get message counts efficiently
                 const messageCounts = await ChatStorageService.getMessageCounts(user.uid);
-                setSystemMessageCount(messageCounts.server);
+                setBackedByServerCount(messageCounts.server);
+                setByokCount(messageCounts.byok);
+                
             } else {
                 // Get conversation count from localStorage
                 const conversations = getConversationsFromLocal();
-                setTotalConversations(conversations.length);
 
-                // Count system messages from localStorage
-                let systemCount = 0;
+                // Count messages by source from localStorage
+                let serverCount = 0;
+                let byokMessageCount = 0;
                 conversations.forEach(conv => {
                     const messages = getMessagesFromLocal(conv.id);
                     messages.forEach(msg => {
                         if (msg.role === 'user') {
-                            systemCount++;
+                            if (conv.source === 'server') {
+                                serverCount++;
+                            } else {
+                                byokMessageCount++;
+                            }
                         }
                     });
                 });
-                setSystemMessageCount(systemCount);
+                setBackedByServerCount(serverCount);
+                setByokCount(byokMessageCount);
             }
         } catch (error) {
             console.error('Error loading usage data:', error);
@@ -217,12 +220,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                                        <div>
                                            <div className="flex justify-between text-xs font-medium mb-1">
                                                 <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
-                                                <span className="text-zinc-500 dark:text-zinc-400">{systemMessageCount} / unlimited</span>
+                                                <span className="text-zinc-500 dark:text-zinc-400">{backedByServerCount} / unlimited</span>
                                            </div>
                                            <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                                                <div className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" style={{width: `${Math.min((systemMessageCount/1000)*100, 100)}%`}}></div>
+                                                <div className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" style={{width: `${Math.min((backedByServerCount/1000)*100, 100)}%`}}></div>
                                            </div>
-                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{systemMessageCount} messages usage</p>
+                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{backedByServerCount} messages usage</p>
                                        </div>
                                         <div>
                                            <div className="flex justify-between text-xs font-medium mb-1">
@@ -230,12 +233,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                                                     Your Own Api
                                                     <Info className="w-3.5 h-3.5 text-pink-500" />
                                                 </span>
-                                                <span className="text-zinc-500 dark:text-zinc-400">{totalConversations}</span>
+                                                <span className="text-zinc-500 dark:text-zinc-400">{byokCount}</span>
                                            </div>
                                            <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                                                <div className="bg-pink-500 h-1.5 rounded-full" style={{width: `${Math.min((totalConversations/1000)*100, 100)}%`}}></div>
+                                                <div className="bg-pink-500 h-1.5 rounded-full" style={{width: `${Math.min((byokCount/1000)*100, 100)}%`}}></div>
                                            </div>
-                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{totalConversations} conversations</p>
+                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{byokCount} messages</p>
                                        </div>
                                        <div className="bg-zinc-200/50 dark:bg-zinc-900/50 rounded-lg p-3 flex items-start gap-2.5">
                                             <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400 mt-0.5 flex-shrink-0" />
