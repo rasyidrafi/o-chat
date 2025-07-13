@@ -260,10 +260,14 @@ export const useChat = (settings?: AppSettings) => {
         content: msg.content
       }));
 
-      // Add custom instruction if it exists
-      const messagesWithInstruction: ServiceChatMessage[] = settings?.customInstruction 
-        ? [{ role: 'system', content: settings.customInstruction }, ...historyMessages]
-        : historyMessages;
+      // Add custom instruction as system message if it exists
+      let messagesToSend: ServiceChatMessage[] = historyMessages;
+      if (settings?.customInstruction?.trim()) {
+        messagesToSend = [
+          { role: 'system', content: settings.customInstruction.trim() },
+          ...historyMessages
+        ];
+      }
 
       // Define callback functions separately
       const onChunkCallback = (chunk: string) => {
@@ -362,7 +366,7 @@ export const useChat = (settings?: AppSettings) => {
 
       await ChatService.sendMessage(
         model,
-        messagesWithInstruction,
+        messagesToSend,
         onChunkCallback,
         onCompleteCallback,
         onErrorCallback,
