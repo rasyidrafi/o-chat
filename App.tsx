@@ -252,6 +252,7 @@ const App: React.FC = () => {
         <ChatView 
           onMenuClick={() => setIsMobileMenuOpen(true)}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+         isSidebarCollapsed={isSidebarCollapsed}
           onOpenSettings={openSettings}
           theme={settings.theme}
           toggleTheme={toggleTheme}

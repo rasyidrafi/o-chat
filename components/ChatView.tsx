@@ -13,6 +13,7 @@ import { useChat } from '../hooks/useChat';
 interface ChatViewProps {
   onMenuClick: () => void;
   toggleSidebar: () => void;
+  isSidebarCollapsed: boolean;
   onOpenSettings: (tab?: SettingsTab) => void;
   theme: Theme;
   toggleTheme: () => void;
@@ -23,6 +24,7 @@ interface ChatViewProps {
 const ChatView: React.FC<ChatViewProps> = ({ 
   onMenuClick, 
   toggleSidebar, 
+  isSidebarCollapsed,
   onOpenSettings, 
   theme, 
   toggleTheme, 
@@ -39,6 +41,8 @@ const ChatView: React.FC<ChatViewProps> = ({
     sendMessage(prompt, 'gemini-1.5-flash', 'system');
   };
 
+  // Calculate sidebar width based on collapsed state
+  const sidebarWidth = isSidebarCollapsed ? 80 : 256; // w-20 = 80px, w-64 = 256px
   const hasContent = currentConversation && currentConversation.messages.length > 0;
   const shouldShowWelcome = !hasContent && !streamingState.isStreaming && !isLoading;
 
