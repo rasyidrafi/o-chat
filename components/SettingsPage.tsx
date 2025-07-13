@@ -54,23 +54,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                 // Get conversation count from localStorage
                 const conversations = getConversationsFromLocal();
 
-                // Count messages by source from localStorage
-                let serverCount = 0;
-                let byokMessageCount = 0;
-                conversations.forEach(conv => {
-                    const messages = getMessagesFromLocal(conv.id);
-                    messages.forEach(msg => {
-                        if (msg.role === 'user') {
-                            if (conv.source === 'server') {
-                                serverCount++;
-                            } else {
-                                byokMessageCount++;
-                            }
-                        }
-                    });
-                });
-                setBackedByServerCount(serverCount);
-                setByokCount(byokMessageCount);
+                // Count conversations by source from localStorage
+                const serverConversations = conversations.filter(conv => conv.source === 'server').length;
+                const byokConversations = conversations.filter(conv => conv.source === 'byok').length;
+                
+                setBackedByServerCount(serverConversations);
+                setByokCount(byokConversations);
             }
         } catch (error) {
             console.error('Error loading usage data:', error);
