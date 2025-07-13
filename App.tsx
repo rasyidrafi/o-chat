@@ -42,8 +42,6 @@ const App: React.FC = () => {
   const [confirmDialogProps, setConfirmDialogProps] = useState(defaultConfirmDialogProps);
   const [settingsUnsubscribe, setSettingsUnsubscribe] = useState<(() => void) | null>(null);
 
-  const chat = useChat(settings);
-
   const loadGuestSettings = (): AppSettings => ({
     theme: (localStorage.getItem('theme') as Theme) || 'system',
     mainFont: localStorage.getItem('mainFont') || 'Montserrat',
@@ -55,6 +53,8 @@ const App: React.FC = () => {
   });
 
   const [settings, setSettings] = useState<AppSettings>(loadGuestSettings);
+
+  const chat = useChat(settings);
   
   const clearLocalSettings = () => {
     const guestSettingsKeys: Array<keyof AppSettings> = ['theme', 'mainFont', 'codeFont', 'animationsDisabled', 'customInstruction', 'hidePersonalInfo', 'disableLinkWarning'];
