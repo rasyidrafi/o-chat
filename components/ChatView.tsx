@@ -138,12 +138,18 @@ const ChatView: React.FC<ChatViewProps> = ({
         )}
       </main>
 
-      <footer className="fixed bottom-0 bg-white dark:bg-[#1c1c1c] z-10 p-4 md:p-6 pb-0 md:pb-0" style={{
-        left: `${sidebarWidth}px`,
-        right: '0',
-        width: `calc(100vw - ${sidebarWidth}px)`,
-        transition: animationsDisabled ? 'none' : 'left 0.3s ease-in-out, width 0.3s ease-in-out'
-      }}>
+      <footer 
+        className="fixed bottom-0 bg-white dark:bg-[#1c1c1c] z-10 p-4 md:p-6 pb-0 md:pb-0 left-0 right-0 w-full md:left-auto md:right-0"
+      <footer 
+        className="fixed bottom-0 bg-white dark:bg-[#1c1c1c] z-10 p-4 md:p-6 pb-0 md:pb-0 left-0 right-0 w-full"
+        style={{
+          ...(window.innerWidth >= 768 && {
+            left: `${sidebarWidth}px`,
+            width: `calc(100vw - ${sidebarWidth}px)`,
+            transition: animationsDisabled ? 'none' : 'left 0.3s ease-in-out, width 0.3s ease-in-out'
+          })
+        }}
+      >
         <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16">
           <ChatInput 
             onMessageSend={handleSendMessage}
