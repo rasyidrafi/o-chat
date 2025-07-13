@@ -398,9 +398,8 @@ export const useChat = () => {
     streamingMessageRef.current = '';
   }, [streamingState]);
 
-  const selectConversation = useCallback((conversation: ChatConversation) => {
+  const selectConversation = useCallback((conversation: ChatConversation | null) => {
     setCurrentConversation(conversation);
-  }, []);
 
   const deleteConversation = useCallback((conversationId: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== conversationId));
