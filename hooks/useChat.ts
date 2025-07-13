@@ -260,6 +260,11 @@ export const useChat = (settings?: AppSettings) => {
         content: msg.content
       }));
 
+      // Add custom instruction if it exists
+      const messagesWithInstruction: ServiceChatMessage[] = settings?.customInstruction 
+        ? [{ role: 'system', content: settings.customInstruction }, ...historyMessages]
+        : historyMessages;
+
       // Define callback functions separately
       const onChunkCallback = (chunk: string) => {
         streamingMessageRef.current += chunk;
