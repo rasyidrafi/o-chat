@@ -151,7 +151,8 @@ const OpenAICompatibleProviderCard: React.FC<{
     const [isSaved, setIsSaved] = useState(false);
 
     const handleChange = (field: keyof ApiProvider, value: string) => {
-        onUpdate({ ...provider, [field]: value });
+        const updatedProvider = { ...provider, [field]: value };
+        onUpdate(updatedProvider);
         setIsSaved(false);
     };
 
@@ -278,8 +279,10 @@ const ApiKeysTab: React.FC = () => {
 
     const updateProvider = (updatedProvider: ApiProvider) => {
         setProviders(prev => 
-            prev.map(provider => 
-                provider.provider === updatedProvider.provider ? updatedProvider : provider
+            prev.map((provider, index) => 
+                provider.custom && index === prev.findIndex(p => p.custom && p === provider) 
+                    ? updatedProvider 
+                    : provider
             )
         );
     };
