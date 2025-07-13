@@ -78,10 +78,10 @@ const ApiProviderCard: React.FC<{
                     </label>
                     <input
                         type="password"
-                        value={value}
+                        key={provider.id || provider.provider}
                         onChange={(e) => onChange(e.target.value)}
                         placeholder={placeholder}
-                        className="flex-1 bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                        onDelete={(id) => deleteProvider(id)}
                     />
                 </div>
                 
