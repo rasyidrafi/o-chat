@@ -3,6 +3,26 @@ import React, { useState, useEffect } from 'react';
 import { Key, Plus, X } from '../../Icons';
 import Button from '../../ui/Button';
 
+// Simple toast notification component
+const Toast: React.FC<{ message: string; isVisible: boolean; onClose: () => void }> = ({ message, isVisible, onClose }) => {
+    useEffect(() => {
+        if (isVisible) {
+            const timer = setTimeout(() => {
+                onClose();
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [isVisible, onClose]);
+
+    if (!isVisible) return null;
+
+    return (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-in slide-in-from-top-2 duration-300">
+            {message}
+        </div>
+    );
+};
+
 // localStorage keys
 const ANTHROPIC_API_KEY = 'anthropic_api_key';
 const OPENAI_API_KEY = 'openai_api_key';
@@ -16,54 +36,81 @@ const ApiProviderCard: React.FC<{
     storageKey: string;
 }> = ({ title, consoleUrl, placeholder, consoleName, storageKey }) => {
     const [apiKey, setApiKey] = useState('');
+    const [isSaved, setIsSaved] = useState(false);
+    const [showToast, setShowToast] = useState(false);
 
     // Load API key from localStorage on mount
     useEffect(() => {
         const savedKey = localStorage.getItem(storageKey);
         if (savedKey) {
             setApiKey(savedKey);
+            setIsSaved(true);
         }
     }, [storageKey]);
 
+    // Check if API key is valid (not empty and trimmed)
+    const isValid = apiKey.trim().length > 0;
+
     const handleSave = () => {
-        if (apiKey.trim()) {
+        if (isValid) {
             localStorage.setItem(storageKey, apiKey.trim());
+            setIsSaved(true);
+            setShowToast(true);
         } else {
             localStorage.removeItem(storageKey);
+            setIsSaved(false);
         }
-        // Could add a toast notification here
+    };
+
+    const handleInputChange = (value: string) => {
+        setApiKey(value);
+        setIsSaved(false);
     };
 
     return (
-        <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 space-y-4">
-            {/* Title line */}
-            <div className="flex items-center gap-3">
-                <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h3>
+        <>
+            <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 space-y-4">
+                {/* Title line */}
+                <div className="flex items-center gap-3">
+                    <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h3>
+                </div>
+                
+                {/* Input line */}
+                <div className="flex items-center gap-4">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[80px]">
+                        API Key:
+                    </label>
+                    <input
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => handleInputChange(e.target.value)}
+                        placeholder={placeholder}
+                        className="flex-1 bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    />
+                    <Button 
+                        size="sm" 
+                        onClick={handleSave}
+                        disabled={!isValid}
+                        className={isSaved && isValid ? 'bg-green-500 hover:bg-green-600' : ''}
+                    >
+                        {isSaved && isValid ? 'Saved' : 'Save'}
+                    </Button>
+                </div>
+                
+                {/* Console link line */}
+                <div>
+                    <a href={consoleUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-pink-500 hover:underline">
+                        Get your API key from {consoleName}
+                    </a>
+                </div>
             </div>
-            
-            {/* Input line */}
-            <div className="flex items-center gap-4">
-                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[80px]">
-                    API Key:
-                </label>
-                <input
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder={placeholder}
-                    className="flex-1 bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                />
-                <Button size="sm" onClick={handleSave}>Save</Button>
-            </div>
-            
-            {/* Console link line */}
-            <div>
-                <a href={consoleUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-pink-500 hover:underline">
-                    Get your API key from {consoleName}
-                </a>
-            </div>
-        </div>
+            <Toast 
+                message="API key saved successfully!" 
+                isVisible={showToast} 
+                onClose={() => setShowToast(false)} 
+            />
+        </>
     );
 };
 
@@ -79,71 +126,98 @@ const OpenAICompatibleProviderCard: React.FC<{
     onUpdate: (provider: OpenAICompatibleProvider) => void;
     onDelete: (id: string) => void;
 }> = ({ provider, onUpdate, onDelete }) => {
+    const [isSaved, setIsSaved] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+
     const handleChange = (field: keyof OpenAICompatibleProvider, value: string) => {
         onUpdate({ ...provider, [field]: value });
+        setIsSaved(false);
+    };
+
+    const isValid = provider.name.trim() && provider.baseUrl.trim() && provider.apiKey.trim();
+
+    const handleSave = () => {
+        if (isValid) {
+            setIsSaved(true);
+            setShowToast(true);
+            // Here you would typically save to localStorage or API
+        }
     };
 
     return (
-        <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 relative">
-            <button
-                onClick={() => onDelete(provider.id)}
-                className="absolute top-4 right-4 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
-                aria-label="Delete provider"
-            >
-                <X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-            </button>
+        <>
+            <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 relative">
+                <button
+                    onClick={() => onDelete(provider.id)}
+                    className="absolute top-4 right-4 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
+                    aria-label="Delete provider"
+                >
+                    <X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                </button>
 
-            <div className="flex items-center gap-3 mb-4">
-                <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">OpenAI Compatible Provider</h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Provider Name
-                    </label>
-                    <input
-                        type="text"
-                        value={provider.name}
-                        onChange={(e) => handleChange('name', e.target.value)}
-                        placeholder="e.g., Local LLM, Custom API"
-                        className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                    />
+                <div className="flex items-center gap-3 mb-4">
+                    <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white">OpenAI Compatible Provider</h3>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Base URL
-                    </label>
-                    <input
-                        type="url"
-                        value={provider.baseUrl}
-                        onChange={(e) => handleChange('baseUrl', e.target.value)}
-                        placeholder="https://api.example.com/v1"
-                        className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            Provider Name
+                        </label>
+                        <input
+                            type="text"
+                            value={provider.name}
+                            onChange={(e) => handleChange('name', e.target.value)}
+                            placeholder="e.g., Local LLM, Custom API"
+                            className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            Base URL
+                        </label>
+                        <input
+                            type="url"
+                            value={provider.baseUrl}
+                            onChange={(e) => handleChange('baseUrl', e.target.value)}
+                            placeholder="https://api.example.com/v1"
+                            className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            API Key
+                        </label>
+                        <input
+                            type="password"
+                            value={provider.apiKey}
+                            onChange={(e) => handleChange('apiKey', e.target.value)}
+                            placeholder="sk-..."
+                            className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                        />
+                    </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        API Key
-                    </label>
-                    <input
-                        type="password"
-                        value={provider.apiKey}
-                        onChange={(e) => handleChange('apiKey', e.target.value)}
-                        placeholder="sk-..."
-                        className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-                    />
+                <div className="flex justify-end mt-4">
+                    <Button 
+                        size="sm" 
+                        onClick={handleSave}
+                        disabled={!isValid}
+                        className={isSaved && isValid ? 'bg-green-500 hover:bg-green-600' : ''}
+                    >
+                        {isSaved && isValid ? 'Saved' : 'Save Provider'}
+                    </Button>
                 </div>
-
             </div>
-
-            <div className="flex justify-end mt-4">
-                <Button size="sm">Save Provider</Button>
-            </div>
-        </div>
+            <Toast 
+                message="Provider saved successfully!" 
+                isVisible={showToast} 
+                onClose={() => setShowToast(false)} 
+            />
+        </>
     );
 };
 
