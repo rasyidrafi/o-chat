@@ -78,33 +78,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="bg-zinc-200 dark:bg-[#2a2a2a] rounded-xl p-2 shadow-lg">
+    <div className="bg-zinc-200 dark:bg-[#2a2a2a] rounded-t-xl p-2 shadow-lg">
       <div className="relative">
         <textarea
           value={message}
           onChange={handleTextareaChange}
           onKeyPress={handleKeyPress}
           placeholder="Type your message here..."
-          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-12 pt-1 pb-10 text-sm max-h-32 overflow-y-auto"
+          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-2 text-sm max-h-32 overflow-y-auto thin-scrollbar"
           rows={1}
           disabled={disabled}
         />
-        <button 
-          onClick={handleSendMessage}
-          className={`absolute right-1 top-1 p-1.5 rounded-full transition-colors ${
-            message && !disabled 
-              ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700' 
-              : 'bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
-          }`}
-          disabled={!message || disabled}
-          aria-label={disabled ? "Sending..." : "Send message"}
-        >
-          {disabled && message ? (
-            <LoadingIndicator size="sm" color="white" />
-          ) : (
-            <ArrowUp className="w-4 h-4" />
-          )}
-        </button>
       </div>
       <div className="flex items-center justify-between flex-wrap gap-2 mt-1.5 pt-1.5 border-t border-zinc-300 dark:border-zinc-700">
         <div className="flex items-center flex-wrap gap-2">
@@ -119,7 +103,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             </button>
             {isModelDropdownOpen && (
               <div className="absolute bottom-full mb-2 left-0 w-64 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10">
-                <div className="py-1">
+                <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
                   {modelOptions.map(option => (
                     <button
                       key={option.value}
@@ -139,9 +123,27 @@ const ChatInput: React.FC<ChatInputProps> = ({
             <span className="text-zinc-900 dark:text-white">Search</span>
           </button>
         </div>
-        <button className="p-2 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors" aria-label="Attach file">
-          <Paperclip className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="p-2 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors" aria-label="Attach file">
+            <Paperclip className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+          </button>
+          <button 
+            onClick={handleSendMessage}
+            className={`p-1.5 rounded-full transition-colors ${
+              message && !disabled 
+                ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700' 
+                : 'bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
+            }`}
+            disabled={!message || disabled}
+            aria-label={disabled ? "Sending..." : "Send message"}
+          >
+            {disabled && message ? (
+              <LoadingIndicator size="sm" color="white" />
+            ) : (
+              <ArrowUp className="w-4 h-4" />
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

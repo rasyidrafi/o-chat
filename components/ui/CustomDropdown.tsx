@@ -71,7 +71,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                             exit="exit"
                             className="absolute z-10 mt-1 w-full bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden"
                         >
-                            <ul className="py-1">
+                            <ul className="py-1 max-h-60 overflow-y-auto thin-scrollbar">
                                 {options.map(option => (
                                     <li key={option}>
                                         <button

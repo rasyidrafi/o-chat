@@ -93,7 +93,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
     }
 
     return (
-        <div className="fixed inset-0 z-50 bg-white dark:bg-[#1c1c1c] text-zinc-900 dark:text-zinc-200 font-sans overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-white dark:bg-[#1c1c1c] text-zinc-900 dark:text-zinc-200 font-sans overflow-y-auto custom-scrollbar">
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                 <div className="flex items-center justify-between mb-8">
                     <Button variant="ghost" size="sm" onClick={onClose} className="gap-2">

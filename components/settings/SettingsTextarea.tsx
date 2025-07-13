@@ -18,7 +18,7 @@ const SettingsTextarea: React.FC<SettingsTextareaProps> = ({ label, value, onCha
                     onChange={(e) => onChange(e.target.value)}
                     maxLength={maxLength}
                     placeholder={placeholder}
-                    className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 min-h-[120px] resize-y"
+                    className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 min-h-[120px] resize-y thin-scrollbar"
                 />
                 <span className="absolute right-3 bottom-2 text-xs text-zinc-500 dark:text-zinc-400">
                     {value.length}/{maxLength}

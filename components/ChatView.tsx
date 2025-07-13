@@ -123,7 +123,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         )}
       </main>
 
-      <footer className="p-4 md:p-6">
+      <footer className="p-4 md:p-6 pb-0 md:pb-0">
         <div className="max-w-4xl mx-auto px-0 md:px-2 lg:px-8 xl:px-16">
           <ChatInput 
             onMessageSend={handleSendMessage}

@@ -20,16 +20,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
                        md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
                        w-64 ${isCollapsed ? 'md:w-20' : ''}`}>
 
-      <div className="flex items-center justify-between mb-6">
-        <div className={`flex items-center gap-2 ${isCollapsed ? 'md:hidden' : 'flex'}`}>
-          <span className="font-bold text-lg text-zinc-900 dark:text-white">O-Chat</span>
+      <div className={`flex items-center justify-between ${isCollapsed ? 'mb-0' : 'mb-4'}`}>
+        <div className={`flex items-center justify-center gap-2 w-full ${isCollapsed ? 'md:hidden' : 'flex'}`}>
+          <span className="font-bold text-lg text-zinc-900 dark:text-white text-center w-full">O-Chat</span>
         </div>
         <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded md:hidden" aria-label="Close menu">
           <X className="w-5 h-5" />
         </button>
       </div>
 
-      <Button className={`w-full mb-6 ${isCollapsed ? 'md:px-2.5' : ''}`}>
+      <Button className={`w-full mb-4 ${isCollapsed ? 'md:px-2.5' : ''}`}>
         {isCollapsed ? <Plus className="w-5 h-5" /> : 'New Chat'}
       </Button>
 
@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
         />
       </div>
 
-      <div className={`flex-grow overflow-y-auto block ${isCollapsed ? 'md:hidden' : ''}`}>
+      <div className={`flex-grow overflow-y-auto block thin-scrollbar ${isCollapsed ? 'md:hidden' : ''}`}>
         <div className="text-xs font-semibold text-zinc-500 mb-2">Today</div>
         <ul>
           <li className="py-2 px-3 text-sm text-zinc-900 dark:text-white bg-zinc-200 dark:bg-zinc-800 rounded-md cursor-pointer">

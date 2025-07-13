@@ -4,6 +4,9 @@ import { ChatMessage } from '../types/chat';
 import { User, Sparkles, X } from './Icons';
 import { motion } from 'framer-motion';
 import TypingIndicator from './TypingIndicator';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface MessageProps {
   message: ChatMessage;
@@ -35,6 +38,58 @@ const Message: React.FC<MessageProps> = ({
     return 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100';
   };
 
+  const renderContent = () => {
+    if (isUser) {
+      return (
+        <div className="text-sm leading-relaxed whitespace-pre-wrap">
+          {message.content}
+        </div>
+      );
+    }
+
+    // For AI responses, render markdown
+    return (
+      <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+        <ReactMarkdown
+          components={{
+            code({ node, inline, className, children, ...props }) {
+              const match = /language-(\w+)/.exec(className || '');
+              return !inline && match ? (
+                <SyntaxHighlighter
+                  style={oneDark}
+                  language={match[1]}
+                  PreTag="div"
+                  className="rounded-lg !bg-zinc-900 !m-0"
+                  {...props}
+                >
+                  {String(children).replace(/\n$/, '')}
+                </SyntaxHighlighter>
+              ) : (
+                <code className="bg-zinc-200 dark:bg-zinc-700 px-1 py-0.5 rounded text-xs" {...props}>
+                  {children}
+                </code>
+              );
+            },
+            p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+            ul: ({ children }) => <ul className="mb-2 last:mb-0 pl-4">{children}</ul>,
+            ol: ({ children }) => <ol className="mb-2 last:mb-0 pl-4">{children}</ol>,
+            li: ({ children }) => <li className="mb-1">{children}</li>,
+            h1: ({ children }) => <h1 className="text-lg font-semibold mb-2">{children}</h1>,
+            h2: ({ children }) => <h2 className="text-base font-semibold mb-2">{children}</h2>,
+            h3: ({ children }) => <h3 className="text-sm font-semibold mb-2">{children}</h3>,
+            blockquote: ({ children }) => (
+              <blockquote className="border-l-4 border-zinc-300 dark:border-zinc-600 pl-4 italic my-2">
+                {children}
+              </blockquote>
+            ),
+          }}
+        >
+          {message.content}
+        </ReactMarkdown>
+      </div>
+    );
+  };
+
   return (
     <motion.div
       initial={animationsDisabled ? {} : { opacity: 0, y: 20 }}
@@ -52,12 +107,10 @@ const Message: React.FC<MessageProps> = ({
       
       <div className={`flex flex-col max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div className={`rounded-2xl px-4 py-3 ${getMessageStyles()}`}>
-          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-            {message.content}
-            {isStreaming && !isUser && (
-              <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
-            )}
-          </div>
+          {renderContent()}
+          {isStreaming && !isUser && (
+            <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
+          )}
           
           {isStreaming && !isUser && (
             <div className="mt-3 flex items-center justify-between">
