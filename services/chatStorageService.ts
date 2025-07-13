@@ -150,6 +150,7 @@ export class ChatStorageService {
           id: data.id,
           title: data.title,
           model: data.model,
+          source: data.source || 'server', // Default to server for existing conversations
           createdAt: data.createdAt.toDate(),
           updatedAt: data.updatedAt.toDate(),
           messages
@@ -355,6 +356,7 @@ export class ChatStorageService {
           id: data.id,
           title: data.title,
           model: data.model,
+          source: data.source || 'server', // Default to server for existing conversations
           createdAt: data.createdAt.toDate(),
           updatedAt: data.updatedAt.toDate(),
           messages
