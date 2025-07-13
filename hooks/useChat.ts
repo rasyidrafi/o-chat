@@ -284,6 +284,7 @@ export const useChat = () => {
 
         setConversations(prev => prev.map(conv =>
           conv.id === updatedConversation.id
+            ? {
                 ...conv,
                 messages: conv.messages.map(msg =>
                   msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
@@ -295,6 +296,7 @@ export const useChat = () => {
         setCurrentConversation(prev => 
           prev && prev.id === updatedConversation.id
             ? {
+                ...prev,
                 messages: prev.messages.map(msg =>
                   msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
                 )
