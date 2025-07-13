@@ -46,9 +46,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
         try {
             if (user) {
                 // Get conversation counts efficiently
-                const chatStats = await ChatStorageService.getUserChatStats(user.uid);
-                setBackedByServerCount(chatStats.serverMessages);
-                setByokCount(chatStats.byokMessages);
+                const chatStats = await ChatStorageService.getMessageCounts(user.uid);
+                setBackedByServerCount(chatStats.server);
+                setByokCount(chatStats.byok);
                 
             } else {
                 // Get message count from localStorage
