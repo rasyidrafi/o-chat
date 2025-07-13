@@ -22,6 +22,11 @@ export const useChat = () => {
 
   const streamingMessageRef = useRef<string>('');
 
+  // Helper function to determine model source
+  const getModelSource = (model: string): 'server' | 'byok' => {
+    const serverModels = ['gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+    return serverModels.includes(model) ? 'server' : 'byok';
+  };
   // Listen to auth state changes
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -78,7 +83,8 @@ export const useChat = () => {
         messages: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        model
+        model,
+        source: getModelSource(model)
       };
     }
     
@@ -90,7 +96,8 @@ export const useChat = () => {
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
-      model
+      model,
+      source: getModelSource(model)
     };
 
     // Update conversations state immediately
@@ -161,7 +168,8 @@ export const useChat = () => {
         messages: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        model
+        model,
+        source: getModelSource(model)
       };
       setCurrentConversation(conversation);
     } else if (conversation.messages.length === 0 && conversation.title === 'New Chat') {
@@ -170,6 +178,7 @@ export const useChat = () => {
       conversation = {
         ...conversation,
         title: messageTitle,
+        source: getModelSource(model),
         updatedAt: new Date()
       };
       

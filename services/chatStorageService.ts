@@ -103,6 +103,7 @@ export class ChatStorageService {
         id: conversation.id,
         title: conversation.title,
         model: conversation.model,
+        source: conversation.source || 'server', // Default to server for existing conversations
         createdAt: Timestamp.fromDate(conversation.createdAt),
         updatedAt: Timestamp.fromDate(conversation.updatedAt),
         messageCount: conversation.messages.length
