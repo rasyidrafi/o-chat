@@ -62,7 +62,13 @@ export const useChat = (user?: User | null) => {
       model
     };
 
-    setConversations(prev => [newConversation, ...prev]);
+    // Update conversations state immediately
+    setConversations(prev => {
+      // Check if conversation already exists to prevent duplicates
+      const exists = prev.some(conv => conv.id === newConversation.id);
+      if (exists) return prev;
+      return [newConversation, ...prev];
+    });
     setCurrentConversation(newConversation);
     
     // Save to storage
@@ -145,10 +151,19 @@ export const useChat = (user?: User | null) => {
       updatedAt: new Date()
     };
 
-    // Update both states at once
-    setConversations(prev => prev.map(conv =>
-      conv.id === conversation!.id ? updatedConversation : conv
-    ));
+    // Update conversations state - handle both existing and new conversations
+    setConversations(prev => {
+      const existingIndex = prev.findIndex(conv => conv.id === conversation!.id);
+      if (existingIndex >= 0) {
+        // Update existing conversation
+        const newConversations = [...prev];
+        newConversations[existingIndex] = updatedConversation;
+        return newConversations;
+      } else {
+        // Add new conversation to the beginning
+        return [updatedConversation, ...prev];
+      }
+    });
     setCurrentConversation(updatedConversation);
     
     // Save conversation with new messages
