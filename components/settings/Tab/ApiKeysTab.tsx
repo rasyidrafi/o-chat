@@ -193,6 +193,14 @@ const ApiKeysTab: React.FC = () => {
     }, [openAIProviders]);
 
     const addNewProvider = () => {
+        // Check if the last provider is complete before adding a new one
+        if (openAIProviders.length > 0) {
+            const lastProvider = openAIProviders[openAIProviders.length - 1];
+            if (!isProviderValid(lastProvider)) {
+                return; // Don't add new provider if last one is incomplete
+            }
+        }
+
         const newProvider: OpenAICompatibleProvider = {
             id: Date.now().toString(),
             name: '',
@@ -214,6 +222,20 @@ const ApiKeysTab: React.FC = () => {
     const deleteProvider = (id: string) => {
         setOpenAIProviders(prev => prev.filter(provider => provider.id !== id));
     };
+
+    // Validation function to check if a provider is complete and valid
+    const isProviderValid = (provider: OpenAICompatibleProvider): boolean => {
+        return !!(
+            provider.name.trim() &&
+            provider.baseUrl.trim() &&
+            provider.apiKey.trim() &&
+            provider.model.trim()
+        );
+    };
+
+    // Check if we can add a new provider
+    const canAddNewProvider = openAIProviders.length === 0 || 
+        isProviderValid(openAIProviders[openAIProviders.length - 1]);
 
     return (
         <div>
@@ -248,7 +270,12 @@ const ApiKeysTab: React.FC = () => {
                                 Add custom API endpoints that are compatible with OpenAI's API format.
                             </p>
                         </div>
-                        <Button onClick={addNewProvider} className="gap-2">
+                        <Button 
+                            onClick={addNewProvider} 
+                            className="gap-2"
+                            disabled={!canAddNewProvider}
+                            title={!canAddNewProvider ? "Please complete the current provider before adding a new one" : ""}
+                        >
                             <Plus className="w-4 h-4" />
                             Add Provider
                         </Button>
