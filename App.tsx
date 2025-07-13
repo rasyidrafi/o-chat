@@ -7,6 +7,7 @@ import ConfirmationDialog from './components/ui/ConfirmationDialog';
 import { app, auth, db } from './firebase.ts'; // Import the initialized Firebase app and db
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { useChat } from './hooks/useChat';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -248,6 +249,7 @@ const App: React.FC = () => {
           user={user}
           onLoginClick={() => openSettings('Account')}
           onSignOutClick={onSignOutClick}
+          chat={chat}
         />
         <ChatView 
           onMenuClick={() => setIsMobileMenuOpen(true)}
@@ -258,6 +260,7 @@ const App: React.FC = () => {
           toggleTheme={toggleTheme}
           user={user}
           animationsDisabled={settings.animationsDisabled}
+          chat={chat}
         />
         {isMobileMenuOpen && (
           <div 

@@ -5,12 +5,15 @@ import { ChatService } from '../services/chatService';
 import { ChatMessage as ServiceChatMessage } from '../services/chatService';
 import { ChatStorageService } from '../services/chatStorageService';
 import { User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase';
 
-export const useChat = (user?: User | null) => {
+export const useChat = () => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingNewChat, setIsCreatingNewChat] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
     currentMessageId: null,
@@ -18,6 +21,14 @@ export const useChat = (user?: User | null) => {
   });
 
   const streamingMessageRef = useRef<string>('');
+
+  // Listen to auth state changes
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return unsubscribe;
+  }, []);
 
   // Load conversations on mount and user change
   const loadConversations = useCallback(async () => {
@@ -361,6 +372,7 @@ export const useChat = (user?: User | null) => {
     streamingState,
     isLoading,
     isCreatingNewChat,
+    user,
     sendMessage,
     stopStreaming,
     createNewConversation,

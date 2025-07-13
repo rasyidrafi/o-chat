@@ -19,6 +19,7 @@ interface ChatViewProps {
   toggleTheme: () => void;
   user: FirebaseUser | null;
   animationsDisabled: boolean;
+  chat: ReturnType<typeof useChat>;
 }
 
 const ChatView: React.FC<ChatViewProps> = ({ 
@@ -29,9 +30,10 @@ const ChatView: React.FC<ChatViewProps> = ({
   theme, 
   toggleTheme, 
   user, 
-  animationsDisabled 
+  animationsDisabled,
+  chat
 }) => {
-  const { currentConversation, streamingState, sendMessage, stopStreaming, isLoading } = useChat(user);
+  const { currentConversation, streamingState, sendMessage, stopStreaming, isLoading } = chat;
 
   const handleSendMessage = (message: string, model: string, source: string = 'system') => {
     sendMessage(message, model, source);

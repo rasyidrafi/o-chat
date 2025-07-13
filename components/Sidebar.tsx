@@ -12,10 +12,11 @@ interface SidebarProps {
   user: FirebaseUser | null;
   onLoginClick: () => void;
   onSignOutClick: () => void;
+  chat: ReturnType<typeof useChat>;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed, user, onLoginClick, onSignOutClick }) => {
-  const { conversations, currentConversation, selectConversation, createNewConversation, deleteConversation, isCreatingNewChat, isLoading } = useChat(user);
+const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed, user, onLoginClick, onSignOutClick, chat }) => {
+  const { conversations, currentConversation, selectConversation, createNewConversation, deleteConversation, isCreatingNewChat, isLoading } = chat;
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   const handleNewChat = () => {
