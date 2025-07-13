@@ -20,7 +20,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   const handleNewChat = () => {
+    // Prevent creating new chat if already creating one or if already on welcome page
     if (isCreatingNewChat) return;
+    
+    // Check if we're already on the welcome page (no current conversation or empty conversation)
+    if (!currentConversation || currentConversation.messages.length === 0) {
+      return;
+    }
+    
     createNewConversation();
     setIsMobileMenuOpen(false);
   };
