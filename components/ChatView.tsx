@@ -137,9 +137,9 @@ const ChatView: React.FC<ChatViewProps> = ({
       </main>
 
       <footer className="fixed bottom-0 bg-white dark:bg-[#1c1c1c] z-10 p-4 md:p-6 pb-0 md:pb-0" style={{
-        left: '256px', // Start after sidebar (w-64 = 256px)
+        left: `${sidebarWidth}px`,
         right: '0',
-        width: 'calc(100vw - 256px)' // Full viewport width minus sidebar
+        width: `calc(100vw - ${sidebarWidth}px)`
       }}>
         <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16">
           <ChatInput 
