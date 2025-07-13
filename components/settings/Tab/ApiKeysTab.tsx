@@ -3,53 +3,79 @@ import React, { useState, useEffect } from 'react';
 import { Key, Plus, X } from '../../Icons';
 import Button from '../../ui/Button';
 
-// Define the structure for API providers
-interface ApiProvider {
+// Define the structure for built-in providers
+interface BuiltInProvider {
     provider: string;
     value: string;
-    custom: boolean;
-    base_url?: string;
+
+// Define the structure for custom OpenAI compatible providers
+interface CustomProvider {
+    id: string;
+    provider: string;
+    value: string;
+    base_url: string;
 }
 
-// Default providers structure
-const DEFAULT_PROVIDERS: ApiProvider[] = [
-    { provider: "anthropic", value: "", custom: false },
-    { provider: "openai", value: "", custom: false }
+// Storage keys
+const BUILTIN_PROVIDERS_KEY = 'builtin_api_providers';
+const CUSTOM_PROVIDERS_KEY = 'custom_api_providers';
+
+// Default built-in providers
+const DEFAULT_BUILTIN_PROVIDERS: BuiltInProvider[] = [
+    { provider: "anthropic", value: "" },
+    { provider: "openai", value: "" }
 ];
 
-const API_PROVIDERS_KEY = 'api_providers';
-
 // Helper functions for localStorage management
-const loadProvidersFromStorage = (): ApiProvider[] => {
+const loadBuiltInProvidersFromStorage = (): BuiltInProvider[] => {
     try {
-        const stored = localStorage.getItem(API_PROVIDERS_KEY);
+        const stored = localStorage.getItem(BUILTIN_PROVIDERS_KEY);
         if (stored) {
-            const providers = JSON.parse(stored);
-            // Ensure we have all default providers
-            const mergedProviders = [...DEFAULT_PROVIDERS];
-            providers.forEach((storedProvider: ApiProvider) => {
-                const existingIndex = mergedProviders.findIndex(p => p.provider === storedProvider.provider);
-                if (existingIndex >= 0) {
-                    mergedProviders[existingIndex] = storedProvider;
-                } else if (storedProvider.custom) {
-                    mergedProviders.push(storedProvider);
-                }
-            });
-            return mergedProviders;
+            return JSON.parse(stored);
         }
-        return DEFAULT_PROVIDERS;
+        return DEFAULT_BUILTIN_PROVIDERS;
     } catch (error) {
-        console.error('Error loading providers from localStorage:', error);
-        return DEFAULT_PROVIDERS;
+        console.error('Error loading built-in providers from localStorage:', error);
+        return DEFAULT_BUILTIN_PROVIDERS;
     }
 };
 
-const saveProvidersToStorage = (providers: ApiProvider[]) => {
+const loadCustomProvidersFromStorage = (): CustomProvider[] => {
     try {
-        localStorage.setItem(API_PROVIDERS_KEY, JSON.stringify(providers));
+        const stored = localStorage.getItem(CUSTOM_PROVIDERS_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+        return [];
     } catch (error) {
-        console.error('Error saving providers to localStorage:', error);
+        console.error('Error loading custom providers from localStorage:', error);
+        return [];
     }
+};
+
+const saveBuiltInProvidersToStorage = (providers: BuiltInProvider[]) => {
+    try {
+        localStorage.setItem(BUILTIN_PROVIDERS_KEY, JSON.stringify(providers));
+    } catch (error) {
+        console.error('Error saving built-in providers to localStorage:', error);
+    }
+};
+
+const saveCustomProvidersToStorage = (providers: CustomProvider[]) => {
+    try {
+        localStorage.setItem(CUSTOM_PROVIDERS_KEY, JSON.stringify(providers));
+    } catch (error) {
+        console.error('Error saving custom providers to localStorage:', error);
+    }
+};
+
+// Generate UUID for custom providers
+const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 };
 
 const ApiProviderCard: React.FC<{
@@ -97,11 +123,11 @@ const ApiProviderCard: React.FC<{
 };
 
 const OpenAICompatibleProviderCard: React.FC<{
-    provider: ApiProvider;
-    onUpdate: (provider: ApiProvider) => void;
+    provider: CustomProvider;
+    onUpdate: (provider: CustomProvider) => void;
     onDelete: (providerKey: string) => void;
 }> = ({ provider, onUpdate, onDelete }) => {
-    const handleChange = (field: keyof ApiProvider, value: string) => {
+    const handleChange = (field: keyof CustomProvider, value: string) => {
         const updatedProvider = { ...provider, [field]: value };
         onUpdate(updatedProvider);
     };
@@ -168,48 +194,40 @@ const OpenAICompatibleProviderCard: React.FC<{
 };
 
 const ApiKeysTab: React.FC = () => {
-    const [providers, setProviders] = useState<ApiProvider[]>([]);
+    const [builtInProviders, setBuiltInProviders] = useState<BuiltInProvider[]>([]);
+    const [customProviders, setCustomProviders] = useState<CustomProvider[]>([]);
     const [hasChanges, setHasChanges] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     // Load providers from localStorage on mount
     useEffect(() => {
-        const loadedProviders = loadProvidersFromStorage();
-        setProviders(loadedProviders);
+        const loadedBuiltInProviders = loadBuiltInProvidersFromStorage();
+        const loadedCustomProviders = loadCustomProvidersFromStorage();
+        setBuiltInProviders(loadedBuiltInProviders);
+        setCustomProviders(loadedCustomProviders);
     }, []);
 
-    // Update individual provider values
-    const updateProviderValue = (providerKey: string, value: string) => {
-        setProviders(prev => prev.map(p => 
+    // Update individual built-in provider values
+    const updateBuiltInProviderValue = (providerKey: string, value: string) => {
+        setBuiltInProviders(prev => prev.map(p => 
             p.provider === providerKey ? { ...p, value } : p
         ));
         setHasChanges(true);
     };
 
-    // Get custom providers (where custom: true)
-    const customProviders = providers.filter(p => p.custom);
-
     const addNewProvider = () => {
-        // Check if the last provider is complete before adding a new one
-        if (customProviders.length > 0) {
-            const lastProvider = customProviders[customProviders.length - 1];
-            if (!isProviderValid(lastProvider)) {
-                return; // Don't add new provider if last one is incomplete
-            }
-        }
-
-        const newProvider: ApiProvider = {
+        const newProvider: CustomProvider = {
+            id: generateUUID(),
             provider: '',
             value: '',
-            base_url: '',
-            custom: true
+            base_url: ''
         };
-        setProviders(prev => [...prev, newProvider]);
+        setCustomProviders(prev => [...prev, newProvider]);
         setHasChanges(true);
     };
 
-    const updateProvider = (updatedProvider: ApiProvider) => {
-        setProviders(prev => 
+    const updateProvider = (updatedProvider: CustomProvider) => {
+        setCustomProviders(prev => 
             prev.map(provider => 
                 provider.id === updatedProvider.id
                     ? updatedProvider 
@@ -220,7 +238,7 @@ const ApiKeysTab: React.FC = () => {
     };
 
     const deleteProvider = (providerKey: string) => {
-        setProviders(prev => prev.filter(provider => provider.provider !== providerKey));
+        setCustomProviders(prev => prev.filter(provider => provider.id !== providerKey));
         setHasChanges(true);
     };
 
@@ -239,7 +257,8 @@ const ApiKeysTab: React.FC = () => {
                 return;
             }
             
-            saveProvidersToStorage(providers);
+            saveBuiltInProvidersToStorage(builtInProviders);
+            saveCustomProvidersToStorage(customProviders);
             setHasChanges(false);
             
             // Brief delay to show saving state
@@ -260,8 +279,8 @@ const ApiKeysTab: React.FC = () => {
     );
 
     // Get provider values for the built-in providers
-    const anthropicProvider = providers.find(p => p.provider === 'anthropic');
-    const openaiProvider = providers.find(p => p.provider === 'openai');
+    const anthropicProvider = builtInProviders.find(p => p.provider === 'anthropic');
+    const openaiProvider = builtInProviders.find(p => p.provider === 'openai');
 
     return (
         <div>
@@ -276,7 +295,7 @@ const ApiKeysTab: React.FC = () => {
                     placeholder="sk-ant-..."
                     consoleName="Anthropic's Console"
                     value={anthropicProvider?.value || ''}
-                    onChange={(value) => updateProviderValue('anthropic', value)}
+                    onChange={(value) => updateBuiltInProviderValue('anthropic', value)}
                 />
                 <ApiProviderCard 
                     title="OpenAI API Key"
@@ -284,7 +303,7 @@ const ApiKeysTab: React.FC = () => {
                     placeholder="sk-..."
                     consoleName="OpenAI's Console"
                     value={openaiProvider?.value || ''}
-                    onChange={(value) => updateProviderValue('openai', value)}
+                    onChange={(value) => updateBuiltInProviderValue('openai', value)}
                 />
 
                 {/* OpenAI Compatible Providers Section */}
