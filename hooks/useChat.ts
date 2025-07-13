@@ -10,6 +10,7 @@ export const useChat = (user?: User | null) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingNewChat, setIsCreatingNewChat] = useState(false);
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
     currentMessageId: null,
@@ -48,6 +49,10 @@ export const useChat = (user?: User | null) => {
   const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
   const createNewConversation = useCallback((title: string = 'New Chat', model: string = 'gemini-1.5-flash'): ChatConversation => {
+    if (isCreatingNewChat) return currentConversation!;
+    
+    setIsCreatingNewChat(true);
+    
     const newConversation: ChatConversation = {
       id: generateId(),
       title,
@@ -63,10 +68,12 @@ export const useChat = (user?: User | null) => {
     // Save to storage
     ChatStorageService.saveConversation(newConversation, user).catch(error => {
       console.error('Error saving new conversation:', error);
+    }).finally(() => {
+      setIsCreatingNewChat(false);
     });
     
     return newConversation;
-  }, [user]);
+  }, [user, isCreatingNewChat, currentConversation]);
 
   const updateMessage = useCallback((conversationId: string, messageId: string, content: string) => {
     let updatedConversation: ChatConversation | null = null;
@@ -338,6 +345,7 @@ export const useChat = (user?: User | null) => {
     currentConversation,
     streamingState,
     isLoading,
+    isCreatingNewChat,
     sendMessage,
     stopStreaming,
     createNewConversation,

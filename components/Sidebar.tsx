@@ -14,9 +14,10 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed, user, onLoginClick, onSignOutClick }) => {
-  const { conversations, currentConversation, selectConversation, createNewConversation, deleteConversation } = useChat(user);
+  const { conversations, currentConversation, selectConversation, createNewConversation, deleteConversation, isCreatingNewChat } = useChat(user);
 
   const handleNewChat = () => {
+    if (isCreatingNewChat) return;
     createNewConversation();
     setIsMobileMenuOpen(false);
   };
@@ -68,9 +69,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
 
       <Button 
         onClick={handleNewChat}
+        disabled={isCreatingNewChat}
         className={`w-full mb-4 ${isCollapsed ? 'md:px-2.5' : ''}`}
       >
-        {isCollapsed ? <Plus className="w-5 h-5" /> : 'New Chat'}
+        {isCollapsed ? <Plus className="w-5 h-5" /> : (isCreatingNewChat ? 'Creating...' : 'New Chat')}
       </Button>
 
       <div className="relative mb-4">
