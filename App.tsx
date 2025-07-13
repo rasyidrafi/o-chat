@@ -218,6 +218,8 @@ const App: React.FC = () => {
   const handleSignOut = async () => {
       try {
         await signOut(auth);
+        // Clear current conversation to show welcome page
+        chat.selectConversation(null);
         setIsConfirmDialogOpen(false);
         closeSettings();
       } catch (error) {

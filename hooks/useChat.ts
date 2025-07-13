@@ -26,9 +26,13 @@ export const useChat = () => {
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      // If user signs out, clear current conversation to show welcome page
+      if (!currentUser && user) {
+        setCurrentConversation(null);
+      }
     });
     return unsubscribe;
-  }, []);
+  }, [user]);
 
   // Load conversations on mount and user change
   const loadConversations = useCallback(async () => {
