@@ -210,8 +210,8 @@ const ApiKeysTab: React.FC = () => {
 
     const updateProvider = (updatedProvider: ApiProvider) => {
         setProviders(prev => 
-            prev.map((provider, index) => 
-                provider.custom && index === prev.findIndex(p => p.custom && p === provider) 
+            prev.map(provider => 
+                provider.id === updatedProvider.id
                     ? updatedProvider 
                     : provider
             )
@@ -310,7 +310,7 @@ const ApiKeysTab: React.FC = () => {
                     <div className="space-y-4">
                         {customProviders.map(provider => (
                             <OpenAICompatibleProviderCard
-                                key={provider.provider}
+                                key={provider.id}
                                 provider={provider}
                                 onUpdate={updateProvider}
                                 onDelete={deleteProvider}
