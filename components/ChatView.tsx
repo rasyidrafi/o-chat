@@ -132,12 +132,12 @@ const ChatView: React.FC<ChatViewProps> = ({
         )}
       </main>
 
-      <footer className="absolute bottom-0 left-0 right-0 p-4 md:p-6 pb-0 md:pb-0 bg-white dark:bg-[#1c1c1c] z-10">
-        <div className="max-w-4xl mx-auto" style={{ 
-          marginLeft: 'calc(256px + 1rem)', // 256px sidebar width + 1rem padding
-          marginRight: '1rem',
-          width: 'calc(100% - 256px - 2rem)' // Full width minus sidebar and padding
-        }}>
+      <footer className="fixed bottom-0 bg-white dark:bg-[#1c1c1c] z-10 p-4 md:p-6 pb-0 md:pb-0" style={{
+        left: '256px', // Start after sidebar (w-64 = 256px)
+        right: '0',
+        width: 'calc(100vw - 256px)' // Full viewport width minus sidebar
+      }}>
+        <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16">
           <ChatInput 
             onMessageSend={handleSendMessage}
             disabled={streamingState.isStreaming || isLoading}
