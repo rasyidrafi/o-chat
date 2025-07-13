@@ -9,7 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { AppSettings } from '../App';
 
-export const useChat = (settings?: AppSettings) => {
+export const useChat = (settings?: AppSettings | undefined) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,7 +24,8 @@ export const useChat = (settings?: AppSettings) => {
   const streamingMessageRef = useRef<string>('');
 
   // Debug log to check if settings are being passed
-  console.log('useChat settings:', settings?.customInstruction);
+  console.log('useChat settings received:', settings);
+  console.log('useChat customInstruction:', settings?.customInstruction);
 
   // Helper function to determine model source
   const getModelSource = (model: string): 'server' | 'byok' => {
@@ -273,7 +274,7 @@ export const useChat = (settings?: AppSettings) => {
           ...historyMessages
         ];
       } else {
-        console.log('No custom instruction to add');
+        console.log('No custom instruction to add. Settings available:', !!settings, 'Instruction empty:', !settings?.customInstruction?.trim());
       }
 
       // Define callback functions separately

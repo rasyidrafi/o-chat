@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [confirmDialogProps, setConfirmDialogProps] = useState(defaultConfirmDialogProps);
   const [settingsUnsubscribe, setSettingsUnsubscribe] = useState<(() => void) | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const loadGuestSettings = (): AppSettings => ({
     theme: (localStorage.getItem('theme') as Theme) || 'system',
@@ -52,9 +53,13 @@ const App: React.FC = () => {
     disableLinkWarning: localStorage.getItem('disableLinkWarning') === 'true',
   });
 
-  const [settings, setSettings] = useState<AppSettings>(loadGuestSettings);
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const initialSettings = loadGuestSettings();
+    console.log('Initial settings loaded:', initialSettings);
+    return initialSettings;
+  });
 
-  const chat = useChat(settings);
+  const chat = useChat(settingsLoaded ? settings : undefined);
   
   const clearLocalSettings = () => {
     const guestSettingsKeys: Array<keyof AppSettings> = ['theme', 'mainFont', 'codeFont', 'animationsDisabled', 'customInstruction', 'hidePersonalInfo', 'disableLinkWarning'];
@@ -103,7 +108,9 @@ const App: React.FC = () => {
             const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const firestoreSettings = snapshot.data() as Partial<AppSettings>;
+                    console.log('Firestore settings loaded:', firestoreSettings);
                     setSettings(prev => ({ ...prev, ...firestoreSettings }));
+                    setSettingsLoaded(true);
                 }
             });
             setSettingsUnsubscribe(() => unsubscribe);
@@ -120,7 +127,9 @@ const App: React.FC = () => {
                         title: "Choose Your Settings",
                         description: "You have settings saved on this device and in the cloud. Which version would you like to use?",
                         onConfirm: () => { // Use Cloud
+                            console.log('Using cloud settings:', cloudSettings);
                             setSettings(cloudSettings);
+                            setSettingsLoaded(true);
                             clearLocalSettings();
                             setIsConfirmDialogOpen(false);
                             setupFirestoreListener();
@@ -129,7 +138,9 @@ const App: React.FC = () => {
                         confirmVariant: 'primary',
                         cancelText: 'Use Local',
                         onCancel: async () => { // Use Local
+                            console.log('Using local settings:', localSettings);
                             setSettings(localSettings);
+                            setSettingsLoaded(true);
                             await setDoc(settingsRef, localSettings);
                             clearLocalSettings();
                             setIsConfirmDialogOpen(false);
@@ -137,29 +148,40 @@ const App: React.FC = () => {
                         }
                     });
                 } else {
+                    console.log('Settings match, using local:', localSettings);
                     setSettings(localSettings);
+                    setSettingsLoaded(true);
                     setupFirestoreListener();
                 }
             } else if (docSnap.exists()) {
                 const cloudSettings = { ...loadGuestSettings(), ...docSnap.data() as Partial<AppSettings> };
+                console.log('Using cloud settings only:', cloudSettings);
                 setSettings(cloudSettings);
+                setSettingsLoaded(true);
                 setupFirestoreListener();
             } else if (hasLocalSettings) {
+                console.log('Migrating local settings to cloud:', localSettings);
                 await setDoc(settingsRef, localSettings);
                 setSettings(localSettings);
+                setSettingsLoaded(true);
                 clearLocalSettings();
                 setupFirestoreListener();
             } else {
+                console.log('Using default settings for authenticated user');
                 setSettings(loadGuestSettings());
+                setSettingsLoaded(true);
                 setupFirestoreListener();
             }
         } catch (error) {
             console.error("Error handling user settings sync:", error);
             setSettings(loadGuestSettings());
+            setSettingsLoaded(true);
         }
 
       } else {
+        console.log('Using guest settings');
         setSettings(loadGuestSettings());
+        setSettingsLoaded(true);
       }
     });
 
