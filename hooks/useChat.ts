@@ -7,8 +7,9 @@ import { ChatStorageService } from '../services/chatStorageService';
 import { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
+import { AppSettings } from '../App';
 
-export const useChat = () => {
+export const useChat = (settings?: AppSettings) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
