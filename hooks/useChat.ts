@@ -146,17 +146,11 @@ export const useChat = () => {
     // Create or get current conversation
     let conversation = currentConversation;
     if (!conversation) {
-      // Use the user message content as title (first 50 chars)
-      const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
-      conversation = {
-        id: generateId(),
-        title,
-        messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      // Create new conversation with message content as title
+      conversation = createNewConversation(
+        content.slice(0, 50) + (content.length > 50 ? '...' : ''),
         model
-      };
-      setCurrentConversation(conversation);
+      );
     } else if (conversation.messages.length === 0 && conversation.title === 'New Chat') {
       // Update existing empty conversation title with the message content
       const messageTitle = content.slice(0, 50) + (content.length > 50 ? '...' : '');
