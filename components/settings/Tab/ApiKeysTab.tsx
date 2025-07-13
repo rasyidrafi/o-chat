@@ -7,6 +7,7 @@ import Button from '../../ui/Button';
 interface BuiltInProvider {
     provider: string;
     value: string;
+}
 
 // Define the structure for custom OpenAI compatible providers
 interface CustomProvider {
@@ -136,7 +137,7 @@ const OpenAICompatibleProviderCard: React.FC<{
         <>
             <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 relative">
                 <button
-                    onClick={() => onDelete(provider.provider)}
+                    onClick={() => onDelete(provider.id)}
                     className="absolute top-4 right-4 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
                     aria-label="Delete provider"
                 >
@@ -294,6 +295,7 @@ const ApiKeysTab: React.FC = () => {
                     consoleUrl="https://console.anthropic.com/"
                     placeholder="sk-ant-..."
                     consoleName="Anthropic's Console"
+                    providerKey="anthropic"
                     value={anthropicProvider?.value || ''}
                     onChange={(value) => updateBuiltInProviderValue('anthropic', value)}
                 />
@@ -302,6 +304,7 @@ const ApiKeysTab: React.FC = () => {
                     consoleUrl="https://platform.openai.com/api-keys"
                     placeholder="sk-..."
                     consoleName="OpenAI's Console"
+                    providerKey="openai"
                     value={openaiProvider?.value || ''}
                     onChange={(value) => updateBuiltInProviderValue('openai', value)}
                 />
