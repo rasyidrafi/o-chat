@@ -1,23 +1,38 @@
+// Clean Message component focused purely on rendering
 import React from 'react';
 import { ChatMessage } from '../types/chat';
 import { User, Sparkles, X } from './Icons';
 import { motion } from 'framer-motion';
 import TypingIndicator from './TypingIndicator';
-import LoadingIndicator from './ui/LoadingIndicator';
 
 interface MessageProps {
   message: ChatMessage;
-  animationsDisabled: boolean;
-  onStop?: () => void;
   isStreaming?: boolean;
+  onStopStreaming?: () => void;
+  animationsDisabled: boolean;
 }
 
-const Message: React.FC<MessageProps> = ({ message, animationsDisabled, onStop, isStreaming }) => {
+const Message: React.FC<MessageProps> = ({ 
+  message, 
+  isStreaming = false, 
+  onStopStreaming, 
+  animationsDisabled 
+}) => {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getMessageStyles = () => {
+    if (isUser) {
+      return 'bg-gradient-to-r from-pink-600 to-purple-600 text-white';
+    }
+    if (message.isError) {
+      return 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200';
+    }
+    return 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100';
   };
 
   return (
@@ -36,15 +51,7 @@ const Message: React.FC<MessageProps> = ({ message, animationsDisabled, onStop, 
       )}
       
       <div className={`flex flex-col max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
-        <div
-          className={`rounded-2xl px-4 py-3 ${
-            isUser
-              ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
-              : message.isError
-              ? 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
-              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100'
-          }`}
-        >
+        <div className={`rounded-2xl px-4 py-3 ${getMessageStyles()}`}>
           <div className="text-sm leading-relaxed whitespace-pre-wrap">
             {message.content}
             {isStreaming && !isUser && (
@@ -52,13 +59,12 @@ const Message: React.FC<MessageProps> = ({ message, animationsDisabled, onStop, 
             )}
           </div>
           
-          {/* Enhanced streaming controls */}
           {isStreaming && !isUser && (
             <div className="mt-3 flex items-center justify-between">
               <TypingIndicator />
-              {onStop && (
+              {onStopStreaming && (
                 <button
-                  onClick={onStop}
+                  onClick={onStopStreaming}
                   className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors"
                   aria-label="Stop generation"
                 >

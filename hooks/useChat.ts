@@ -15,11 +15,9 @@ export const useChat = (user?: User | null) => {
 
   const streamingMessageRef = useRef<string>('');
 
-  const generateId = () => {
-    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-  };
+  const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
-  const createNewConversation = useCallback((title: string = 'New Chat', model: string = 'gemini-1.5-flash') => {
+  const createNewConversation = useCallback((title: string = 'New Chat', model: string = 'gemini-1.5-flash'): ChatConversation => {
     const newConversation: ChatConversation = {
       id: generateId(),
       title,
@@ -28,46 +26,18 @@ export const useChat = (user?: User | null) => {
       updatedAt: new Date(),
       model
     };
-    
+
     setConversations(prev => [newConversation, ...prev]);
     setCurrentConversation(newConversation);
     return newConversation;
   }, []);
 
-  const addMessage = useCallback((conversationId: string, message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-    const newMessage: ChatMessage = {
-      ...message,
-      id: generateId(),
-      timestamp: new Date()
-    };
-
-    setConversations(prev => prev.map(conv => 
-      conv.id === conversationId 
-        ? { 
-            ...conv, 
-            messages: [...conv.messages, newMessage],
-            updatedAt: new Date()
-          }
-        : conv
-    ));
-
-    if (currentConversation?.id === conversationId) {
-      setCurrentConversation(prev => prev ? {
-        ...prev,
-        messages: [...prev.messages, newMessage],
-        updatedAt: new Date()
-      } : null);
-    }
-
-    return newMessage;
-  }, [currentConversation]);
-
   const updateMessage = useCallback((conversationId: string, messageId: string, content: string) => {
-    setConversations(prev => prev.map(conv => 
-      conv.id === conversationId 
+    setConversations(prev => prev.map(conv =>
+      conv.id === conversationId
         ? {
             ...conv,
-            messages: conv.messages.map(msg => 
+            messages: conv.messages.map(msg =>
               msg.id === messageId ? { ...msg, content } : msg
             ),
             updatedAt: new Date()
@@ -75,22 +45,20 @@ export const useChat = (user?: User | null) => {
         : conv
     ));
 
-    if (currentConversation?.id === conversationId) {
-      setCurrentConversation(prev => prev ? {
-        ...prev,
-        messages: prev.messages.map(msg => 
-          msg.id === messageId ? { ...msg, content } : msg
-        ),
-        updatedAt: new Date()
-      } : null);
-    }
-  }, [currentConversation]);
+    setCurrentConversation(prev => 
+      prev && prev.id === conversationId 
+        ? {
+            ...prev,
+            messages: prev.messages.map(msg =>
+              msg.id === messageId ? { ...msg, content } : msg
+            ),
+            updatedAt: new Date()
+          }
+        : prev
+    );
+  }, []);
 
-  const sendMessage = useCallback(async (
-    content: string, 
-    model: string, 
-    source: string = 'system'
-  ) => {
+  const sendMessage = useCallback(async (content: string, model: string, source: string = 'system') => {
     if (!content.trim()) return;
 
     // Create or get current conversation
@@ -100,114 +68,157 @@ export const useChat = (user?: User | null) => {
       conversation = createNewConversation(title, model);
     }
 
-    // Add user message
-    const userMessage = addMessage(conversation.id, {
+    // Create user message
+    const userMessage: ChatMessage = {
+      id: generateId(),
       role: 'user',
-      content: content.trim()
+      content: content.trim(),
+      timestamp: new Date()
+    };
+
+    // Create AI message
+    const aiMessage: ChatMessage = {
+      id: generateId(),
+      role: 'assistant',
+      content: '',
+      model,
+      isStreaming: true,
+      timestamp: new Date()
+    };
+
+    // Update conversation with both messages
+    const updatedConversation = {
+      ...conversation,
+      messages: [...conversation.messages, userMessage, aiMessage],
+      updatedAt: new Date()
+    };
+
+    // Update both states at once
+    setConversations(prev => prev.map(conv =>
+      conv.id === conversation!.id ? updatedConversation : conv
+    ));
+    setCurrentConversation(updatedConversation);
+
+    if (source !== 'system') return;
+
+    // Start streaming
+    const controller = new AbortController();
+    setStreamingState({
+      isStreaming: true,
+      currentMessageId: aiMessage.id,
+      controller
     });
 
-    // For system models, make API call
-    if (source === 'system') {
-      // Create AI response message
-      const aiMessage = addMessage(conversation.id, {
-        role: 'assistant',
-        content: '',
+    streamingMessageRef.current = '';
+
+    try {
+      // Build conversation history
+      const historyMessages: ServiceChatMessage[] = [...conversation.messages, userMessage].map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      }));
+
+      await ChatService.sendMessage(
         model,
-        isStreaming: true
-      });
+        historyMessages,
+        (chunk: string) => {
+          streamingMessageRef.current += chunk;
+          updateMessage(updatedConversation.id, aiMessage.id, streamingMessageRef.current);
+        },
+        () => {
+          // Mark message as complete
+          setConversations(prev => prev.map(conv =>
+            conv.id === updatedConversation.id
+              ? {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
+                  )
+                }
+              : conv
+          ));
 
-      // Set up streaming
-      const controller = new AbortController();
-      setStreamingState({
-        isStreaming: true,
-        currentMessageId: aiMessage.id,
+          setCurrentConversation(prev => 
+            prev && prev.id === updatedConversation.id
+              ? {
+                  ...prev,
+                  messages: prev.messages.map(msg =>
+                    msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
+                  )
+                }
+              : prev
+          );
+
+          setStreamingState({
+            isStreaming: false,
+            currentMessageId: null,
+            controller: null
+          });
+          streamingMessageRef.current = '';
+        },
+        (error: Error) => {
+          // Handle error
+          const errorMessage = `Error: ${error.message}`;
+          updateMessage(updatedConversation.id, aiMessage.id, errorMessage);
+
+          setConversations(prev => prev.map(conv =>
+            conv.id === updatedConversation.id
+              ? {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+                  )
+                }
+              : conv
+          ));
+
+          setCurrentConversation(prev => 
+            prev && prev.id === updatedConversation.id
+              ? {
+                  ...prev,
+                  messages: prev.messages.map(msg =>
+                    msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+                  )
+                }
+              : prev
+          );
+
+          setStreamingState({
+            isStreaming: false,
+            currentMessageId: null,
+            controller: null
+          });
+          streamingMessageRef.current = '';
+        },
+        user,
         controller
-      });
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      updateMessage(updatedConversation.id, aiMessage.id, `Error: ${errorMessage}`);
 
-      streamingMessageRef.current = '';
+      setConversations(prev => prev.map(conv =>
+        conv.id === updatedConversation.id
+          ? {
+              ...conv,
+              messages: conv.messages.map(msg =>
+                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+              )
+            }
+          : conv
+      ));
 
-      try {
-        // Prepare messages for API
-        const apiMessages: ServiceChatMessage[] = conversation.messages
-          .concat([userMessage])
-          .filter(msg => msg.role !== 'system') // Filter out system messages if any
-          .map(msg => ({
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content
-          }));
+      setCurrentConversation(prev => 
+        prev && prev.id === updatedConversation.id
+          ? {
+              ...prev,
+              messages: prev.messages.map(msg =>
+                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+              )
+            }
+          : prev
+      );
 
-        // Log the exact parameters being passed
-        console.log('ChatService.sendMessage parameters:', {
-          model,
-          apiMessagesLength: apiMessages.length,
-          userUid: user?.uid,
-          controllerExists: !!controller
-        });
-
-        await ChatService.sendMessage(
-          model,
-          apiMessages,
-          (chunk: string) => {
-            // Handle streaming chunk
-            streamingMessageRef.current += chunk;
-            updateMessage(conversation!.id, aiMessage.id, streamingMessageRef.current);
-          },
-          () => {
-            // Handle completion
-            setStreamingState({
-              isStreaming: false,
-              currentMessageId: null,
-              controller: null
-            });
-            streamingMessageRef.current = '';
-          },
-          (error: Error) => {
-            // Handle error
-            console.error('Chat error:', error);
-            console.log('Error callback, user:', user);
-            updateMessage(conversation!.id, aiMessage.id, `Error: ${error.message}`);
-            
-            // Mark message as error
-            setConversations(prev => prev.map(conv => 
-              conv.id === conversation!.id 
-                ? {
-                    ...conv,
-                    messages: conv.messages.map(msg => 
-                      msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                    ),
-                  }
-                : conv
-            ));
-
-            setStreamingState({
-              isStreaming: false,
-              currentMessageId: null,
-              controller: null
-            });
-            streamingMessageRef.current = '';
-          },
-          user,
-          controller
-        );
-        
-      } catch (error) {
-        console.error('Failed to send message:', error);
-        console.log('Catch block, user:', user);
-        setStreamingState({
-          isStreaming: false,
-          currentMessageId: null,
-          controller: null
-        });
-        streamingMessageRef.current = '';
-      }
-    } else {
-      console.log('Non-system model not implemented yet');
-    }
-  }, [currentConversation, createNewConversation, addMessage, updateMessage, user]);
-
-  const stopStreaming = useCallback(() => {
-    if (streamingState.controller) {
-      streamingState.controller.abort();
       setStreamingState({
         isStreaming: false,
         currentMessageId: null,
@@ -215,6 +226,18 @@ export const useChat = (user?: User | null) => {
       });
       streamingMessageRef.current = '';
     }
+  }, [currentConversation, createNewConversation, updateMessage, user]);
+
+  const stopStreaming = useCallback(() => {
+    if (streamingState.controller) {
+      streamingState.controller.abort();
+    }
+    setStreamingState({
+      isStreaming: false,
+      currentMessageId: null,
+      controller: null
+    });
+    streamingMessageRef.current = '';
   }, [streamingState]);
 
   const selectConversation = useCallback((conversation: ChatConversation) => {
@@ -223,7 +246,6 @@ export const useChat = (user?: User | null) => {
 
   const deleteConversation = useCallback((conversationId: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== conversationId));
-    
     if (currentConversation?.id === conversationId) {
       setCurrentConversation(null);
     }
