@@ -35,6 +35,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
     const [backedByServerCount, setBackedByServerCount] = useState(0);
     const [byokCount, setByokCount] = useState(0);
     const [totalConversations, setTotalConversations] = useState(0);
+    const [isLoadingUsage, setIsLoadingUsage] = useState(true);
 
     const tabs: Tab[] = ['Account', 'Customization', 'History & Sync', 'Models', 'API Keys', 'Attachments', 'Contact Us'];
 
@@ -44,6 +45,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
     }, [user]);
 
     const loadUsageData = async () => {
+        setIsLoadingUsage(true);
         try {
             if (user) {
                 // Get message counts using collection group queries
@@ -77,6 +79,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
             }
         } catch (error) {
             console.error('Error loading usage data:', error);
+        } finally {
+            setIsLoadingUsage(false);
         }
     };
 
@@ -217,47 +221,75 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                            <div className="p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl">
                                <div>
                                    <div className="flex items-center mb-2">
-                                       <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">Usage</h3>
+                                        <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">Usage</h3>
                                    </div>
-                                   <div className="space-y-4">
-                                       <div>
-                                           <div className="flex justify-between text-xs font-medium mb-1">
-                                                <span className="text-zinc-600 dark:text-zinc-300">Conversations</span>
-                                                <span className="text-zinc-500 dark:text-zinc-400">{totalConversations}</span>
-                                           </div>
-                                           <div className="w-full border-t border-zinc-300 dark:border-zinc-600 my-2"></div>
-                                           <p className="text-xs text-zinc-500 dark:text-zinc-400">{totalConversations} total conversations</p>
-                                       </div>
-                                       <div>
-                                           <div className="flex justify-between text-xs font-medium mb-1">
-                                                <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
-                                                <span className="text-zinc-500 dark:text-zinc-400">{backedByServerCount} / unlimited</span>
-                                           </div>
-                                           <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                                                <div className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" style={{width: `${Math.min((backedByServerCount/1000)*100, 100)}%`}}></div>
-                                           </div>
-                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{backedByServerCount} messages usage</p>
-                                       </div>
-                                        <div>
-                                           <div className="flex justify-between text-xs font-medium mb-1">
-                                                <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-                                                    Your Own Api
-                                                    <Info className="w-3.5 h-3.5 text-pink-500" />
-                                                </span>
-                                                <span className="text-zinc-500 dark:text-zinc-400">{byokCount}</span>
-                                           </div>
-                                           <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                                                <div className="bg-pink-500 h-1.5 rounded-full" style={{width: `${Math.min((byokCount/1000)*100, 100)}%`}}></div>
-                                           </div>
-                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{byokCount} messages</p>
-                                       </div>
-                                       <div className="bg-zinc-200/50 dark:bg-zinc-900/50 rounded-lg p-3 flex items-start gap-2.5">
-                                            <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400 mt-0.5 flex-shrink-0" />
-                                            <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                                                Messages sent using your own API key are managed by you. Please be mindful of your billing as we are not responsible for any charges incurred.
-                                            </p>
+                                    {isLoadingUsage ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
                                         </div>
-                                   </div>
+                                    ) : (
+                                        <motion.div 
+                                            className="space-y-4"
+                                            initial={settings.animationsDisabled ? {} : { opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: settings.animationsDisabled ? 0 : 0.3 }}
+                                        >
+                                            <div>
+                                                <div className="flex justify-between text-xs font-medium mb-1">
+                                                     <span className="text-zinc-600 dark:text-zinc-300">Conversations</span>
+                                                     <span className="text-zinc-500 dark:text-zinc-400">{totalConversations}</span>
+                                                </div>
+                                                <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                                                     <motion.div 
+                                                         className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" 
+                                                         initial={settings.animationsDisabled ? {} : { width: 0 }}
+                                                         animate={{ width: `${Math.min((totalConversations/100)*100, 100)}%` }}
+                                                         transition={{ duration: settings.animationsDisabled ? 0 : 0.8, ease: "easeOut" }}
+                                                     />
+                                                </div>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{totalConversations} total conversations</p>
+                                            </div>
+                                            <div>
+                                                <div className="flex justify-between text-xs font-medium mb-1">
+                                                     <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
+                                                     <span className="text-zinc-500 dark:text-zinc-400">{backedByServerCount} / unlimited</span>
+                                                </div>
+                                                <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                                                     <motion.div 
+                                                         className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" 
+                                                         initial={settings.animationsDisabled ? {} : { width: 0 }}
+                                                         animate={{ width: `${Math.min((backedByServerCount/1000)*100, 100)}%` }}
+                                                         transition={{ duration: settings.animationsDisabled ? 0 : 0.8, ease: "easeOut", delay: settings.animationsDisabled ? 0 : 0.1 }}
+                                                     />
+                                                </div>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{backedByServerCount} messages usage</p>
+                                            </div>
+                                             <div>
+                                                <div className="flex justify-between text-xs font-medium mb-1">
+                                                     <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+                                                         Your Own Api
+                                                         <Info className="w-3.5 h-3.5 text-pink-500" />
+                                                     </span>
+                                                     <span className="text-zinc-500 dark:text-zinc-400">{byokCount}</span>
+                                                </div>
+                                                <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                                                     <motion.div 
+                                                         className="bg-pink-500 h-1.5 rounded-full" 
+                                                         initial={settings.animationsDisabled ? {} : { width: 0 }}
+                                                         animate={{ width: `${Math.min((byokCount/1000)*100, 100)}%` }}
+                                                         transition={{ duration: settings.animationsDisabled ? 0 : 0.8, ease: "easeOut", delay: settings.animationsDisabled ? 0 : 0.2 }}
+                                                     />
+                                                </div>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{byokCount} messages</p>
+                                            </div>
+                                            <div className="bg-zinc-200/50 dark:bg-zinc-900/50 rounded-lg p-3 flex items-start gap-2.5">
+                                                 <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400 mt-0.5 flex-shrink-0" />
+                                                 <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                                                     Messages sent using your own API key are managed by you. Please be mindful of your billing as we are not responsible for any charges incurred.
+                                                 </p>
+                                             </div>
+                                        </motion.div>
+                                    )}
                                </div>
                            </div>
                         </div>
