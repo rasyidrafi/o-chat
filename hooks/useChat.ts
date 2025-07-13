@@ -60,7 +60,20 @@ export const useChat = () => {
   const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
   const createNewConversation = useCallback((title: string = 'New Chat', model: string = 'gemini-1.5-flash'): ChatConversation => {
+    // Prevent creating new conversation if already creating one
     if (isCreatingNewChat) return currentConversation!;
+    
+    // Check if we're already on the welcome page (no current conversation or empty conversation)
+    if (!currentConversation || currentConversation.messages.length === 0) {
+      return currentConversation || {
+        id: generateId(),
+        title: 'New Chat',
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        model: 'gemini-1.5-flash'
+      };
+    }
     
     setIsCreatingNewChat(true);
     
