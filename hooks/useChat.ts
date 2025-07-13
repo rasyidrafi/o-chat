@@ -428,4 +428,4 @@ export const useChat = () => {
     deleteConversation,
     loadConversations
   };
-};
+}
