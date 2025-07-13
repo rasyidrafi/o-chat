@@ -45,10 +45,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
     const loadUsageData = async () => {
         try {
             if (user) {
-                // Get conversation counts efficiently
-                const chatStats = await ChatStorageService.getMessageCounts(user.uid);
-                setBackedByServerCount(chatStats.server);
-                setByokCount(chatStats.byok);
+                // Get message counts using collection group queries
+                const chatStats = await ChatStorageService.getUserChatStats(user.uid);
+                setBackedByServerCount(chatStats.serverMessages);
+                setByokCount(chatStats.byokMessages);
                 
             } else {
                 // Get message count from localStorage

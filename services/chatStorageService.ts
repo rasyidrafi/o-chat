@@ -9,6 +9,7 @@ import {
   onSnapshot, 
   deleteDoc,
   getCountFromServer,
+  collectionGroup,
   where,
   Timestamp,
   writeBatch
@@ -432,6 +433,54 @@ export class ChatStorageService {
     } catch (error) {
       console.error('Error getting message counts:', error);
       return { server: 0, byok: 0 };
+    }
+  }
+
+  // Get user chat statistics using collection group queries
+  static async getUserChatStats(userId: string): Promise<{ totalConversations: number; totalMessages: number; serverMessages: number; byokMessages: number }> {
+    try {
+      // 1. Get total conversations count
+      const conversationsRef = collection(db, `chats/${userId}/conversations`);
+      const conversationsCount = await getCountFromServer(conversationsRef);
+      
+      // 2. Get all messages count using collection group
+      const allMessagesQuery = collectionGroup(db, 'messages');
+      // Filter to only this user's messages by document path
+      const userMessagesQuery = where('__name__', '>=', `chats/${userId}/conversations/`);
+      const userMessagesEndQuery = where('__name__', '<', `chats/${userId}/conversations/\uf8ff`);
+      
+      const allMessagesCount = await getCountFromServer(
+        query(allMessagesQuery, userMessagesQuery, userMessagesEndQuery)
+      );
+      
+      // 3. Get server messages count
+      const serverMessagesQuery = query(
+        allMessagesQuery,
+        userMessagesQuery,
+        userMessagesEndQuery,
+        where('source', '==', 'server')
+      );
+      const serverMessagesCount = await getCountFromServer(serverMessagesQuery);
+      
+      // 4. Get byok messages count
+      const byokMessagesQuery = query(
+        allMessagesQuery,
+        userMessagesQuery,
+        userMessagesEndQuery,
+        where('source', '==', 'byok')
+      );
+      const byokMessagesCount = await getCountFromServer(byokMessagesQuery);
+      
+      return {
+        totalConversations: conversationsCount.data().count,
+        totalMessages: allMessagesCount.data().count,
+        serverMessages: serverMessagesCount.data().count,
+        byokMessages: byokMessagesCount.data().count
+      };
+      
+    } catch (error) {
+      console.error('Error getting user chat stats:', error);
+      throw error;
     }
   }
 }
