@@ -71,7 +71,7 @@ const saveProvidersToStorage = (providers: ApiProvider[]) => {
     } catch (error) {
         console.error('Error saving providers to localStorage:', error);
     }
-};</parameter>
+};
 
 const ApiProviderCard: React.FC<{
     title: string;
