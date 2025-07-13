@@ -178,7 +178,6 @@ export const useChat = () => {
       conversation = {
         ...conversation,
         title: messageTitle,
-        source: getModelSource(model),
         updatedAt: new Date()
       };
       
