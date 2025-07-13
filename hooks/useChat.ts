@@ -188,7 +188,7 @@ export const useChat = () => {
       content: '',
       model,
       isStreaming: true,
-      timestamp: new Date()
+      timestamp: new Date(Date.now() + 1) // Ensure AI message has slightly later timestamp
     };
 
     // Update conversation with both messages

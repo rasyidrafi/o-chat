@@ -171,7 +171,7 @@ export class ChatStorageService {
       const q = query(messagesRef, orderBy('timestamp', 'asc'));
       
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
+      const messages = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: data.id,
@@ -181,6 +181,18 @@ export class ChatStorageService {
           model: data.model,
           isError: data.isError || false
         };
+      });
+      
+      // Additional sort to ensure proper ordering, especially for messages with similar timestamps
+      return messages.sort((a, b) => {
+        const timeDiff = a.timestamp.getTime() - b.timestamp.getTime();
+        if (timeDiff !== 0) return timeDiff;
+        
+        // If timestamps are identical, ensure user messages come before assistant messages
+        if (a.role === 'user' && b.role === 'assistant') return -1;
+        if (a.role === 'assistant' && b.role === 'user') return 1;
+        
+        return 0;
       });
     } catch (error) {
       console.error('Error loading messages from Firestore:', error);
