@@ -44,26 +44,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
     const loadUsageData = async () => {
         try {
             if (user) {
-                // Get conversation count from Firestore
-                const chatRef = doc(db, 'chats', user.uid);
-                const conversationsRef = collection(chatRef, 'conversations');
-                const snapshot = await getDocs(conversationsRef);
-                setTotalConversations(snapshot.size);
-
-                // Count system messages from all conversations
-                let systemCount = 0;
-                for (const conversationDoc of snapshot.docs) {
-                    const messagesRef = collection(conversationDoc.ref, 'messages');
-                    const messagesSnapshot = await getDocs(messagesRef);
-                    messagesSnapshot.docs.forEach(messageDoc => {
-                        const messageData = messageDoc.data();
-                        // Count user messages that were sent to system models
-                        if (messageData.role === 'user') {
-                            systemCount++;
-                        }
-                    });
-                }
-                setSystemMessageCount(systemCount);
+                // Get conversation counts efficiently
+                const conversationCounts = await ChatStorageService.getConversationCounts(user.uid);
+                setTotalConversations(conversationCounts.byok);
+                
+                // Get message counts efficiently
+                const messageCounts = await ChatStorageService.getMessageCounts(user.uid);
+                setSystemMessageCount(messageCounts.server);
             } else {
                 // Get conversation count from localStorage
                 const conversations = getConversationsFromLocal();

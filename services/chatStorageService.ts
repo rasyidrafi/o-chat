@@ -8,6 +8,8 @@ import {
   orderBy, 
   onSnapshot, 
   deleteDoc,
+  getCountFromServer,
+  where,
   Timestamp,
   writeBatch
 } from 'firebase/firestore';
@@ -365,5 +367,72 @@ export class ChatStorageService {
       
       callback(conversations);
     });
+  }
+
+  // Get conversation counts by source
+  static async getConversationCounts(userId: string): Promise<{ server: number; byok: number; total: number }> {
+    try {
+      const chatRef = doc(db, 'chats', userId);
+      const conversationsRef = collection(chatRef, 'conversations');
+      
+      // Get total count
+      const totalSnapshot = await getCountFromServer(conversationsRef);
+      const total = totalSnapshot.data().count;
+      
+      // Get server conversations count
+      const serverQuery = query(conversationsRef, where('source', '==', 'server'));
+      const serverSnapshot = await getCountFromServer(serverQuery);
+      const server = serverSnapshot.data().count;
+      
+      // Get byok conversations count
+      const byokQuery = query(conversationsRef, where('source', '==', 'byok'));
+      const byokSnapshot = await getCountFromServer(byokQuery);
+      const byok = byokSnapshot.data().count;
+      
+      return { server, byok, total };
+    } catch (error) {
+      console.error('Error getting conversation counts:', error);
+      return { server: 0, byok: 0, total: 0 };
+    }
+  }
+
+  // Get message counts by conversation source
+  static async getMessageCounts(userId: string): Promise<{ server: number; byok: number }> {
+    try {
+      const chatRef = doc(db, 'chats', userId);
+      const conversationsRef = collection(chatRef, 'conversations');
+      
+      // Get server conversations
+      const serverQuery = query(conversationsRef, where('source', '==', 'server'));
+      const serverConversations = await getDocs(serverQuery);
+      
+      // Get byok conversations  
+      const byokQuery = query(conversationsRef, where('source', '==', 'byok'));
+      const byokConversations = await getDocs(byokQuery);
+      
+      let serverMessageCount = 0;
+      let byokMessageCount = 0;
+      
+      // Count messages in server conversations
+      for (const conversationDoc of serverConversations.docs) {
+        const messagesRef = collection(conversationDoc.ref, 'messages');
+        const userMessagesQuery = query(messagesRef, where('role', '==', 'user'));
+        const userMessagesSnapshot = await getCountFromServer(userMessagesQuery);
+        serverMessageCount += userMessagesSnapshot.data().count;
+      }
+      
+      // Count messages in byok conversations
+      for (const conversationDoc of byokConversations.docs) {
+        const messagesRef = collection(conversationDoc.ref, 'messages');
+        const userMessagesQuery = query(messagesRef, where('role', '==', 'user'));
+        const userMessagesSnapshot = await getCountFromServer(userMessagesQuery);
+        byokMessageCount += userMessagesSnapshot.data().count;
+      }
+      
+      return { server: serverMessageCount, byok: byokMessageCount };
+    } catch (error) {
+      console.error('Error getting message counts:', error);
+      return { server: 0, byok: 0 };
+    }
   }
 }
