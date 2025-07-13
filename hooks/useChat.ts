@@ -292,53 +292,6 @@ export const useChat = () => {
             }
             return current;
           });
-              console.error('Error saving final conversation:', error);
-            });
-
-          setStreamingState({
-            isStreaming: false,
-            currentMessageId: null,
-            controller: null
-          });
-          streamingMessageRef.current = '';
-        },
-        (error: Error) => {
-          // Handle error
-          const errorMessage = `Error: ${error.message}`;
-          updateMessage(updatedConversation.id, aiMessage.id, errorMessage);
-
-          setConversations(prev => prev.map(conv =>
-            conv.id === updatedConversation.id
-              ? {
-                  ...conv,
-                  messages: conv.messages.map(msg =>
-                    msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                  )
-                }
-              : conv
-          ));
-
-          setCurrentConversation(prev => 
-            prev && prev.id === updatedConversation.id
-              ? {
-                  ...prev,
-                  messages: prev.messages.map(msg =>
-                    msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                  )
-                }
-              : prev
-          );
-
-          // Save error conversation
-          setConversations(current => {
-            const errorConv = current.find(conv => conv.id === updatedConversation.id);
-            if (errorConv) {
-              ChatStorageService.saveConversation(errorConv, user).catch(error => {
-                console.error('Error saving error conversation:', error);
-              });
-            }
-            return current;
-          });
 
           setStreamingState({
             isStreaming: false,
