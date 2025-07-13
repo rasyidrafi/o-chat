@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, LogOut, Info } from './Icons';
 import TabButton from './settings/TabButton';
 import ApiKeysTab from './settings/Tab/ApiKeysTab';
@@ -12,6 +13,8 @@ import { User } from 'firebase/auth';
 import Button from './ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppSettings } from '../App';
+import { collection, doc, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 
 
 export type Tab = 'Account' | 'Customization' | 'History & Sync' | 'Models' | 'API Keys' | 'Attachments' | 'Contact Us';
@@ -28,8 +31,94 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, onOpenAuthModal, onSignOutClick, settings, updateSettings }) => {
     const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'Customization');
+    const [systemMessageCount, setSystemMessageCount] = useState(0);
+    const [totalConversations, setTotalConversations] = useState(0);
 
     const tabs: Tab[] = ['Account', 'Customization', 'History & Sync', 'Models', 'API Keys', 'Attachments', 'Contact Us'];
+
+    // Load message usage data when component mounts
+    useEffect(() => {
+        loadUsageData();
+    }, [user]);
+
+    const loadUsageData = async () => {
+        try {
+            if (user) {
+                // Get conversation count from Firestore
+                const chatRef = doc(db, 'chats', user.uid);
+                const conversationsRef = collection(chatRef, 'conversations');
+                const snapshot = await getDocs(conversationsRef);
+                setTotalConversations(snapshot.size);
+
+                // Count system messages from all conversations
+                let systemCount = 0;
+                for (const conversationDoc of snapshot.docs) {
+                    const messagesRef = collection(conversationDoc.ref, 'messages');
+                    const messagesSnapshot = await getDocs(messagesRef);
+                    messagesSnapshot.docs.forEach(messageDoc => {
+                        const messageData = messageDoc.data();
+                        // Count user messages that were sent to system models
+                        if (messageData.role === 'user') {
+                            systemCount++;
+                        }
+                    });
+                }
+                setSystemMessageCount(systemCount);
+            } else {
+                // Get conversation count from localStorage
+                const conversations = getConversationsFromLocal();
+                setTotalConversations(conversations.length);
+
+                // Count system messages from localStorage
+                let systemCount = 0;
+                conversations.forEach(conv => {
+                    const messages = getMessagesFromLocal(conv.id);
+                    messages.forEach(msg => {
+                        if (msg.role === 'user') {
+                            systemCount++;
+                        }
+                    });
+                });
+                setSystemMessageCount(systemCount);
+            }
+        } catch (error) {
+            console.error('Error loading usage data:', error);
+        }
+    };
+
+    // Helper functions for localStorage (same as in ChatStorageService)
+    const getConversationsFromLocal = () => {
+        try {
+            const stored = localStorage.getItem('chat_conversations');
+            if (!stored) return [];
+            
+            const conversations = JSON.parse(stored);
+            return conversations.map((conv: any) => ({
+                ...conv,
+                createdAt: new Date(conv.createdAt),
+                updatedAt: new Date(conv.updatedAt),
+            }));
+        } catch (error) {
+            console.error('Error loading conversations from localStorage:', error);
+            return [];
+        }
+    };
+
+    const getMessagesFromLocal = (conversationId: string) => {
+        try {
+            const stored = localStorage.getItem(`chat_messages_${conversationId}`);
+            if (!stored) return [];
+            
+            const messages = JSON.parse(stored);
+            return messages.map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp)
+            }));
+        } catch (error) {
+            console.error('Error loading messages from localStorage:', error);
+            return [];
+        }
+    };
 
     const renderContent = () => {
         let content;
@@ -136,28 +225,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                                        <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">Message Usage</h3>
                                    </div>
                                    <div className="space-y-4">
-                                       <div>
-                                           <div className="flex justify-between text-xs font-medium mb-1">
-                                                <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
-                                                <span className="text-zinc-500 dark:text-zinc-400">20 / unlimited</span>
+                                       {systemMessageCount > 0 && (
+                                           <div>
+                                               <div className="flex justify-between text-xs font-medium mb-1">
+                                                    <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
+                                                    <span className="text-zinc-500 dark:text-zinc-400">{systemMessageCount} / unlimited</span>
+                                               </div>
+                                               <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                                                    <div className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" style={{width: `${Math.min((systemMessageCount/1000)*100, 100)}%`}}></div>
+                                               </div>
+                                               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{systemMessageCount} messages usage</p>
                                            </div>
-                                           <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                                                <div className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" style={{width: `${(20/1000)*100}%`}}></div>
-                                           </div>
-                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">20 messages usage</p>
-                                       </div>
+                                       )}
                                         <div>
                                            <div className="flex justify-between text-xs font-medium mb-1">
                                                 <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
                                                     Your Own Api
                                                     <Info className="w-3.5 h-3.5 text-pink-500" />
                                                 </span>
-                                                <span className="text-zinc-500 dark:text-zinc-400">23</span>
+                                                <span className="text-zinc-500 dark:text-zinc-400">{totalConversations}</span>
                                            </div>
                                            <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                                                <div className="bg-pink-500 h-1.5 rounded-full" style={{width: `${(23/1000)*100}%`}}></div>
+                                                <div className="bg-pink-500 h-1.5 rounded-full" style={{width: `${Math.min((totalConversations/1000)*100, 100)}%`}}></div>
                                            </div>
-                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">23 messages usage</p>
+                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{totalConversations} conversations</p>
                                        </div>
                                        <div className="bg-zinc-200/50 dark:bg-zinc-900/50 rounded-lg p-3 flex items-start gap-2.5">
                                             <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400 mt-0.5 flex-shrink-0" />
