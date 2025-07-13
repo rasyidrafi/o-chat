@@ -10,12 +10,11 @@ const OPENAI_COMPATIBLE_PROVIDERS = 'openai_compatible_providers';
 
 const ApiProviderCard: React.FC<{
     title: string;
-    models: string[];
     consoleUrl: string;
     placeholder: string;
     consoleName: string;
     storageKey: string;
-}> = ({ title, models, consoleUrl, placeholder, consoleName, storageKey }) => {
+}> = ({ title, consoleUrl, placeholder, consoleName, storageKey }) => {
     const [apiKey, setApiKey] = useState('');
 
     // Load API key from localStorage on mount
@@ -37,32 +36,100 @@ const ApiProviderCard: React.FC<{
 
     return (
         <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6">
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h3>
+                </div>
+                
+                <div className="flex items-center gap-4 flex-1 max-w-2xl">
+                    <input
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder={placeholder}
+                        className="flex-1 bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    />
+                    
+                    <a href={consoleUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-pink-500 hover:underline whitespace-nowrap">
+                        Get your API key from {consoleName}
+                    </a>
+                    
+                    <Button size="sm" onClick={handleSave}>Save</Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const OpenAICompatibleProviderCard: React.FC<{
+    provider: OpenAICompatibleProvider;
+    onUpdate: (provider: OpenAICompatibleProvider) => void;
+    onDelete: (id: string) => void;
+}> = ({ provider, onUpdate, onDelete }) => {
+    const handleChange = (field: keyof OpenAICompatibleProvider, value: string) => {
+        onUpdate({ ...provider, [field]: value });
+    };
+
+    return (
+        <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 relative">
+            <button
+                onClick={() => onDelete(provider.id)}
+                className="absolute top-4 right-4 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
+                aria-label="Delete provider"
+            >
+                <X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+            </button>
+
             <div className="flex items-center gap-3 mb-4">
                 <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h3>
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">OpenAI Compatible Provider</h3>
             </div>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">Used for the following models:</p>
-            <div className="flex flex-wrap gap-2 mb-4">
-                {models.map(model => (
-                    <span key={model} className="text-xs font-medium bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-400 py-1 px-3 rounded-full">
-                        {model}
-                    </span>
-                ))}
-            </div>
-            
-            <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={placeholder}
-                className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-            />
 
-            <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
-                <a href={consoleUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-pink-500 hover:underline">
-                    Get your API key from {consoleName}
-                </a>
-                <Button size="sm" onClick={handleSave}>Save</Button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                        Provider Name
+                    </label>
+                    <input
+                        type="text"
+                        value={provider.name}
+                        onChange={(e) => handleChange('name', e.target.value)}
+                        placeholder="e.g., Local LLM, Custom API"
+                        className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                        Base URL
+                    </label>
+                    <input
+                        type="url"
+                        value={provider.baseUrl}
+                        onChange={(e) => handleChange('baseUrl', e.target.value)}
+                        placeholder="https://api.example.com/v1"
+                        className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                        API Key
+                    </label>
+                    <input
+                        type="password"
+                        value={provider.apiKey}
+                        onChange={(e) => handleChange('apiKey', e.target.value)}
+                        placeholder="sk-..."
+                        className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    />
+                </div>
+
+            </div>
+
+            <div className="flex justify-end mt-4">
+                <Button size="sm">Save Provider</Button>
             </div>
         </div>
     );
@@ -221,7 +288,6 @@ const ApiKeysTab: React.FC = () => {
             <div className="space-y-6">
                 <ApiProviderCard 
                     title="Anthropic API Key"
-                    models={['Claude 3.5 Sonnet', 'Claude 3.7 Sonnet', 'Claude 3.7 Sonnet (Reasoning)', 'Claude 4 Opus', 'Claude 4 Sonnet', 'Claude 4 Sonnet (Reasoning)']}
                     consoleUrl="https://console.anthropic.com/"
                     placeholder="sk-ant-..."
                     consoleName="Anthropic's Console"
@@ -229,7 +295,6 @@ const ApiKeysTab: React.FC = () => {
                 />
                 <ApiProviderCard 
                     title="OpenAI API Key"
-                    models={['GPT-4.5', 'o3', 'o3 Pro']}
                     consoleUrl="https://platform.openai.com/api-keys"
                     placeholder="sk-..."
                     consoleName="OpenAI's Console"
