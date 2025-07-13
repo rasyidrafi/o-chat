@@ -3,6 +3,23 @@ import React, { useState, useEffect } from 'react';
 import { Key, Plus, X } from '../../Icons';
 import Button from '../../ui/Button';
 
+// Define the structure for API providers
+interface ApiProvider {
+    provider: string;
+    value: string;
+    custom: boolean;
+    base_url?: string;
+}
+
+// Default providers structure
+const DEFAULT_PROVIDERS: ApiProvider[] = [
+    { provider: "anthropic", value: "", custom: false },
+    { provider: "openai", value: "", custom: false },
+    { provider: "openrouter", value: "", base_url: "", custom: true }
+];
+
+const API_PROVIDERS_KEY = 'api_providers';
+
 // Simple toast notification component
 const Toast: React.FC<{ message: string; isVisible: boolean; onClose: () => void }> = ({ message, isVisible, onClose }) => {
     useEffect(() => {
@@ -23,41 +40,81 @@ const Toast: React.FC<{ message: string; isVisible: boolean; onClose: () => void
     );
 };
 
-// localStorage keys
-const ANTHROPIC_API_KEY = 'anthropic_api_key';
-const OPENAI_API_KEY = 'openai_api_key';
-const OPENAI_COMPATIBLE_PROVIDERS = 'openai_compatible_providers';
+// Helper functions for localStorage management
+const loadProvidersFromStorage = (): ApiProvider[] => {
+    try {
+        const stored = localStorage.getItem(API_PROVIDERS_KEY);
+        if (stored) {
+            const providers = JSON.parse(stored);
+            // Ensure we have all default providers
+            const mergedProviders = [...DEFAULT_PROVIDERS];
+            providers.forEach((storedProvider: ApiProvider) => {
+                const existingIndex = mergedProviders.findIndex(p => p.provider === storedProvider.provider);
+                if (existingIndex >= 0) {
+                    mergedProviders[existingIndex] = storedProvider;
+                } else if (storedProvider.custom) {
+                    mergedProviders.push(storedProvider);
+                }
+            });
+            return mergedProviders;
+        }
+        return DEFAULT_PROVIDERS;
+    } catch (error) {
+        console.error('Error loading providers from localStorage:', error);
+        return DEFAULT_PROVIDERS;
+    }
+};
+
+const saveProvidersToStorage = (providers: ApiProvider[]) => {
+    try {
+        localStorage.setItem(API_PROVIDERS_KEY, JSON.stringify(providers));
+    } catch (error) {
+        console.error('Error saving providers to localStorage:', error);
+    }
+};</parameter>
 
 const ApiProviderCard: React.FC<{
     title: string;
     consoleUrl: string;
     placeholder: string;
     consoleName: string;
-    storageKey: string;
-}> = ({ title, consoleUrl, placeholder, consoleName, storageKey }) => {
+    providerKey: string;
+    providers: ApiProvider[];
+    onUpdateProviders: (providers: ApiProvider[]) => void;
+}> = ({ title, consoleUrl, placeholder, consoleName, providerKey, providers, onUpdateProviders }) => {
     const [apiKey, setApiKey] = useState('');
     const [isSaved, setIsSaved] = useState(false);
     const [showToast, setShowToast] = useState(false);
 
-    // Load API key from localStorage on mount
+    // Load API key from providers array on mount
     useEffect(() => {
-        const savedKey = localStorage.getItem(storageKey);
-        if (savedKey) {
-            setApiKey(savedKey);
+        const provider = providers.find(p => p.provider === providerKey);
+        if (provider && provider.value) {
+            setApiKey(provider.value);
             setIsSaved(true);
         }
-    }, [storageKey]);
+    }, [providers, providerKey]);
 
     // Check if API key is valid (not empty and trimmed)
     const isValid = apiKey.trim().length > 0;
 
     const handleSave = () => {
         if (isValid) {
-            localStorage.setItem(storageKey, apiKey.trim());
+            const updatedProviders = providers.map(p => 
+                p.provider === providerKey 
+                    ? { ...p, value: apiKey.trim() }
+                    : p
+            );
+            onUpdateProviders(updatedProviders);
             setIsSaved(true);
             setShowToast(true);
         } else {
-            localStorage.removeItem(storageKey);
+            const updatedProviders = providers.map(p => 
+                p.provider === providerKey 
+                    ? { ...p, value: "" }
+                    : p
+            );
+            onUpdateProviders(updatedProviders);
             setIsSaved(false);
         }
     };
@@ -114,33 +171,25 @@ const ApiProviderCard: React.FC<{
     );
 };
 
-interface OpenAICompatibleProvider {
-    id: string;
-    name: string;
-    baseUrl: string;
-    apiKey: string;
-}
-
 const OpenAICompatibleProviderCard: React.FC<{
-    provider: OpenAICompatibleProvider;
-    onUpdate: (provider: OpenAICompatibleProvider) => void;
-    onDelete: (id: string) => void;
+    provider: ApiProvider;
+    onUpdate: (provider: ApiProvider) => void;
+    onDelete: (providerKey: string) => void;
 }> = ({ provider, onUpdate, onDelete }) => {
     const [isSaved, setIsSaved] = useState(false);
     const [showToast, setShowToast] = useState(false);
 
-    const handleChange = (field: keyof OpenAICompatibleProvider, value: string) => {
+    const handleChange = (field: keyof ApiProvider, value: string) => {
         onUpdate({ ...provider, [field]: value });
         setIsSaved(false);
     };
 
-    const isValid = provider.name.trim() && provider.baseUrl.trim() && provider.apiKey.trim();
+    const isValid = provider.provider.trim() && provider.base_url?.trim() && provider.value.trim();
 
     const handleSave = () => {
         if (isValid) {
             setIsSaved(true);
             setShowToast(true);
-            // Here you would typically save to localStorage or API
         }
     };
 
@@ -148,7 +197,7 @@ const OpenAICompatibleProviderCard: React.FC<{
         <>
             <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 relative">
                 <button
-                    onClick={() => onDelete(provider.id)}
+                    onClick={() => onDelete(provider.provider)}
                     className="absolute top-4 right-4 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
                     aria-label="Delete provider"
                 >
@@ -167,8 +216,8 @@ const OpenAICompatibleProviderCard: React.FC<{
                         </label>
                         <input
                             type="text"
-                            value={provider.name}
-                            onChange={(e) => handleChange('name', e.target.value)}
+                            value={provider.provider}
+                            onChange={(e) => handleChange('provider', e.target.value)}
                             placeholder="e.g., Local LLM, Custom API"
                             className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
                         />
@@ -180,8 +229,8 @@ const OpenAICompatibleProviderCard: React.FC<{
                         </label>
                         <input
                             type="url"
-                            value={provider.baseUrl}
-                            onChange={(e) => handleChange('baseUrl', e.target.value)}
+                            value={provider.base_url || ''}
+                            onChange={(e) => handleChange('base_url', e.target.value)}
                             placeholder="https://api.example.com/v1"
                             className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
                         />
@@ -193,8 +242,8 @@ const OpenAICompatibleProviderCard: React.FC<{
                         </label>
                         <input
                             type="password"
-                            value={provider.apiKey}
-                            onChange={(e) => handleChange('apiKey', e.target.value)}
+                            value={provider.value}
+                            onChange={(e) => handleChange('value', e.target.value)}
                             placeholder="sk-..."
                             className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
                         />
@@ -222,68 +271,70 @@ const OpenAICompatibleProviderCard: React.FC<{
 };
 
 const ApiKeysTab: React.FC = () => {
-    const [openAIProviders, setOpenAIProviders] = useState<OpenAICompatibleProvider[]>([]);
+    const [providers, setProviders] = useState<ApiProvider[]>([]);
 
-    // Load OpenAI compatible providers from localStorage on mount
+    // Load providers from localStorage on mount
     useEffect(() => {
-        const savedProviders = localStorage.getItem(OPENAI_COMPATIBLE_PROVIDERS);
-        if (savedProviders) {
-            try {
-                const providers = JSON.parse(savedProviders);
-                setOpenAIProviders(providers);
-            } catch (error) {
-                console.error('Error loading OpenAI compatible providers:', error);
-            }
-        }
+        const loadedProviders = loadProvidersFromStorage();
+        setProviders(loadedProviders);
     }, []);
 
-    // Save OpenAI compatible providers to localStorage whenever they change
+    // Save providers to localStorage whenever they change
     useEffect(() => {
-        localStorage.setItem(OPENAI_COMPATIBLE_PROVIDERS, JSON.stringify(openAIProviders));
-    }, [openAIProviders]);
+        if (providers.length > 0) {
+            saveProvidersToStorage(providers);
+        }
+    }, [providers]);
+
+    const updateProviders = (updatedProviders: ApiProvider[]) => {
+        setProviders(updatedProviders);
+    };
+
+    // Get custom providers (where custom: true)
+    const customProviders = providers.filter(p => p.custom);
 
     const addNewProvider = () => {
         // Check if the last provider is complete before adding a new one
-        if (openAIProviders.length > 0) {
-            const lastProvider = openAIProviders[openAIProviders.length - 1];
+        if (customProviders.length > 0) {
+            const lastProvider = customProviders[customProviders.length - 1];
             if (!isProviderValid(lastProvider)) {
                 return; // Don't add new provider if last one is incomplete
             }
         }
 
-        const newProvider: OpenAICompatibleProvider = {
-            id: Date.now().toString(),
-            name: '',
-            baseUrl: '',
-            apiKey: ''
+        const newProvider: ApiProvider = {
+            provider: '',
+            value: '',
+            base_url: '',
+            custom: true
         };
-        setOpenAIProviders(prev => [...prev, newProvider]);
+        setProviders(prev => [...prev, newProvider]);
     };
 
-    const updateProvider = (updatedProvider: OpenAICompatibleProvider) => {
-        setOpenAIProviders(prev => 
+    const updateProvider = (updatedProvider: ApiProvider) => {
+        setProviders(prev => 
             prev.map(provider => 
-                provider.id === updatedProvider.id ? updatedProvider : provider
+                provider.provider === updatedProvider.provider ? updatedProvider : provider
             )
         );
     };
 
-    const deleteProvider = (id: string) => {
-        setOpenAIProviders(prev => prev.filter(provider => provider.id !== id));
+    const deleteProvider = (providerKey: string) => {
+        setProviders(prev => prev.filter(provider => provider.provider !== providerKey));
     };
 
     // Validation function to check if a provider is complete and valid
-    const isProviderValid = (provider: OpenAICompatibleProvider): boolean => {
+    const isProviderValid = (provider: ApiProvider): boolean => {
         return !!(
-            provider.name.trim() &&
-            provider.baseUrl.trim() &&
-            provider.apiKey.trim()
+            provider.provider.trim() &&
+            provider.base_url?.trim() &&
+            provider.value.trim()
         );
     };
 
     // Check if we can add a new provider
-    const canAddNewProvider = openAIProviders.length === 0 || 
-        isProviderValid(openAIProviders[openAIProviders.length - 1]);
+    const canAddNewProvider = customProviders.length === 0 || 
+        isProviderValid(customProviders[customProviders.length - 1]);</parameter>
 
     return (
         <div>
@@ -297,14 +348,18 @@ const ApiKeysTab: React.FC = () => {
                     consoleUrl="https://console.anthropic.com/"
                     placeholder="sk-ant-..."
                     consoleName="Anthropic's Console"
-                    storageKey={ANTHROPIC_API_KEY}
+                    providerKey="anthropic"
+                    providers={providers}
+                    onUpdateProviders={updateProviders}
                 />
                 <ApiProviderCard 
                     title="OpenAI API Key"
                     consoleUrl="https://platform.openai.com/api-keys"
                     placeholder="sk-..."
                     consoleName="OpenAI's Console"
-                    storageKey={OPENAI_API_KEY}
+                    providerKey="openai"
+                    providers={providers}
+                    onUpdateProviders={updateProviders}
                 />
 
                 {/* OpenAI Compatible Providers Section */}
@@ -328,16 +383,16 @@ const ApiKeysTab: React.FC = () => {
                     </div>
 
                     <div className="space-y-4">
-                        {openAIProviders.map(provider => (
+                        {customProviders.map(provider => (
                             <OpenAICompatibleProviderCard
-                                key={provider.id}
+                                key={provider.provider}
                                 provider={provider}
                                 onUpdate={updateProvider}
                                 onDelete={deleteProvider}
                             />
                         ))}
 
-                        {openAIProviders.length === 0 && (
+                        {customProviders.length === 0 && (
                             <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
                                 <p className="text-sm">No custom providers added yet.</p>
                                 <p className="text-xs mt-1">Click "Add Provider" to add your first OpenAI compatible API endpoint.</p>
