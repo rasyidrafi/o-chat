@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import React, { useState, useEffect } from 'react';
 import { Key, Plus, X } from '../../Icons';
 import Button from '../../ui/Button';
-import CustomDropdown from '../../ui/CustomDropdown';
 
 // localStorage keys
 const ANTHROPIC_API_KEY = 'anthropic_api_key';
@@ -74,7 +73,6 @@ interface OpenAICompatibleProvider {
     name: string;
     baseUrl: string;
     apiKey: string;
-    model: string;
 }
 
 const OpenAICompatibleProviderCard: React.FC<{
@@ -82,17 +80,6 @@ const OpenAICompatibleProviderCard: React.FC<{
     onUpdate: (provider: OpenAICompatibleProvider) => void;
     onDelete: (id: string) => void;
 }> = ({ provider, onUpdate, onDelete }) => {
-    const modelOptions = [
-        'gpt-3.5-turbo',
-        'gpt-4',
-        'gpt-4-turbo',
-        'claude-3-sonnet',
-        'claude-3-opus',
-        'llama-2-70b',
-        'mistral-7b',
-        'custom-model'
-    ];
-
     const handleChange = (field: keyof OpenAICompatibleProvider, value: string) => {
         onUpdate({ ...provider, [field]: value });
     };
@@ -112,7 +99,7 @@ const OpenAICompatibleProviderCard: React.FC<{
                 <h3 className="text-xl font-bold text-zinc-900 dark:text-white">OpenAI Compatible Provider</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                         Provider Name
@@ -152,16 +139,6 @@ const OpenAICompatibleProviderCard: React.FC<{
                     />
                 </div>
 
-                <div>
-                    <CustomDropdown
-                        label="Model"
-                        description=""
-                        options={modelOptions}
-                        selected={provider.model}
-                        onSelect={(model) => handleChange('model', model)}
-                        animationsDisabled={false}
-                    />
-                </div>
             </div>
 
             <div className="flex justify-end mt-4">
@@ -205,8 +182,7 @@ const ApiKeysTab: React.FC = () => {
             id: Date.now().toString(),
             name: '',
             baseUrl: '',
-            apiKey: '',
-            model: 'gpt-3.5-turbo'
+            apiKey: ''
         };
         setOpenAIProviders(prev => [...prev, newProvider]);
     };
@@ -228,8 +204,7 @@ const ApiKeysTab: React.FC = () => {
         return !!(
             provider.name.trim() &&
             provider.baseUrl.trim() &&
-            provider.apiKey.trim() &&
-            provider.model.trim()
+            provider.apiKey.trim()
         );
     };
 
