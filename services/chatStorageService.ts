@@ -125,6 +125,8 @@ export class ChatStorageService {
           timestamp: Timestamp.fromDate(message.timestamp),
           model: message.model || null,
           isError: message.isError || false
+          source: message.source || 'server',
+          userId: userId
         });
       });
 
@@ -183,7 +185,8 @@ export class ChatStorageService {
           content: data.content,
           timestamp: data.timestamp.toDate(),
           model: data.model,
-          isError: data.isError || false
+          isError: data.isError || false,
+          source: data.source || 'server'
         };
       });
       
