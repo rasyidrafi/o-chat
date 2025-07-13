@@ -96,13 +96,6 @@ const ChatView: React.FC<ChatViewProps> = ({
           </button>
         </div>
         <div className="flex items-center gap-4">
-          <button className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full">
-            <LinkIcon className="w-5 h-5" />
-          </button>
-          <button className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full">
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
-          <div className="w-px h-6 bg-zinc-300 dark:bg-zinc-700"></div>
           <button 
             onClick={() => onOpenSettings()} 
             className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full" 
