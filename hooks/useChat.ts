@@ -206,100 +206,107 @@ export const useChat = () => {
         content: msg.content
       }));
 
+      // Define callback functions separately
+      const onChunkCallback = (chunk: string) => {
+        streamingMessageRef.current += chunk;
+        updateMessage(updatedConversation.id, aiMessage.id, streamingMessageRef.current);
+      };
+
+      const onCompleteCallback = () => {
+        // Mark message as complete
+        setConversations(prev => prev.map(conv =>
+          conv.id === updatedConversation.id
+            ? {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
+                )
+              }
+            : conv
+        ));
+
+        setCurrentConversation(prev => 
+          prev && prev.id === updatedConversation.id
+            ? {
+                ...prev,
+                messages: prev.messages.map(msg =>
+                  msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
+                )
+              }
+            : prev
+        );
+
+        // Save final conversation with complete AI message
+        setConversations(current => {
+          const finalConv = current.find(conv => conv.id === updatedConversation.id);
+          if (finalConv) {
+            ChatStorageService.saveConversation(finalConv, user).catch(error => {
+              console.error('Error saving final conversation:', error);
+            });
+          }
+          return current;
+        });
+
+        setStreamingState({
+          isStreaming: false,
+          currentMessageId: null,
+          controller: null
+        });
+        streamingMessageRef.current = '';
+      };
+
+      const onErrorCallback = (error: Error) => {
+        // Handle error
+        const errorMessage = `Error: ${error.message}`;
+        updateMessage(updatedConversation.id, aiMessage.id, errorMessage);
+
+        setConversations(prev => prev.map(conv =>
+          conv.id === updatedConversation.id
+            ? {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+                )
+              }
+            : conv
+        ));
+
+        setCurrentConversation(prev => 
+          prev && prev.id === updatedConversation.id
+            ? {
+                ...prev,
+                messages: prev.messages.map(msg =>
+                  msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+                )
+              }
+            : prev
+        );
+
+        // Save error conversation
+        setConversations(current => {
+          const errorConv = current.find(conv => conv.id === updatedConversation.id);
+          if (errorConv) {
+            ChatStorageService.saveConversation(errorConv, user).catch(error => {
+              console.error('Error saving error conversation:', error);
+            });
+          }
+          return current;
+        });
+
+        setStreamingState({
+          isStreaming: false,
+          currentMessageId: null,
+          controller: null
+        });
+        streamingMessageRef.current = '';
+      };
+
       await ChatService.sendMessage(
         model,
         historyMessages,
-        (chunk: string) => {
-          streamingMessageRef.current += chunk;
-          updateMessage(updatedConversation.id, aiMessage.id, streamingMessageRef.current);
-        },
-        () => {
-          // Mark message as complete
-          setConversations(prev => prev.map(conv =>
-            conv.id === updatedConversation.id
-              ? {
-                  ...conv,
-                  messages: conv.messages.map(msg =>
-                    msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
-                  )
-                }
-              : conv
-          ));
-
-          setCurrentConversation(prev => 
-            prev && prev.id === updatedConversation.id
-              ? {
-                  ...prev,
-                  messages: prev.messages.map(msg =>
-                    msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
-                  )
-                }
-              : prev
-          );
-
-          // Save final conversation with complete AI message
-          setConversations(current => {
-            const finalConv = current.find(conv => conv.id === updatedConversation.id);
-            if (finalConv) {
-              ChatStorageService.saveConversation(finalConv, user).catch(error => {
-                console.error('Error saving final conversation:', error);
-              });
-            }
-            return current;
-          });
-
-          setStreamingState({
-            isStreaming: false,
-            currentMessageId: null,
-            controller: null
-          });
-          streamingMessageRef.current = '';
-        },
-        (error: Error) => {
-          // Handle error
-          const errorMessage = `Error: ${error.message}`;
-          updateMessage(updatedConversation.id, aiMessage.id, errorMessage);
-
-          setConversations(prev => prev.map(conv =>
-            conv.id === updatedConversation.id
-              ? {
-                  ...conv,
-                  messages: conv.messages.map(msg =>
-                    msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                  )
-                }
-              : conv
-          ));
-
-          setCurrentConversation(prev => 
-            prev && prev.id === updatedConversation.id
-              ? {
-                  ...prev,
-                  messages: prev.messages.map(msg =>
-                    msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                  )
-                }
-              : prev
-          );
-
-          // Save error conversation
-          setConversations(current => {
-            const errorConv = current.find(conv => conv.id === updatedConversation.id);
-            if (errorConv) {
-              ChatStorageService.saveConversation(errorConv, user).catch(error => {
-                console.error('Error saving error conversation:', error);
-              });
-            }
-            return current;
-          });
-
-          setStreamingState({
-            isStreaming: false,
-            currentMessageId: null,
-            controller: null
-          });
-          streamingMessageRef.current = '';
-        },
+        onChunkCallback,
+        onCompleteCallback,
+        onErrorCallback,
         user,
         controller
       );
