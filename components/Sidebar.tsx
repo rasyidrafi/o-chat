@@ -14,7 +14,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed, user, onLoginClick, onSignOutClick }) => {
-  const { conversations, currentConversation, selectConversation, createNewConversation, deleteConversation, isCreatingNewChat } = useChat(user);
+  const { conversations, currentConversation, selectConversation, createNewConversation, deleteConversation, isCreatingNewChat, isLoading } = useChat(user);
 
   const handleNewChat = () => {
     if (isCreatingNewChat) return;
@@ -85,42 +85,51 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
       </div>
 
       <div className={`flex-grow overflow-y-auto block thin-scrollbar ${isCollapsed ? 'md:hidden' : ''}`}>
-        {Object.entries(groupedConversations).map(([dateGroup, convs]) => (
-          <div key={dateGroup} className="mb-4">
-            <div className="text-xs font-semibold text-zinc-500 mb-2">{dateGroup}</div>
-            <ul className="space-y-1">
-              {convs.map((conversation) => (
-                <li 
-                  key={conversation.id}
-                  onClick={() => handleConversationSelect(conversation)}
-                  className={`py-2 px-3 text-sm rounded-md cursor-pointer transition-colors group relative ${
-                    currentConversation?.id === conversation.id
-                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                      : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
-                  }`}
-                >
-                  <div className="truncate pr-6">{conversation.title}</div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteConversation(conversation.id);
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded transition-all"
-                    aria-label="Delete conversation"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </li>
-              ))}
-            </ul>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">
+            <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <div className="text-sm">Loading conversations...</div>
           </div>
-        ))}
-        
-        {conversations.length === 0 && (
-          <div className="text-center text-zinc-500 dark:text-zinc-400 text-sm py-8">
-            No conversations yet.<br />
-            Start a new chat to begin!
-          </div>
+        ) : (
+          <>
+            {Object.entries(groupedConversations).map(([dateGroup, convs]) => (
+              <div key={dateGroup} className="mb-4">
+                <div className="text-xs font-semibold text-zinc-500 mb-2">{dateGroup}</div>
+                <ul className="space-y-1">
+                  {convs.map((conversation) => (
+                    <li 
+                      key={conversation.id}
+                      onClick={() => handleConversationSelect(conversation)}
+                      className={`py-2 px-3 text-sm rounded-md cursor-pointer transition-colors group relative ${
+                        currentConversation?.id === conversation.id
+                          ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                          : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
+                      }`}
+                    >
+                      <div className="truncate pr-6">{conversation.title}</div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteConversation(conversation.id);
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded transition-all"
+                        aria-label="Delete conversation"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            
+            {conversations.length === 0 && (
+              <div className="text-center text-zinc-500 dark:text-zinc-400 text-sm py-8">
+                No conversations yet.<br />
+                Start a new chat to begin!
+              </div>
+            )}
+          </>
         )}
       </div>
 
