@@ -14,31 +14,10 @@ interface ApiProvider {
 // Default providers structure
 const DEFAULT_PROVIDERS: ApiProvider[] = [
     { provider: "anthropic", value: "", custom: false },
-    { provider: "openai", value: "", custom: false },
-    { provider: "openrouter", value: "", base_url: "", custom: true }
+    { provider: "openai", value: "", custom: false }
 ];
 
 const API_PROVIDERS_KEY = 'api_providers';
-
-// Simple toast notification component
-const Toast: React.FC<{ message: string; isVisible: boolean; onClose: () => void }> = ({ message, isVisible, onClose }) => {
-    useEffect(() => {
-        if (isVisible) {
-            const timer = setTimeout(() => {
-                onClose();
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [isVisible, onClose]);
-
-    if (!isVisible) return null;
-
-    return (
-        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-in slide-in-from-top-2 duration-300">
-            {message}
-        </div>
-    );
-};
 
 // Helper functions for localStorage management
 const loadProvidersFromStorage = (): ApiProvider[] => {
@@ -84,7 +63,6 @@ const ApiProviderCard: React.FC<{
 }> = ({ title, consoleUrl, placeholder, consoleName, providerKey, providers, onUpdateProviders }) => {
     const [apiKey, setApiKey] = useState('');
     const [isSaved, setIsSaved] = useState(false);
-    const [showToast, setShowToast] = useState(false);
 
     // Load API key from providers array on mount
     useEffect(() => {
@@ -107,7 +85,6 @@ const ApiProviderCard: React.FC<{
             );
             onUpdateProviders(updatedProviders);
             setIsSaved(true);
-            setShowToast(true);
         } else {
             const updatedProviders = providers.map(p => 
                 p.provider === providerKey 
@@ -162,11 +139,6 @@ const ApiProviderCard: React.FC<{
                     </a>
                 </div>
             </div>
-            <Toast 
-                message="API key saved successfully!" 
-                isVisible={showToast} 
-                onClose={() => setShowToast(false)} 
-            />
         </>
     );
 };
@@ -177,7 +149,6 @@ const OpenAICompatibleProviderCard: React.FC<{
     onDelete: (providerKey: string) => void;
 }> = ({ provider, onUpdate, onDelete }) => {
     const [isSaved, setIsSaved] = useState(false);
-    const [showToast, setShowToast] = useState(false);
 
     const handleChange = (field: keyof ApiProvider, value: string) => {
         onUpdate({ ...provider, [field]: value });
@@ -189,7 +160,6 @@ const OpenAICompatibleProviderCard: React.FC<{
     const handleSave = () => {
         if (isValid) {
             setIsSaved(true);
-            setShowToast(true);
         }
     };
 
@@ -261,11 +231,6 @@ const OpenAICompatibleProviderCard: React.FC<{
                     </Button>
                 </div>
             </div>
-            <Toast 
-                message="Provider saved successfully!" 
-                isVisible={showToast} 
-                onClose={() => setShowToast(false)} 
-            />
         </>
     );
 };
