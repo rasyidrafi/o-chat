@@ -225,18 +225,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                                        <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">Message Usage</h3>
                                    </div>
                                    <div className="space-y-4">
-                                       {systemMessageCount > 0 && (
-                                           <div>
-                                               <div className="flex justify-between text-xs font-medium mb-1">
-                                                    <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
-                                                    <span className="text-zinc-500 dark:text-zinc-400">{systemMessageCount} / unlimited</span>
-                                               </div>
-                                               <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                                                    <div className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" style={{width: `${Math.min((systemMessageCount/1000)*100, 100)}%`}}></div>
-                                               </div>
-                                               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{systemMessageCount} messages usage</p>
+                                       <div>
+                                           <div className="flex justify-between text-xs font-medium mb-1">
+                                                <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
+                                                <span className="text-zinc-500 dark:text-zinc-400">{systemMessageCount} / unlimited</span>
                                            </div>
-                                       )}
+                                           <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                                                <div className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" style={{width: `${Math.min((systemMessageCount/1000)*100, 100)}%`}}></div>
+                                           </div>
+                                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{systemMessageCount} messages usage</p>
+                                       </div>
                                         <div>
                                            <div className="flex justify-between text-xs font-medium mb-1">
                                                 <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
