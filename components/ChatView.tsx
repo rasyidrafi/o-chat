@@ -152,6 +152,10 @@ const ChatView: React.FC<ChatViewProps> = ({
           <ChatInput 
             onMessageSend={handleSendMessage}
             disabled={streamingState.isStreaming || isLoading}
+          />
+        </div>
+      </footer>
+    </div>
   );
 };
 
