@@ -1,7 +1,9 @@
 import React from 'react';
+import { useState } from 'react';
 import { Search, User, X, LogIn, Plus } from './Icons';
 import { User as FirebaseUser } from 'firebase/auth';
 import Button from './ui/Button';
+import ConfirmationDialog from './ui/ConfirmationDialog';
 import { useChat } from '../hooks/useChat';
 
 interface SidebarProps {
@@ -15,6 +17,15 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed, user, onLoginClick, onSignOutClick }) => {
   const { conversations, currentConversation, selectConversation, createNewConversation, deleteConversation, isCreatingNewChat, isLoading } = useChat(user);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    conversationId: string;
+    conversationTitle: string;
+  }>({
+    isOpen: false,
+    conversationId: '',
+    conversationTitle: ''
+  });
 
   const handleNewChat = () => {
     if (isCreatingNewChat) return;
@@ -25,6 +36,32 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
   const handleConversationSelect = (conversation: any) => {
     selectConversation(conversation);
     setIsMobileMenuOpen(false);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, conversation: any) => {
+    e.stopPropagation();
+    setDeleteConfirmation({
+      isOpen: true,
+      conversationId: conversation.id,
+      conversationTitle: conversation.title
+    });
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteConversation(deleteConfirmation.conversationId);
+    setDeleteConfirmation({
+      isOpen: false,
+      conversationId: '',
+      conversationTitle: ''
+    });
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      conversationId: '',
+      conversationTitle: ''
+    });
   };
 
   const formatDate = (date: Date) => {
@@ -108,10 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
                     >
                       <div className="truncate pr-6">{conversation.title}</div>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteConversation(conversation.id);
-                        }}
+                        onClick={(e) => handleDeleteClick(e, conversation)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded transition-all"
                         aria-label="Delete conversation"
                       >
@@ -160,6 +194,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
           </button>
         )}
       </div>
+
+      <ConfirmationDialog
+        isOpen={deleteConfirmation.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Conversation"
+        confirmText="Delete"
+        confirmVariant="destructive"
+        cancelText="Cancel"
+        onCancel={handleDeleteCancel}
+      >
+        Are you sure you want to delete "{deleteConfirmation.conversationTitle}"? This action cannot be undone.
+      </ConfirmationDialog>
     </aside>
   );
 };
