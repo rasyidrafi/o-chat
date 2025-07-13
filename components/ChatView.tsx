@@ -31,7 +31,8 @@ const ChatView: React.FC<ChatViewProps> = ({
   toggleTheme, 
   user, 
   animationsDisabled,
-  chat
+  chat,
+  settings
 }) => {
   const { currentConversation, streamingState, sendMessage, stopStreaming, isLoading } = chat;
 

@@ -357,7 +357,7 @@ export const useChat = (settings?: AppSettings) => {
 
       await ChatService.sendMessage(
         model,
-        historyMessages,
+        messagesWithInstruction,
         onChunkCallback,
         onCompleteCallback,
         onErrorCallback,

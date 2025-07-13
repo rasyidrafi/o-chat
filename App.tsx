@@ -264,6 +264,7 @@ const App: React.FC = () => {
           user={user}
           animationsDisabled={settings.animationsDisabled}
           chat={chat}
+          settings={settings}
         />
         {isMobileMenuOpen && (
           <div 
