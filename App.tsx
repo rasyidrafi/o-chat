@@ -42,7 +42,6 @@ const App: React.FC = () => {
   const [confirmDialogProps, setConfirmDialogProps] = useState(defaultConfirmDialogProps);
   const [settingsUnsubscribe, setSettingsUnsubscribe] = useState<(() => void) | null>(null);
 
-  const chat = useChat();
   const chat = useChat(settings);
 
   const loadGuestSettings = (): AppSettings => ({
