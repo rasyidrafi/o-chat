@@ -162,6 +162,9 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const sendMessage = useCallback(async (content: string, model: string, source: string = 'system') => {
     if (!content.trim()) return;
 
+    console.log('sendMessage called with settings:', settings);
+    console.log('sendMessage customInstruction:', settings?.customInstruction);
+
     // Create or get current conversation
     let conversation = currentConversation;
     if (!conversation) {
@@ -266,16 +269,22 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
       // Add custom instruction as system message if it exists
       let messagesToSend: ServiceChatMessage[] = historyMessages;
-      console.log('Custom instruction check:', settings?.customInstruction);
-      if (settings?.customInstruction && settings.customInstruction.trim()) {
-        console.log('Adding custom instruction:', settings.customInstruction);
+      console.log('Custom instruction check - settings available:', !!settings);
+      console.log('Custom instruction value:', settings?.customInstruction);
+      console.log('Custom instruction trimmed length:', settings?.customInstruction?.trim().length);
+      
+      if (settings && settings.customInstruction && settings.customInstruction.trim()) {
+        console.log('✅ Adding custom instruction:', settings.customInstruction);
         messagesToSend = [
           { role: 'system', content: settings.customInstruction.trim() },
           ...historyMessages
         ];
         console.log('Final messages to send:', messagesToSend);
       } else {
-        console.log('No custom instruction to add. Settings available:', !!settings, 'Instruction empty:', !settings?.customInstruction?.trim());
+        console.log('❌ No custom instruction to add');
+        console.log('  - Settings available:', !!settings);
+        console.log('  - Has customInstruction:', !!settings?.customInstruction);
+        console.log('  - Instruction empty:', !settings?.customInstruction?.trim());
       }
 
       // Define callback functions separately
@@ -426,7 +435,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       });
       streamingMessageRef.current = '';
     }
-  }, [currentConversation, createNewConversation, updateMessage, user]);
+  }, [currentConversation, createNewConversation, updateMessage, user, settings]);
 
   const stopStreaming = useCallback(() => {
     if (streamingState.controller) {
