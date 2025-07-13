@@ -29,7 +29,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   user, 
   animationsDisabled 
 }) => {
-  const { currentConversation, streamingState, sendMessage, stopStreaming } = useChat(user);
+  const { currentConversation, streamingState, sendMessage, stopStreaming, isLoading } = useChat(user);
 
   const handleSendMessage = (message: string, model: string, source: string = 'system') => {
     sendMessage(message, model, source);
@@ -40,7 +40,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const hasContent = currentConversation && currentConversation.messages.length > 0;
-  const shouldShowWelcome = !hasContent && !streamingState.isStreaming;
+  const shouldShowWelcome = !hasContent && !streamingState.isStreaming && !isLoading;
 
   const getThemeIcon = () => {
     const iconProps = {
@@ -107,7 +107,14 @@ const ChatView: React.FC<ChatViewProps> = ({
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        {shouldShowWelcome ? (
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-zinc-500 dark:text-zinc-400">Loading conversations...</p>
+            </div>
+          </div>
+        ) : shouldShowWelcome ? (
           <div className="flex-1 flex items-center justify-center p-4 md:p-6">
             <div className="w-full max-w-4xl mx-auto px-0 md:px-2 lg:px-8 xl:px-16">
               <WelcomeScreen user={user} onPromptSelect={handlePromptSelect} />

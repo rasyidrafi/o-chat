@@ -2,11 +2,13 @@ import { useState, useCallback, useRef } from 'react';
 import { ChatMessage, ChatConversation, StreamingState } from '../types/chat';
 import { ChatService } from '../services/chatService';
 import { ChatMessage as ServiceChatMessage } from '../services/chatService';
+import { ChatStorageService } from '../services/chatStorageService';
 import { User } from 'firebase/auth';
 
 export const useChat = (user?: User | null) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
     currentMessageId: null,
@@ -14,6 +16,33 @@ export const useChat = (user?: User | null) => {
   });
 
   const streamingMessageRef = useRef<string>('');
+
+  // Load conversations on mount and user change
+  const loadConversations = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const loadedConversations = await ChatStorageService.loadConversations(user);
+      setConversations(loadedConversations);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  // Load conversations when user changes
+  React.useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // Handle user login - migrate data if needed
+  React.useEffect(() => {
+    if (user) {
+      ChatStorageService.handleUserLogin(user);
+    } else {
+      ChatStorageService.handleUserLogout();
+    }
+  }, [user]);
 
   const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
@@ -29,34 +58,49 @@ export const useChat = (user?: User | null) => {
 
     setConversations(prev => [newConversation, ...prev]);
     setCurrentConversation(newConversation);
+    
+    // Save to storage
+    ChatStorageService.saveConversation(newConversation, user).catch(error => {
+      console.error('Error saving new conversation:', error);
+    });
+    
     return newConversation;
-  }, []);
+  }, [user]);
 
   const updateMessage = useCallback((conversationId: string, messageId: string, content: string) => {
+    let updatedConversation: ChatConversation | null = null;
+    
     setConversations(prev => prev.map(conv =>
       conv.id === conversationId
-        ? {
+        ? (updatedConversation = {
             ...conv,
             messages: conv.messages.map(msg =>
               msg.id === messageId ? { ...msg, content } : msg
             ),
             updatedAt: new Date()
-          }
+          })
         : conv
     ));
 
     setCurrentConversation(prev => 
       prev && prev.id === conversationId 
-        ? {
+        ? (updatedConversation = {
             ...prev,
             messages: prev.messages.map(msg =>
               msg.id === messageId ? { ...msg, content } : msg
             ),
             updatedAt: new Date()
-          }
+          })
         : prev
     );
-  }, []);
+    
+    // Save updated conversation to storage
+    if (updatedConversation) {
+      ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
+        console.error('Error saving updated conversation:', error);
+      });
+    }
+  }, [user]);
 
   const sendMessage = useCallback(async (content: string, model: string, source: string = 'system') => {
     if (!content.trim()) return;
@@ -98,6 +142,11 @@ export const useChat = (user?: User | null) => {
       conv.id === conversation!.id ? updatedConversation : conv
     ));
     setCurrentConversation(updatedConversation);
+    
+    // Save conversation with new messages
+    ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
+      console.error('Error saving conversation with new messages:', error);
+    });
 
     if (source !== 'system') return;
 
@@ -126,28 +175,37 @@ export const useChat = (user?: User | null) => {
           updateMessage(updatedConversation.id, aiMessage.id, streamingMessageRef.current);
         },
         () => {
+          let finalConversation: ChatConversation | null = null;
+          
           // Mark message as complete
           setConversations(prev => prev.map(conv =>
             conv.id === updatedConversation.id
-              ? {
+              ? (finalConversation = {
                   ...conv,
                   messages: conv.messages.map(msg =>
                     msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
                   )
-                }
+                })
               : conv
           ));
 
           setCurrentConversation(prev => 
             prev && prev.id === updatedConversation.id
-              ? {
+              ? (finalConversation = {
                   ...prev,
                   messages: prev.messages.map(msg =>
                     msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
                   )
-                }
+                })
               : prev
           );
+
+          // Save final conversation
+          if (finalConversation) {
+            ChatStorageService.saveConversation(finalConversation, user).catch(error => {
+              console.error('Error saving final conversation:', error);
+            });
+          }
 
           setStreamingState({
             isStreaming: false,
@@ -157,31 +215,40 @@ export const useChat = (user?: User | null) => {
           streamingMessageRef.current = '';
         },
         (error: Error) => {
+          let errorConversation: ChatConversation | null = null;
+          
           // Handle error
           const errorMessage = `Error: ${error.message}`;
           updateMessage(updatedConversation.id, aiMessage.id, errorMessage);
 
           setConversations(prev => prev.map(conv =>
             conv.id === updatedConversation.id
-              ? {
+              ? (errorConversation = {
                   ...conv,
                   messages: conv.messages.map(msg =>
                     msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
                   )
-                }
+                })
               : conv
           ));
 
           setCurrentConversation(prev => 
             prev && prev.id === updatedConversation.id
-              ? {
+              ? (errorConversation = {
                   ...prev,
                   messages: prev.messages.map(msg =>
                     msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
                   )
-                }
+                })
               : prev
           );
+
+          // Save error conversation
+          if (errorConversation) {
+            ChatStorageService.saveConversation(errorConversation, user).catch(error => {
+              console.error('Error saving error conversation:', error);
+            });
+          }
 
           setStreamingState({
             isStreaming: false,
@@ -194,30 +261,39 @@ export const useChat = (user?: User | null) => {
         controller
       );
     } catch (error) {
+      let errorConversation: ChatConversation | null = null;
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       updateMessage(updatedConversation.id, aiMessage.id, `Error: ${errorMessage}`);
 
       setConversations(prev => prev.map(conv =>
         conv.id === updatedConversation.id
-          ? {
+          ? (errorConversation = {
               ...conv,
               messages: conv.messages.map(msg =>
                 msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
               )
-            }
+            })
           : conv
       ));
 
       setCurrentConversation(prev => 
         prev && prev.id === updatedConversation.id
-          ? {
+          ? (errorConversation = {
               ...prev,
               messages: prev.messages.map(msg =>
                 msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
               )
-            }
+            })
           : prev
       );
+
+      // Save error conversation
+      if (errorConversation) {
+        ChatStorageService.saveConversation(errorConversation, user).catch(error => {
+          console.error('Error saving error conversation:', error);
+        });
+      }
 
       setStreamingState({
         isStreaming: false,
@@ -249,16 +325,23 @@ export const useChat = (user?: User | null) => {
     if (currentConversation?.id === conversationId) {
       setCurrentConversation(null);
     }
-  }, [currentConversation]);
+    
+    // Delete from storage
+    ChatStorageService.deleteConversation(conversationId, user).catch(error => {
+      console.error('Error deleting conversation:', error);
+    });
+  }, [currentConversation, user]);
 
   return {
     conversations,
     currentConversation,
     streamingState,
+    isLoading,
     sendMessage,
     stopStreaming,
     createNewConversation,
     selectConversation,
-    deleteConversation
+    deleteConversation,
+    loadConversations
   };
 };
