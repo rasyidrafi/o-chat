@@ -8,6 +8,7 @@ export interface ChatMessage {
   model?: string;
   isStreaming?: boolean;
   isError?: boolean;
+  source?: 'server' | 'byok';
 }
 
 export interface ChatConversation {
@@ -17,7 +18,6 @@ export interface ChatConversation {
   createdAt: Date;
   updatedAt: Date;
   model: string;
-  source?: 'server' | 'byok';
 }
 
 export interface StreamingState {

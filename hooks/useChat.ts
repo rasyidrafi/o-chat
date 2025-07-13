@@ -194,7 +194,8 @@ export const useChat = () => {
       id: generateId(),
       role: 'user',
       content: content.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
+      source: getModelSource(model)
     };
 
     // Create AI message
@@ -204,7 +205,8 @@ export const useChat = () => {
       content: '',
       model,
       isStreaming: true,
-      timestamp: new Date(Date.now() + 1) // Ensure AI message has slightly later timestamp
+      timestamp: new Date(Date.now() + 1), // Ensure AI message has slightly later timestamp
+      source: getModelSource(model)
     };
 
     // Update conversation with both messages
