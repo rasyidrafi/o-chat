@@ -204,6 +204,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                     label=""
                                     description=""
                                     options={availableProviders.map(p => p.disabled ? `${p.label} (No API Key)` : p.label)}
+                                    disabledOptions={availableProviders.filter(p => p.disabled).map(p => `${p.label} (No API Key)`)}
                                     selected={selectedProvider ? 
                                         availableProviders.find(p => p.value === selectedProvider)?.label || 'Select Provider' : 
                                         'Select Provider'
