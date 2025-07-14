@@ -43,6 +43,13 @@ const loadCustomProvidersFromStorage = (): Provider[] => {
 const saveBuiltInProvidersToStorage = (providers: Provider[]) => {
   try {
     localStorage.setItem(BUILTIN_PROVIDERS_KEY, JSON.stringify(providers));
+
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(
+      new CustomEvent("localStorageChange", {
+        detail: { key: BUILTIN_PROVIDERS_KEY, value: providers },
+      })
+    );
   } catch (error) {
     console.error("Error saving built-in providers to localStorage:", error);
   }
@@ -51,6 +58,13 @@ const saveBuiltInProvidersToStorage = (providers: Provider[]) => {
 const saveCustomProvidersToStorage = (providers: Provider[]) => {
   try {
     localStorage.setItem(CUSTOM_PROVIDERS_KEY, JSON.stringify(providers));
+
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(
+      new CustomEvent("localStorageChange", {
+        detail: { key: CUSTOM_PROVIDERS_KEY, value: providers },
+      })
+    );
   } catch (error) {
     console.error("Error saving custom providers to localStorage:", error);
   }

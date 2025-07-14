@@ -22,6 +22,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
   });
 
   const streamingMessageRef = useRef<string>('');
+  const streamingReasoningRef = useRef<string>('');
 
   // Debug log to check if settings are being passed
   console.log('useChat settings received:', settings);
@@ -159,7 +160,42 @@ export const useChat = (settings?: AppSettings | undefined) => {
     }
   }, [user]);
 
-  const sendMessage = useCallback(async (content: string, model: string, source: string = 'system') => {
+  const updateMessageReasoning = useCallback((conversationId: string, messageId: string, reasoning: string) => {
+    let updatedConversation: ChatConversation | null = null;
+    
+    setConversations(prev => prev.map(conv =>
+      conv.id === conversationId
+        ? (updatedConversation = {
+            ...conv,
+            messages: conv.messages.map(msg =>
+              msg.id === messageId ? { ...msg, reasoning } : msg
+            ),
+            updatedAt: new Date()
+          })
+        : conv
+    ));
+
+    setCurrentConversation(prev => 
+      prev && prev.id === conversationId 
+        ? (updatedConversation = {
+            ...prev,
+            messages: prev.messages.map(msg =>
+              msg.id === messageId ? { ...msg, reasoning } : msg
+            ),
+            updatedAt: new Date()
+          })
+        : prev
+    );
+
+    // Save updated conversation with reasoning to storage
+    if (updatedConversation) {
+      ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
+        console.error('Error saving conversation with reasoning:', error);
+      });
+    }
+  }, [user]);
+
+  const sendMessage = useCallback(async (content: string, model: string, source: string = 'system', providerId?: string) => {
     if (!content.trim()) return;
 
     console.log('sendMessage called with settings:', settings);
@@ -212,8 +248,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
       content: '',
       model,
       isStreaming: true,
-      timestamp: new Date(Date.now() + 1), // Ensure AI message has slightly later timestamp
-      source: getModelSource(model)
+      timestamp: new Date(Date.now() + 1),
+      source: getModelSource(model),
+      reasoning: '',
+      isReasoningComplete: false
     };
 
     // Update conversation with both messages
@@ -248,9 +286,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
       console.error('Error saving user message:', error);
     }
 
-    if (source !== 'system') return;
+    // Remove the early return that was blocking API calls for non-system sources
+    // if (source !== 'system') return;
 
-    // Start streaming
+    // Start streaming for all sources
     const controller = new AbortController();
     setStreamingState({
       isStreaming: true,
@@ -259,6 +298,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     });
 
     streamingMessageRef.current = '';
+    streamingReasoningRef.current = '';
 
     try {
       // Build conversation history
@@ -293,14 +333,23 @@ export const useChat = (settings?: AppSettings | undefined) => {
         updateMessage(updatedConversation.id, aiMessage.id, streamingMessageRef.current);
       };
 
+      const onReasoningChunkCallback = (reasoning: string) => {
+        streamingReasoningRef.current += reasoning;
+        updateMessageReasoning(updatedConversation.id, aiMessage.id, streamingReasoningRef.current);
+      };
+
       const onCompleteCallback = () => {
-        // Mark message as complete
+        // Mark message as complete including reasoning
         setConversations(prev => prev.map(conv =>
           conv.id === updatedConversation.id
             ? {
                 ...conv,
                 messages: conv.messages.map(msg =>
-                  msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
+                  msg.id === aiMessage.id ? { 
+                    ...msg, 
+                    isStreaming: false, 
+                    isReasoningComplete: true 
+                  } : msg
                 )
               }
             : conv
@@ -311,13 +360,17 @@ export const useChat = (settings?: AppSettings | undefined) => {
             ? {
                 ...prev,
                 messages: prev.messages.map(msg =>
-                  msg.id === aiMessage.id ? { ...msg, isStreaming: false } : msg
+                  msg.id === aiMessage.id ? { 
+                    ...msg, 
+                    isStreaming: false, 
+                    isReasoningComplete: true 
+                  } : msg
                 )
               }
             : prev
         );
 
-        // Save final conversation with complete AI message
+        // Save final conversation with complete AI message including reasoning
         setConversations(current => {
           const finalConv = current.find(conv => conv.id === updatedConversation.id);
           if (finalConv) {
@@ -334,6 +387,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
           controller: null
         });
         streamingMessageRef.current = '';
+        streamingReasoningRef.current = '';
       };
 
       const onErrorCallback = (error: Error) => {
@@ -380,7 +434,16 @@ export const useChat = (settings?: AppSettings | undefined) => {
           controller: null
         });
         streamingMessageRef.current = '';
+        streamingReasoningRef.current = '';
       };
+
+      // Log the parameters being passed to ChatService
+      console.log('Calling ChatService.sendMessage with:', {
+        model,
+        source,
+        providerId,
+        messagesCount: messagesToSend.length
+      });
 
       await ChatService.sendMessage(
         model,
@@ -389,7 +452,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
         onCompleteCallback,
         onErrorCallback,
         user,
-        controller
+        controller,
+        source,
+        providerId,
+        onReasoningChunkCallback
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -434,8 +500,9 @@ export const useChat = (settings?: AppSettings | undefined) => {
         controller: null
       });
       streamingMessageRef.current = '';
+      streamingReasoningRef.current = '';
     }
-  }, [currentConversation, createNewConversation, updateMessage, user, settings]);
+  }, [currentConversation, createNewConversation, updateMessage, updateMessageReasoning, user, settings]);
 
   const stopStreaming = useCallback(() => {
     if (streamingState.controller) {
@@ -447,6 +514,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       controller: null
     });
     streamingMessageRef.current = '';
+    streamingReasoningRef.current = '';
   }, [streamingState]);
 
   const selectConversation = useCallback((conversation: ChatConversation | null) => {

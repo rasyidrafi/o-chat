@@ -11,12 +11,14 @@ export interface ChatResponse {
   choices: {
     delta: {
       content?: string;
+      reasoning?: string;
+      reasoning_details?: any[];
     };
   }[];
 }
 
 export class ChatService {
-  private static createOpenAIInstance(idToken?: string) {
+  private static createOpenAIInstance(idToken?: string, baseURL?: string, apiKey?: string) {
     const headers: Record<string, string> = {};
 
     // Add Firebase ID token as Authorization header if available
@@ -25,11 +27,74 @@ export class ChatService {
     }
 
     return new OpenAI({
-      apiKey: "", // Replace with actual API key if needed
-      baseURL: "https://api-3ujaavqala-uc.a.run.app",
+      apiKey: apiKey || "", // Use provided API key or empty string
+      baseURL: baseURL || "https://api-3ujaavqala-uc.a.run.app",
       defaultHeaders: headers,
       dangerouslyAllowBrowser: true // Allow browser usage
     });
+  }
+
+  private static getProviderConfig(source: string, providerId?: string) {
+    if (source === 'system') {
+      return {
+        baseURL: "https://api-3ujaavqala-uc.a.run.app",
+        apiKey: "",
+        requiresAuth: true
+      };
+    }
+
+    if (source === 'builtin' && providerId) {
+      try {
+        const builtInProviders = localStorage.getItem('builtin_api_providers');
+        if (builtInProviders) {
+          const providers = JSON.parse(builtInProviders);
+          const provider = providers.find((p: any) => p.id === providerId);
+          if (provider && provider.value) {
+            if (providerId === 'openai') {
+              return {
+                baseURL: "https://api.openai.com/v1",
+                apiKey: provider.value,
+                requiresAuth: false
+              };
+            } else if (providerId === 'anthropic') {
+              return {
+                baseURL: "https://api.anthropic.com/v1",
+                apiKey: provider.value,
+                requiresAuth: false
+              };
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading built-in provider config:', error);
+      }
+    }
+
+    if (source === 'custom' && providerId) {
+      try {
+        const customProviders = localStorage.getItem('custom_api_providers');
+        if (customProviders) {
+          const providers = JSON.parse(customProviders);
+          const provider = providers.find((p: any) => p.id === providerId);
+          if (provider && provider.value && provider.base_url) {
+            return {
+              baseURL: provider.base_url,
+              apiKey: provider.value,
+              requiresAuth: false
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error loading custom provider config:', error);
+      }
+    }
+
+    // Default to system
+    return {
+      baseURL: "https://api-3ujaavqala-uc.a.run.app",
+      apiKey: "",
+      requiresAuth: true
+    };
   }
 
   static async sendMessage(
@@ -39,33 +104,56 @@ export class ChatService {
     onComplete: () => void,
     onError: (error: Error) => void,
     user?: User | null,
-    abortController?: AbortController
+    abortController?: AbortController,
+    source: string = 'system',
+    providerId?: string,
+    onReasoningChunk?: (reasoning: string) => void
   ): Promise<void> {
 
     try {
-      // Get Firebase ID token if user is authenticated
+      const config = this.getProviderConfig(source, providerId);
       let idToken: string | undefined;
-      if (user) {
+
+      // Get Firebase ID token if required and user is authenticated
+      if (config.requiresAuth && user) {
         try {
           idToken = await user.getIdToken();
         } catch (tokenError) {
           console.warn('Failed to get Firebase ID token:', tokenError);
-          // Continue without token - might work for unauthenticated requests
+          if (source === 'system') {
+            throw new Error('Authentication required for system models');
+          }
         }
       }
 
-      // Create OpenAI instance with the ID token
-      const openai = this.createOpenAIInstance(idToken);
+      // Create OpenAI instance with the appropriate configuration
+      const openai = this.createOpenAIInstance(idToken, config.baseURL, config.apiKey);
+
+      // Handle different provider message formats
+      let processedMessages = messages;
+      if (source === 'builtin' && providerId === 'anthropic') {
+        // Anthropic may require different message formatting
+        // For now, we'll use the OpenAI format but this could be extended
+        processedMessages = messages;
+      }
 
       const completion = await openai.chat.completions.create({
         model,
-        messages,
+        messages: processedMessages,
         stream: true
       }, {
         signal: abortController?.signal
       });
 
       for await (const chunk of completion) {
+        // Handle reasoning chunks
+        // @ts-ignore
+        if (chunk.choices[0]?.delta?.reasoning && onReasoningChunk) {
+          // @ts-ignore
+          onReasoningChunk(chunk.choices[0].delta.reasoning);
+        }
+        
+        // Handle content chunks
         if (chunk.choices[0]?.delta?.content) {
           onChunk(chunk.choices[0].delta.content);
         }

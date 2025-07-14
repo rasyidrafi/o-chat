@@ -4,11 +4,13 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp: Date;
   model?: string;
   isStreaming?: boolean;
   isError?: boolean;
-  source?: 'server' | 'byok';
+  timestamp: Date;
+  source: 'server' | 'byok';
+  reasoning?: string;
+  isReasoningComplete?: boolean;
 }
 
 export interface ChatConversation {
@@ -18,6 +20,7 @@ export interface ChatConversation {
   createdAt: Date;
   updatedAt: Date;
   model: string;
+  source: string;
 }
 
 export interface StreamingState {

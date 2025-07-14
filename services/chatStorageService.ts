@@ -126,7 +126,8 @@ export class ChatStorageService {
           model: message.model || null,
           isError: message.isError || false,
           source: message.source || 'server',
-          userId: userId
+          userId: userId,
+          reasoning: message.reasoning || null,
         });
       });
 
@@ -151,6 +152,7 @@ export class ChatStorageService {
         const data = docSnap.data();
         const messages = await this.getMessagesFromFirestore(userId, data.id);
         
+        // @ts-ignore
         conversations.push({
           id: data.id,
           title: data.title,
@@ -186,7 +188,8 @@ export class ChatStorageService {
           timestamp: data.timestamp.toDate(),
           model: data.model,
           isError: data.isError || false,
-          source: data.source || 'server'
+          source: data.source || 'server',
+          reasoning: data.reasoning
         };
       });
       

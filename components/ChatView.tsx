@@ -32,16 +32,27 @@ const ChatView: React.FC<ChatViewProps> = ({
   user, 
   animationsDisabled,
   chat,
-  settings
+  
 }) => {
   const { currentConversation, streamingState, sendMessage, stopStreaming, isLoading } = chat;
 
-  const handleSendMessage = (message: string, model: string, source: string = 'system') => {
-    sendMessage(message, model, source);
+  // State to track selected model info from ChatInput
+  const [selectedModelInfo, setSelectedModelInfo] = React.useState({
+    model: 'gemini-1.5-flash',
+    source: 'system',
+    providerId: ''
+  });
+
+  const handleSendMessage = (message: string, model: string, source: string = 'system', providerId?: string) => {
+    sendMessage(message, model, source, providerId);
   };
 
   const handlePromptSelect = (prompt: string) => {
-    sendMessage(prompt, 'gemini-1.5-flash', 'system');
+    sendMessage(prompt, selectedModelInfo.model, selectedModelInfo.source, selectedModelInfo.providerId);
+  };
+
+  const handleModelSelection = (model: string, source: string, providerId?: string) => {
+    setSelectedModelInfo({ model, source, providerId: providerId || '' });
   };
 
   // Calculate sidebar width based on collapsed state
@@ -149,6 +160,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16">
           <ChatInput 
             onMessageSend={handleSendMessage}
+            onModelSelect={handleModelSelection}
             disabled={streamingState.isStreaming || isLoading}
           />
         </div>

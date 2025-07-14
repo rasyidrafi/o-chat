@@ -36,6 +36,11 @@ const saveSelectedModelsToStorage = (providerId: string, selectedModelIds: strin
     try {
         const key = getProviderModelsKey(providerId);
         localStorage.setItem(key, JSON.stringify(selectedModelIds));
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('localStorageChange', {
+            detail: { key, value: selectedModelIds }
+        }));
     } catch (error) {
         console.error('Error saving selected models to localStorage:', error);
     }
