@@ -72,23 +72,25 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                             className="absolute z-10 mt-1 w-full bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden"
                         >
                             <ul className="py-1 max-h-60 overflow-y-auto thin-scrollbar">
-                                {options.map(option => (
+                                {options.map(option => {
                                     const isDisabled = disabledOptions?.includes(option) || false;
-                                    <li key={option}>
-                                                onClick={() => handleSelect(option)}
-                                            onClick={() => !isDisabled && handleSelect(option)}
-                                            disabled={isDisabled}
-                                            className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                                                isDisabled
-                                                    ? 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
-                                                    : 'text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer'
-                                            }`}
-                                        >
-                                            <span>{option}</span>
-                                            {selected === option && <Check className="w-4 h-4 text-pink-500" />}
-                                        </button>
+                                    return (
+                                        <li key={option}>
+                                            <button
+                                                onClick={() => !isDisabled && handleSelect(option)}
+                                                disabled={isDisabled}
+                                                className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                                                    isDisabled
+                                                        ? 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                                                        : 'text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer'
+                                                }`}
+                                            >
+                                                <span>{option}</span>
+                                                {selected === option && <Check className="w-4 h-4 text-pink-500" />}
+                                            </button>
+                                        </li>
                                     );
-                                ))}
+                                })}
                             </ul>
                         </motion.div>
                     )}
