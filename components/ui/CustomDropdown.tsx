@@ -9,9 +9,10 @@ interface CustomDropdownProps {
     selected: string;
     onSelect: (option: string) => void;
     animationsDisabled: boolean;
+    disabledOptions?: string[];
 }
 
-const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, options, selected, onSelect, animationsDisabled }) => {
+const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, options, selected, onSelect, animationsDisabled, disabledOptions }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +76,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                                 {options.map(option => {
                                     const isDisabled = disabledOptions?.includes(option) || false;
                                     return (
+                                    return (
                                         <li key={option}>
                                             <button
                                                 onClick={() => !isDisabled && handleSelect(option)}
@@ -90,6 +92,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                                             </button>
                                         </li>
                                     );
+                                })}
                                 })}
                             </ul>
                         </motion.div>
