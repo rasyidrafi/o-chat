@@ -89,7 +89,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                                                 <span>{option}</span>
                                                 {selected === option && <Check className="w-4 h-4 text-pink-500" />}
                                             </button>
-                                        </li> 
+                                        </li>
                                     );
                                 })}
                             </ul>
