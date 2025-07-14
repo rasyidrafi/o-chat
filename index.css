@@ -1,4 +1,12 @@
-/* Global Custom Scrollbar Styles */
+html {
+    overflow: hidden;
+    height: 100%;
+}
+
+body {
+    height: 100%;
+    overflow: auto;
+}
 
 /* Webkit-based browsers (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {

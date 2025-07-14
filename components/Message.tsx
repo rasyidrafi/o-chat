@@ -106,7 +106,7 @@ const Message: React.FC<MessageProps> = ({
       initial={animationsDisabled ? {} : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: animationsDisabled ? 0 : 0.3 }}
-      className={`flex gap-4 mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}
+      className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'}`}
     >
       {!isUser && (
         <div className="flex-shrink-0">

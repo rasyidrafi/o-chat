@@ -28,8 +28,8 @@ const MessageList: React.FC<MessageListProps> = ({
   }
 
   return (
-    <div className="absolute inset-0 overflow-y-auto py-4 custom-scrollbar">
-      <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto space-y-4">
+    <div className="absolute inset-0 overflow-y-auto custom-scrollbar pt-8">
+      <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto">
         <AnimatePresence mode="popLayout">
           {messages.map((message) => (
             <Message
@@ -41,9 +41,9 @@ const MessageList: React.FC<MessageListProps> = ({
             />
           ))}
         </AnimatePresence>
-        {/* Bottom padding to account for the overlay chat input */}
+        {/* Bottom padding to account for the overlay chat input
         <div className="h-32 md:h-36"></div>
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} /> */}
       </div>
     </div>
   );
