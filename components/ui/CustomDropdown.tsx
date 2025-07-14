@@ -73,8 +73,9 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                         >
                             <ul className="py-1 max-h-60 overflow-y-auto thin-scrollbar">
                                 {options.map(option => (
+                                    const isDisabled = disabledOptions?.includes(option) || false;
                                     <li key={option}>
-                                        <button
+                                                onClick={() => handleSelect(option)}
                                             onClick={() => !isDisabled && handleSelect(option)}
                                             disabled={isDisabled}
                                             className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
@@ -86,7 +87,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                                             <span>{option}</span>
                                             {selected === option && <Check className="w-4 h-4 text-pink-500" />}
                                         </button>
-                                    </li>
+                                    );
                                 ))}
                             </ul>
                         </motion.div>
