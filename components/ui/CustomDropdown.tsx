@@ -75,7 +75,6 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                             <ul className="py-1 max-h-60 overflow-y-auto thin-scrollbar">
                                 {options.map(option => {
                                     const isDisabled = disabledOptions?.includes(option) || false;
-                                    return (
                                         <li key={option}>
                                             <button
                                                 onClick={() => !isDisabled && handleSelect(option)}
