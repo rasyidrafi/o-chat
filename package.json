@@ -11,17 +11,21 @@
   "dependencies": {
     "firebase": "^11.10.0",
     "framer-motion": "^11.3.2",
+    "mermaid": "^11.8.1",
     "openai": "^5.9.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-markdown": "^10.1.0",
-    "react-syntax-highlighter": "^15.6.1"
+    "rehype-highlight": "^7.0.2",
+    "rehype-react": "^8.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "unified": "^11.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "@types/react-syntax-highlighter": "^15.5.13",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }

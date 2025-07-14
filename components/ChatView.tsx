@@ -79,7 +79,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     source: string,
     providerId?: string
   ) => {
-    setSelectedModelInfo({ model, source, providerId: providerId || "" });
+    setSelectedModelInfo({ model, source, providerId });
   };
 
   // Calculate sidebar width based on collapsed state
