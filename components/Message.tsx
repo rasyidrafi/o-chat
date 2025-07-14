@@ -140,7 +140,7 @@ const Message: React.FC<MessageProps> = ({
           )}
         </div>
         
-        <div className={`text-xs text-zinc-500 dark:text-zinc-400 mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
+        <div className={`text-xs text-zinc-500 dark:text-zinc-400 my-1 ${isUser ? 'text-right' : 'text-left mb-4'}`}>
           {formatTime(message.timestamp)}
           {message.model && isAssistant && (
             <span className="ml-2">• {message.model}</span>
