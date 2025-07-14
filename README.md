@@ -15,3 +15,6 @@ This contains everything you need to run your app locally.
    `npm run dev`
 
 or u can just use my hosting at https://o-chat-public.web.app/
+
+## Heavily Inspired from t3 Chat
+Visit Theo https://t3.gg/
