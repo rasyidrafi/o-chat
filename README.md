@@ -10,7 +10,7 @@ This contains everything you need to run your app locally.
 1. Install dependencies:
    `npm install`
 2. Set Up Firebase for Storage and Auth
-   Paste the config in .env, look at .env.example
+   Paste the config in `.env`, look at `.env.example`
 3. Run the app:
    `npm run dev`
 
