@@ -75,10 +75,10 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                                 {options.map(option => (
                                     <li key={option}>
                                         <button
-                                            onClick={() => handleSelect(option)}
-                                            disabled={option.includes('(No API Key)')}
+                                            onClick={() => !isDisabled && handleSelect(option)}
+                                            disabled={isDisabled}
                                             className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                                                option.includes('(No API Key)')
+                                                isDisabled
                                                     ? 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
                                                     : 'text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer'
                                             }`}
