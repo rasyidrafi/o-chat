@@ -155,10 +155,13 @@ const ChatView: React.FC<ChatViewProps> = ({
       </motion.div>
 
       {/* Top-right positioned buttons */}
-      <div className="fixed z-50 flex items-center" style={{
-        top: "10px",
-        right: "18px"
-      }}>
+      <div
+        className="fixed z-10 flex items-center"
+        style={{
+          top: "10px",
+          right: "18px",
+        }}
+      >
         <button
           onClick={() => onOpenSettings()}
           className="flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 bg-white dark:bg-[#1c1c1c] border border-zinc-200 dark:border-zinc-700 rounded-bl-lg rounded-tl-lg"
@@ -187,12 +190,16 @@ const ChatView: React.FC<ChatViewProps> = ({
         </button>
       </div>
 
-      <header className="flex md:hidden items-center justify-between p-4 text-zinc-500 dark:text-zinc-400">
+      <header className="flex md:hidden items-center justify-between p-3 text-zinc-500 dark:text-zinc-400">
         <div className="flex items-center">
           <button
-            className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full md:hidden"
+            className="flex items-center justify-center p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 bg-white dark:bg-[#1c1c1c] border border-zinc-200 dark:border-zinc-700 rounded-lg md:hidden"
             onClick={onMenuClick}
             aria-label="Open menu"
+            style={{
+              width: "40px",
+              height: "40px",
+            }}
           >
             <Menu className="w-6 h-6" />
           </button>
