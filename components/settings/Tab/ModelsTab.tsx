@@ -1,28 +1,82 @@
-import React, { useState } from 'react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import CustomDropdown from '../../ui/CustomDropdown';
 import ModelCard from '../ModelCard';
 import { AppSettings } from '../../../App';
+import { Provider, Model } from '../../../types/providers';
+import { fetchModels, getModelCapabilities } from '../../../services/modelService';
 
 interface ModelsTabProps {
     settings: AppSettings;
 }
 
+// Helper functions for localStorage management
+const getProviderModelsKey = (providerId: string): string => {
+    return `models_${providerId}`;
+};
+
+const loadSelectedModelsFromStorage = (providerId: string): string[] => {
+    if (!providerId) return [];
+    
+    try {
+        const key = getProviderModelsKey(providerId);
+        const stored = localStorage.getItem(key);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+        return [];
+    } catch (error) {
+        console.error('Error loading selected models from localStorage:', error);
+        return [];
+    }
+};
+
+const saveSelectedModelsToStorage = (providerId: string, selectedModelIds: string[]) => {
+    if (!providerId) return;
+    
+    try {
+        const key = getProviderModelsKey(providerId);
+        localStorage.setItem(key, JSON.stringify(selectedModelIds));
+    } catch (error) {
+        console.error('Error saving selected models to localStorage:', error);
+    }
+};
+
 const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
     const [selectedProvider, setSelectedProvider] = useState<string>('');
-    const [availableProviders, setAvailableProviders] = useState<Array<{label: string, value: string, disabled: boolean}>>([]);
+    const [availableProviders, setAvailableProviders] = useState<Array<Provider>>([]);
+    const [fetchedModels, setFetchedModels] = useState<Model[]>([]);
+    const [isLoadingModels, setIsLoadingModels] = useState(false);
+    const [modelsError, setModelsError] = useState<string | null>(null);
+    
+    // Pagination and search states
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [itemsPerPage] = useState<number>(6);
     
     // Server models are always enabled - read only
     const [serverModelsEnabled] = useState<string[]>(['Gemini 1.5 Flash', 'Gemini 1.5 Flash 8B']);
     
-    // BYOK models have their own state
-    const [enabledBYOKModels, setEnabledBYOKModels] = useState<string[]>([]);
+    // All selected models for current provider stored in localStorage
+    const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
+
+    // Load selected models from localStorage when provider changes
+    useEffect(() => {
+        const loadedSelectedModels = loadSelectedModelsFromStorage(selectedProvider);
+        setSelectedModelIds(loadedSelectedModels);
+    }, [selectedProvider]);
+
+    // Save selected models to localStorage whenever they change
+    useEffect(() => {
+        if (selectedProvider) {
+            saveSelectedModelsToStorage(selectedProvider, selectedModelIds);
+        }
+    }, [selectedModelIds, selectedProvider]);
 
     // Load providers from localStorage
     useEffect(() => {
         const loadProviders = () => {
-            const providers: Array<{label: string, value: string, disabled: boolean}> = [];
+            let providers: Array<Provider> = [];
             
             // Load built-in providers from localStorage
             try {
@@ -30,33 +84,25 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 if (builtInProviders) {
                     const parsed = JSON.parse(builtInProviders);
                     
-                    // Add Anthropic
-                    const anthropic = parsed.find((p: any) => p.provider === 'anthropic');
-                    providers.push({
-                        label: 'Anthropic',
-                        value: 'anthropic',
-                        disabled: !anthropic?.value?.trim()
-                    });
-                    
-                    // Add OpenAI
-                    const openai = parsed.find((p: any) => p.provider === 'openai');
-                    providers.push({
-                        label: 'OpenAI',
-                        value: 'openai',
-                        disabled: !openai?.value?.trim()
-                    });
+                    // Add All
+                    const allProvider = parsed.map((p: Provider) => ({
+                        ...p,
+                        disabled: !p.value?.trim()
+                    }));
+
+                    providers = [...providers, ...allProvider];
                 } else {
                     // Default providers if not in localStorage
                     providers.push(
-                        { label: 'Anthropic', value: 'anthropic', disabled: true },
-                        { label: 'OpenAI', value: 'openai', disabled: true }
+                        { label: 'Anthropic', value: 'anthropic', disabled: true, id: 'anthropic', base_url: null },
+                        { label: 'OpenAI', value: 'openai', disabled: true, id: 'openai', base_url: null }
                     );
                 }
             } catch (error) {
                 console.error('Error loading built-in providers:', error);
                 providers.push(
-                    { label: 'Anthropic', value: 'anthropic', disabled: true },
-                    { label: 'OpenAI', value: 'openai', disabled: true }
+                    { label: 'Anthropic', value: 'anthropic', disabled: true, id: 'anthropic', base_url: null },
+                    { label: 'OpenAI', value: 'openai', disabled: true, id: 'openai', base_url: null }
                 );
             }
             
@@ -65,12 +111,14 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 const customProviders = localStorage.getItem('custom_api_providers');
                 if (customProviders) {
                     const parsed = JSON.parse(customProviders);
-                    parsed.forEach((provider: any) => {
-                        if (provider.provider?.trim() && provider.value?.trim() && provider.base_url?.trim()) {
+                    parsed.forEach((provider: Provider) => {
+                        if (provider.label?.trim() && provider.value?.trim() && provider.base_url?.trim()) {
                             providers.push({
-                                label: provider.provider,
-                                value: provider.id,
-                                disabled: false
+                                label: provider.label,
+                                value: null, // prevent
+                                disabled: false,
+                                id: provider.id,
+                                base_url: null
                             });
                         }
                     });
@@ -84,6 +132,61 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         
         loadProviders();
     }, []);
+
+    // Fetch models when a custom provider is selected
+    useEffect(() => {
+        const fetchModelsForProvider = async () => {
+            if (!selectedProvider) {
+                setFetchedModels([]);
+                setModelsError(null);
+                return;
+            }
+
+            // Check if it's a custom provider (UUID format)
+            const isCustomProvider = selectedProvider.includes('-');
+            
+            if (!isCustomProvider) {
+                // For built-in providers, clear fetched models for now
+                setFetchedModels([]);
+                setModelsError(null);
+                return;
+            }
+
+            setIsLoadingModels(true);
+            setModelsError(null);
+
+            try {
+                // Get the custom provider details
+                const customProviders = localStorage.getItem('custom_api_providers');
+                if (!customProviders) {
+                    throw new Error('No custom providers found');
+                }
+
+                const parsed = JSON.parse(customProviders);
+                const provider = parsed.find((p: Provider) => p.id === selectedProvider);
+                
+                if (!provider) {
+                    throw new Error('Selected provider not found');
+                }
+
+                const models = await fetchModels(provider);
+                setFetchedModels(models);
+            } catch (error) {
+                console.error('Error fetching models:', error);
+                setModelsError(error instanceof Error ? error.message : 'Failed to fetch models');
+                setFetchedModels([]);
+            } finally {
+                setIsLoadingModels(false);
+            }
+        };
+
+        fetchModelsForProvider();
+    }, [selectedProvider]);
+
+    // Reset pagination when search or provider changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedProvider, selectedFeatures]);
 
     const availableModels = [
         {
@@ -99,69 +202,197 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             features: ['Tool Calling'],
             category: 'server',
             logo: 'google'
-        },
-        {
-            name: 'Grok 4',
-            description: "xAI's flagship model that breaks records on lots of benchmarks (allegedly).",
-            features: ['Tool Calling', 'Reasoning', 'Vision', 'Search URL'],
-            category: 'byok'
-        },
-        {
-            name: 'Kimi K2',
-            description: "Kimi K2 is a large-scale Mixture-of-Experts (MoE) language model developed by Moonshot AI, featuring 1 trillion total parameters with 32 billion active per forward pass.",
-            features: ['Tool Calling', 'Vision'],
-            category: 'byok'
-        },
-        {
-            name: 'Claude 3.5 Sonnet',
-            description: "Anthropic's most capable model with excellent reasoning and code generation capabilities.",
-            features: ['Tool Calling', 'Vision', 'Reasoning'],
-            category: 'byok'
-        },
-        {
-            name: 'GPT-4o',
-            description: "OpenAI's flagship multimodal model with strong performance across text, vision, and audio tasks.",
-            features: ['Tool Calling', 'Vision', 'Reasoning'],
-            category: 'byok'
         }
     ];
 
     const featureOptions = ['Tool Calling', 'Reasoning', 'Vision'];
 
-    // Filter models based on selected provider and features
-    const filteredModels = availableModels.filter(model => {
-        // Only filter BYOK models, always show server models
-        if (model.category === 'server') return true;
+    // Filter and paginate models
+    const filteredAndPaginatedModels = useMemo(() => {
+        // Always show server models
+        const serverModels = availableModels.filter(model => model.category === 'server');
         
-        // If no provider selected, don't show any BYOK models
-        if (!selectedProvider) return false;
+        // Handle BYOK models
+        let byokModels: any[] = [];
         
-        if (selectedFeatures.length === 0) return true;
-        return selectedFeatures.every(feature => model.features.includes(feature));
-    });
+        if (selectedProvider) {
+            // Check if it's a custom provider (UUID format)
+            const isCustomProvider = selectedProvider.includes('-');
+            
+            if (isCustomProvider) {
+                // Use fetched models for custom providers
+                byokModels = fetchedModels.map(model => {
+                    const capabilities = getModelCapabilities(model.supported_parameters);
+                    return {
+                        name: model.name,
+                        description: model.description,
+                        features: [
+                            ...(capabilities.hasTools ? ['Tool Calling'] : []),
+                            ...(capabilities.hasReasoning ? ['Reasoning'] : []),
+                            ...(capabilities.hasVision ? ['Vision'] : [])
+                        ],
+                        category: 'byok',
+                        id: model.id,
+                        providerId: selectedProvider
+                    };
+                });
+            } else {
+                // Use static models for built-in providers
+                byokModels = availableModels.filter(model => model.category === 'byok');
+            }
+        }
+        
+        // Apply feature filtering
+        if (selectedFeatures.length > 0) {
+            byokModels = byokModels.filter(model => 
+                selectedFeatures.every(feature => model.features.includes(feature))
+            );
+        }
 
-    const serverModels = filteredModels.filter(model => model.category === 'server');
-    const byokModels = filteredModels.filter(model => model.category === 'byok');
+        // Apply search filtering
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            byokModels = byokModels.filter(model => 
+                model.name.toLowerCase().includes(query) ||
+                model.description.toLowerCase().includes(query) ||
+                model.features.some((feature: string) => feature.toLowerCase().includes(query))
+            );
+        }
 
-    const handleModelToggle = (modelName: string, enabled: boolean) => {
-        // Only allow toggling for BYOK models
-        const model = availableModels.find(m => m.name === modelName);
-        if (model?.category !== 'byok') return;
+        // Calculate pagination
+        const totalItems = byokModels.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedModels = byokModels.slice(startIndex, endIndex);
 
+        return {
+            serverModels,
+            byokModels: paginatedModels,
+            totalItems,
+            totalPages,
+            currentPage,
+            hasNextPage: currentPage < totalPages,
+            hasPreviousPage: currentPage > 1
+        };
+    }, [selectedProvider, selectedFeatures, searchQuery, currentPage, fetchedModels, itemsPerPage]);
+
+    const handleModelToggle = (modelId: string, enabled: boolean) => {
         if (enabled) {
-            setEnabledBYOKModels([...enabledBYOKModels, modelName]);
+            setSelectedModelIds(prev => [...prev, modelId]);
         } else {
-            setEnabledBYOKModels(enabledBYOKModels.filter(name => name !== modelName));
+            setSelectedModelIds(prev => prev.filter(id => id !== modelId));
         }
     };
 
     const handleUnselectAll = () => {
-        // Only unselect BYOK models
-        setEnabledBYOKModels([]);
+        // Clear all selected models for current provider
+        setSelectedModelIds([]);
     };
 
     const handleFeatureSelect = (feature: string) => {
         setSelectedFeatures([feature]);
+    };
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+    };
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const renderPaginationButton = (page: number, isActive: boolean = false) => (
+        <button
+            key={page}
+            onClick={() => handlePageChange(page)}
+            className={`
+                px-3 py-2 text-sm font-medium rounded-md
+                ${isActive 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }
+                ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
+            `}
+        >
+            {page}
+        </button>
+    );
+
+    const renderPagination = () => {
+        const { totalPages, currentPage, hasPreviousPage, hasNextPage } = filteredAndPaginatedModels;
+        
+        if (totalPages <= 1) return null;
+
+        const pages = [];
+        const maxVisiblePages = 5;
+        
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(renderPaginationButton(i, i === currentPage));
+        }
+
+        return (
+            <div className="flex items-center justify-between mt-6">
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredAndPaginatedModels.totalItems)} to {Math.min(currentPage * itemsPerPage, filteredAndPaginatedModels.totalItems)} of {filteredAndPaginatedModels.totalItems} models
+                </div>
+                
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={!hasPreviousPage}
+                        className={`
+                            px-3 py-2 text-sm font-medium rounded-md
+                            ${hasPreviousPage 
+                                ? 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800' 
+                                : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                            }
+                            ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
+                        `}
+                    >
+                        Previous
+                    </button>
+                    
+                    {startPage > 1 && (
+                        <>
+                            {renderPaginationButton(1)}
+                            {startPage > 2 && <span className="px-2 text-zinc-400">...</span>}
+                        </>
+                    )}
+                    
+                    {pages}
+                    
+                    {endPage < totalPages && (
+                        <>
+                            {endPage < totalPages - 1 && <span className="px-2 text-zinc-400">...</span>}
+                            {renderPaginationButton(totalPages)}
+                        </>
+                    )}
+                    
+                    <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={!hasNextPage}
+                        className={`
+                            px-3 py-2 text-sm font-medium rounded-md
+                            ${hasNextPage 
+                                ? 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800' 
+                                : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                            }
+                            ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
+                        `}
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -178,7 +409,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">From Our Servers</h3>
                     </div>
                     <div className="space-y-4">
-                        {serverModels.map((model) => (
+                        {filteredAndPaginatedModels.serverModels.map((model) => (
                             <ModelCard
                                 key={model.name}
                                 name={model.name}
@@ -206,14 +437,13 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                     options={availableProviders.map(p => p.label)}
                                     disabledOptions={availableProviders.filter(p => p.disabled).map(p => p.label)}
                                     selected={selectedProvider ? 
-                                        availableProviders.find(p => p.value === selectedProvider)?.label || 'Select Provider' : 
+                                        availableProviders.find(p => p.label === selectedProvider)?.label || 'Select Provider' : 
                                         'Select Provider'
                                     }
                                     onSelect={(option) => {
-                                        const cleanOption = option.replace(' (No API Key)', '');
-                                        const provider = availableProviders.find(p => p.label === cleanOption);
+                                        const provider = availableProviders.find(p => p.label === option);
                                         if (provider && !provider.disabled) {
-                                            setSelectedProvider(provider.value);
+                                            setSelectedProvider(provider.id ?? '');
                                         }
                                     }}
                                     animationsDisabled={settings.animationsDisabled}
@@ -237,39 +467,120 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                             </div>
                             <button
                                 onClick={handleUnselectAll}
-                                className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
+                                className={`
+                                    px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 
+                                    hover:text-zinc-900 dark:hover:text-zinc-100
+                                    ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
+                                `}
                             >
                                 Unselect All
                             </button>
                         </div>
                     </div>
-                    <div className="space-y-4">
+
+                    {/* Search Bar */}
+                    {selectedProvider && (
+                        <div className="mb-6">
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Search models by name, description, or features..."
+                                    value={searchQuery}
+                                    onChange={handleSearchChange}
+                                    className={`
+                                        w-full pl-10 pr-4 py-2 border border-zinc-300 dark:border-zinc-600 
+                                        rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100
+                                        placeholder-zinc-500 dark:placeholder-zinc-400
+                                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                        ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
+                                    `}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className={`space-y-4 ${!settings.animationsDisabled ? 'transition-all duration-300' : ''}`}>
                         {!selectedProvider ? (
                             <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
                                 <p className="text-lg mb-2">No Provider Selected</p>
                                 <p className="text-sm">Please select a provider from the dropdown above to view available models.</p>
                             </div>
-                        ) : byokModels.length === 0 ? (
+                        ) : isLoadingModels ? (
                             <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
-                                <p className="text-lg mb-2">No Models Available</p>
-                                <p className="text-sm">No models match the selected provider and feature filters.</p>
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <div className={`w-5 h-5 border-2 border-zinc-400 border-t-transparent rounded-full ${!settings.animationsDisabled ? 'animate-spin' : ''}`}></div>
+                                    <p className="text-lg">Loading Models...</p>
+                                </div>
+                                <p className="text-sm">Fetching available models from the selected provider.</p>
+                            </div>
+                        ) : modelsError ? (
+                            <div className="text-center py-12 text-red-500 dark:text-red-400">
+                                <p className="text-lg mb-2">Error Loading Models</p>
+                                <p className="text-sm">{modelsError}</p>
+                            </div>
+                        ) : filteredAndPaginatedModels.byokModels.length === 0 ? (
+                            <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+                                <p className="text-lg mb-2">
+                                    {searchQuery.trim() ? 'No Models Found' : 'No Models Available'}
+                                </p>
+                                <p className="text-sm">
+                                    {searchQuery.trim() 
+                                        ? 'No models match your search criteria. Try adjusting your search terms or filters.'
+                                        : 'No models match the selected provider and feature filters.'
+                                    }
+                                </p>
                             </div>
                         ) : (
-                            byokModels.map((model) => (
-                                <ModelCard
-                                    key={model.name}
-                                    name={model.name}
-                                    description={model.description}
-                                    features={model.features}
-                                    isEnabled={enabledBYOKModels.includes(model.name)}
-                                    onToggle={(enabled) => handleModelToggle(model.name, enabled)}
-                                    animationsDisabled={settings.animationsDisabled}
-                                />
-                            ))
+                            <>
+                                {filteredAndPaginatedModels.byokModels.map((model, index) => (
+                                    <div 
+                                        key={model.id || model.name}
+                                        className={`
+                                            ${!settings.animationsDisabled ? 'animate-fadeIn' : ''}
+                                        `}
+                                        style={{
+                                            animationDelay: !settings.animationsDisabled ? `${index * 100}ms` : undefined
+                                        }}
+                                    >
+                                        <ModelCard
+                                            name={model.name}
+                                            description={model.description}
+                                            features={model.features}
+                                            isEnabled={selectedModelIds.includes(model.id)}
+                                            onToggle={(enabled) => handleModelToggle(model.id, enabled)}
+                                            animationsDisabled={settings.animationsDisabled}
+                                        />
+                                    </div>
+                                ))}
+                                {renderPagination()}
+                            </>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* CSS for animations */}
+            <style>{`
+                @keyframes fadeIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                
+                .animate-fadeIn {
+                    animation: fadeIn 0.3s ease-out forwards;
+                }
+            `}</style>
         </div>
     );
 };
