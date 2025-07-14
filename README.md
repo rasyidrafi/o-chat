@@ -1,4 +1,4 @@
-# Run and deploy your AI Studio app
+# Run and deploy
 
 This contains everything you need to run your app locally.
 
@@ -9,6 +9,9 @@ This contains everything you need to run your app locally.
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Set Up Firebase for Storage and Auth
+   Paste the config in .env, look at .env.example
 3. Run the app:
    `npm run dev`
+
+or u can just use my hosting at https://o-chat-public.web.app/
