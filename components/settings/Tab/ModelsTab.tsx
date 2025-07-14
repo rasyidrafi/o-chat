@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CustomDropdown from '../../ui/CustomDropdown';
 import ModelCard from '../ModelCard';
 import { AppSettings } from '../../../App';
@@ -9,12 +10,80 @@ interface ModelsTabProps {
 
 const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+    const [selectedProvider, setSelectedProvider] = useState<string>('');
+    const [availableProviders, setAvailableProviders] = useState<Array<{label: string, value: string, disabled: boolean}>>([]);
     
     // Server models are always enabled - read only
     const [serverModelsEnabled] = useState<string[]>(['Gemini 1.5 Flash', 'Gemini 1.5 Flash 8B']);
     
     // BYOK models have their own state
     const [enabledBYOKModels, setEnabledBYOKModels] = useState<string[]>([]);
+
+    // Load providers from localStorage
+    useEffect(() => {
+        const loadProviders = () => {
+            const providers: Array<{label: string, value: string, disabled: boolean}> = [];
+            
+            // Load built-in providers from localStorage
+            try {
+                const builtInProviders = localStorage.getItem('builtin_api_providers');
+                if (builtInProviders) {
+                    const parsed = JSON.parse(builtInProviders);
+                    
+                    // Add Anthropic
+                    const anthropic = parsed.find((p: any) => p.provider === 'anthropic');
+                    providers.push({
+                        label: 'Anthropic',
+                        value: 'anthropic',
+                        disabled: !anthropic?.value?.trim()
+                    });
+                    
+                    // Add OpenAI
+                    const openai = parsed.find((p: any) => p.provider === 'openai');
+                    providers.push({
+                        label: 'OpenAI',
+                        value: 'openai',
+                        disabled: !openai?.value?.trim()
+                    });
+                } else {
+                    // Default providers if not in localStorage
+                    providers.push(
+                        { label: 'Anthropic', value: 'anthropic', disabled: true },
+                        { label: 'OpenAI', value: 'openai', disabled: true }
+                    );
+                }
+            } catch (error) {
+                console.error('Error loading built-in providers:', error);
+                providers.push(
+                    { label: 'Anthropic', value: 'anthropic', disabled: true },
+                    { label: 'OpenAI', value: 'openai', disabled: true }
+                );
+            }
+            
+            // Load custom providers from localStorage
+            try {
+                const customProviders = localStorage.getItem('custom_api_providers');
+                if (customProviders) {
+                    const parsed = JSON.parse(customProviders);
+                    parsed.forEach((provider: any) => {
+                        if (provider.provider?.trim() && provider.value?.trim() && provider.base_url?.trim()) {
+                            providers.push({
+                                label: provider.provider,
+                                value: provider.id,
+                                disabled: false
+                            });
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading custom providers:', error);
+            }
+            
+            setAvailableProviders(providers);
+        };
+        
+        loadProviders();
+    }, []);
 
     const availableModels = [
         {
@@ -59,9 +128,13 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
     const featureOptions = ['Tool Calling', 'Reasoning', 'Vision'];
 
+    // Filter models based on selected provider and features
     const filteredModels = availableModels.filter(model => {
         // Only filter BYOK models, always show server models
         if (model.category === 'server') return true;
+        
+        // If no provider selected, don't show any BYOK models
+        if (!selectedProvider) return false;
         
         if (selectedFeatures.length === 0) return true;
         return selectedFeatures.every(feature => model.features.includes(feature));
@@ -126,6 +199,25 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">BYOK Models</h3>
                         <div className="flex items-center gap-4">
+                            <div className="w-48">
+                                <CustomDropdown
+                                    label=""
+                                    description=""
+                                    options={availableProviders.map(p => p.disabled ? `${p.label} (No API Key)` : p.label)}
+                                    selected={selectedProvider ? 
+                                        availableProviders.find(p => p.value === selectedProvider)?.label || 'Select Provider' : 
+                                        'Select Provider'
+                                    }
+                                    onSelect={(option) => {
+                                        const cleanOption = option.replace(' (No API Key)', '');
+                                        const provider = availableProviders.find(p => p.label === cleanOption);
+                                        if (provider && !provider.disabled) {
+                                            setSelectedProvider(provider.value);
+                                        }
+                                    }}
+                                    animationsDisabled={settings.animationsDisabled}
+                                />
+                            </div>
                             <div className="w-64">
                                 <CustomDropdown
                                     label=""
@@ -151,17 +243,29 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         </div>
                     </div>
                     <div className="space-y-4">
-                        {byokModels.map((model) => (
-                            <ModelCard
-                                key={model.name}
-                                name={model.name}
-                                description={model.description}
-                                features={model.features}
-                                isEnabled={enabledBYOKModels.includes(model.name)}
-                                onToggle={(enabled) => handleModelToggle(model.name, enabled)}
-                                animationsDisabled={settings.animationsDisabled}
-                            />
-                        ))}
+                        {!selectedProvider ? (
+                            <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+                                <p className="text-lg mb-2">No Provider Selected</p>
+                                <p className="text-sm">Please select a provider from the dropdown above to view available models.</p>
+                            </div>
+                        ) : byokModels.length === 0 ? (
+                            <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+                                <p className="text-lg mb-2">No Models Available</p>
+                                <p className="text-sm">No models match the selected provider and feature filters.</p>
+                            </div>
+                        ) : (
+                            byokModels.map((model) => (
+                                <ModelCard
+                                    key={model.name}
+                                    name={model.name}
+                                    description={model.description}
+                                    features={model.features}
+                                    isEnabled={enabledBYOKModels.includes(model.name)}
+                                    onToggle={(enabled) => handleModelToggle(model.name, enabled)}
+                                    animationsDisabled={settings.animationsDisabled}
+                                />
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
