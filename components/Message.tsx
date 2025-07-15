@@ -15,17 +15,6 @@ const SyntaxHighlighter = React.lazy(() =>
 
 const syntaxStyles = {
   dark: React.lazy(() => 
-    import('react-syntax-highlighter/dist/esm/styles/prism').then(module => ({ 
-      default: module.vscDarkPlus 
-    }))
-  ),
-  light: React.lazy(() => 
-    import('react-syntax-highlighter/dist/esm/styles/prism').then(module => ({ 
-      default: module.vs 
-    }))
-  )
-};
-
 // Lazy load markdown processor
 const createMarkdownProcessor = () => 
   Promise.all([
@@ -115,8 +104,10 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
   
   // Load syntax highlighting styles
   useEffect(() => {
-    syntaxStyles.dark().then(module => setDarkStyle(module.default));
-    syntaxStyles.light().then(module => setLightStyle(module.default));
+    import('react-syntax-highlighter/dist/esm/styles/prism').then(module => {
+      setDarkStyle(module.vscDarkPlus);
+      setLightStyle(module.vs);
+    });
   }, []);
 
   // Don't render until styles are loaded
