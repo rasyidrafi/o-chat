@@ -29,6 +29,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
 
   // Show/hide "Scroll to bottom" button based on scroll position
   useEffect(() => {
@@ -49,6 +50,9 @@ const MessageList: React.FC<MessageListProps> = ({
         isNearBottom,
         shouldShowButton,
       });
+
+      // Track if user has scrolled up from bottom
+      setUserScrolledUp(!isNearBottom);
 
       if (onShowScrollToBottom) {
         onShowScrollToBottom(shouldShowButton);
@@ -72,6 +76,7 @@ const MessageList: React.FC<MessageListProps> = ({
   useEffect(() => {
     const handler = () => {
       setShouldScrollToBottom(true);
+      setUserScrolledUp(false);
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       // Hide the scroll button when scrolling to bottom
       if (onShowScrollToBottom) {
@@ -82,16 +87,17 @@ const MessageList: React.FC<MessageListProps> = ({
     return () => window.removeEventListener("scrollToBottom", handler);
   }, [onShowScrollToBottom]);
 
-  // Auto-scroll to bottom for new messages (but not when user has scrolled up)
+  // Auto-scroll to bottom for new messages only if user hasn't scrolled up
   useEffect(() => {
-    if (shouldScrollToBottom) {
+    if (shouldScrollToBottom && !userScrolledUp) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, streamingMessageId, shouldScrollToBottom]);
+  }, [messages, streamingMessageId, shouldScrollToBottom, userScrolledUp]);
 
   // Reset scroll behavior when messages change (new conversation)
   useEffect(() => {
     setShouldScrollToBottom(true);
+    setUserScrolledUp(false);
     // Reset scroll button state for new conversation
     if (onShowScrollToBottom) {
       onShowScrollToBottom(false);
@@ -108,8 +114,10 @@ const MessageList: React.FC<MessageListProps> = ({
 
     if (wasAtBottom) {
       setShouldScrollToBottom(true);
+      setUserScrolledUp(false);
     } else {
       setShouldScrollToBottom(false);
+      setUserScrolledUp(true);
     }
   }, [messages.length]);
 
