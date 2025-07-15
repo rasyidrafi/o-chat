@@ -27,7 +27,7 @@ const syntaxStyles = {
 };
 
 // Lazy load markdown processor
-const createMarkdownProcessor = React.lazy(() => 
+const createMarkdownProcessor = () => 
   Promise.all([
     import('unified'),
     import('remark-parse'),
@@ -35,7 +35,7 @@ const createMarkdownProcessor = React.lazy(() =>
     import('remark-rehype'),
     import('rehype-react')
   ]).then(([unified, remarkParse, remarkGfm, remarkRehype, rehypeReact]) => ({
-    default: () => unified.unified()
+    processor: unified.unified()
       .use(remarkParse.default)
       .use(remarkGfm.default)
       .use(remarkRehype.default, { allowDangerousHtml: true })
@@ -44,7 +44,7 @@ const createMarkdownProcessor = React.lazy(() =>
         components: MarkdownComponents,
       })
   }))
-);
+  );
 
 // Lazy load mermaid
 const mermaid = React.lazy(() => import('mermaid'));
@@ -427,8 +427,8 @@ const Message: React.FC<MessageProps> = ({
   // Load markdown processor lazily
   useEffect(() => {
     if (!isUser && !processor) {
-      createMarkdownProcessor().then(module => {
-        setProcessor(module.default());
+      createMarkdownProcessor().then(({ processor: markdownProcessor }) => {
+        setProcessor(markdownProcessor);
       });
     }
   }, [isUser, processor]);
