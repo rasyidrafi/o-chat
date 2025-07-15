@@ -286,6 +286,9 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const sendMessage = useCallback(async (content: string, model: string, source: string = 'system', providerId?: string) => {
     if (!content.trim()) return;
 
+    // Prevent multiple sends if already streaming
+    if (streamingState.isStreaming) return;
+
     // Create or get current conversation
     let conversation = currentConversation;
     if (!conversation) {
@@ -350,10 +353,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
     setConversations(prev => {
       const existingIndex = prev.findIndex(conv => conv.id === conversation!.id);
       if (existingIndex >= 0) {
-        // Update existing conversation
+        // Update existing conversation and move to top
         const newConversations = [...prev];
         newConversations[existingIndex] = updatedConversation;
-        return newConversations;
+        // Move updated conversation to the beginning
+        const [updated] = newConversations.splice(existingIndex, 1);
+        return [updated, ...newConversations];
       } else {
         // Add new conversation to the beginning
         return [updatedConversation, ...prev];
