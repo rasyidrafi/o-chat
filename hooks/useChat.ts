@@ -287,11 +287,19 @@ export const useChat = (settings?: AppSettings | undefined) => {
     // Prevent multiple sends if already streaming
     if (streamingState.isStreaming) return;
 
+    // Additional check to prevent rapid duplicate sends
+    const trimmedContent = content.trim();
+    if (currentConversation && currentConversation.messages.length > 0) {
+      const lastMessage = currentConversation.messages[currentConversation.messages.length - 1];
+      if (lastMessage.role === 'user' && lastMessage.content === trimmedContent) {
+        return; // Prevent duplicate user messages
+      }
+    }
     // Create or get current conversation
     let conversation = currentConversation;
     if (!conversation) {
       // Create new conversation with message content as title
-      const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+      const title = trimmedContent.slice(0, 50) + (trimmedContent.length > 50 ? '...' : '');
       conversation = {
         id: generateUniqueId(),
         title,
@@ -304,7 +312,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       setCurrentConversation(conversation);
     } else if (conversation.messages.length === 0 && conversation.title === 'New Chat') {
       // Update existing empty conversation title with the message content
-      const messageTitle = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+      const messageTitle = trimmedContent.slice(0, 50) + (trimmedContent.length > 50 ? '...' : '');
       conversation = {
         ...conversation,
         title: messageTitle,
@@ -313,17 +321,18 @@ export const useChat = (settings?: AppSettings | undefined) => {
       
       // Update the conversation in state immediately
       setCurrentConversation(conversation);
-      setConversations(prev => prev.map(conv => 
-        conv.id === conversation!.id ? conversation! : conv
-      ));
     }
+
+    // Create unique timestamps to ensure different keys
+    const userTimestamp = new Date();
+    const aiTimestamp = new Date(userTimestamp.getTime() + 1);
 
     // Create user message
     const userMessage: ChatMessage = {
       id: generateUniqueId(),
       role: 'user',
-      content: content.trim(),
-      timestamp: new Date(),
+      content: trimmedContent,
+      timestamp: userTimestamp,
       source: getModelSource(model)
     };
 
@@ -334,7 +343,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       content: '',
       model,
       isStreaming: true,
-      timestamp: new Date(Date.now() + 1),
+      timestamp: aiTimestamp,
       source: getModelSource(model),
       reasoning: '',
       isReasoningComplete: false
@@ -347,21 +356,19 @@ export const useChat = (settings?: AppSettings | undefined) => {
       updatedAt: new Date()
     };
 
-    // Update conversations state - handle both existing and new conversations
+    // Update conversations state atomically
     setConversations(prev => {
       const existingIndex = prev.findIndex(conv => conv.id === conversation!.id);
       if (existingIndex >= 0) {
-        // Update existing conversation and move to top
-        const newConversations = [...prev];
-        newConversations[existingIndex] = updatedConversation;
-        // Move updated conversation to the beginning
-        const [updated] = newConversations.splice(existingIndex, 1);
-        return [updated, ...newConversations];
+        // Replace existing conversation and move to top
+        const filtered = prev.filter((_, index) => index !== existingIndex);
+        return [updatedConversation, ...filtered];
       } else {
         // Add new conversation to the beginning
         return [updatedConversation, ...prev];
       }
     });
+    
     setCurrentConversation(updatedConversation);
 
     // Save conversation with user message immediately
