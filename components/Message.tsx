@@ -33,6 +33,7 @@ mermaid.initialize({
 const CodeBlock: React.FC<{ children: string; className?: string }> = ({ children, className }) => {
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [codeFont, setCodeFont] = useState('Berkeley Mono (default)');
   
   // Detect dark mode
   useEffect(() => {
@@ -77,6 +78,7 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
             background: isDark ? '#1f2937' : '#f3f4f6',
             fontSize: '0.875rem',
             lineHeight: '1.5',
+            fontFamily: fontFamily,
           }}
           wrapLines={true}
           wrapLongLines={true}
@@ -321,6 +323,37 @@ const Message: React.FC<MessageProps> = ({
       });
   }, []);
 
+  // Load code font from localStorage and listen for changes
+  useEffect(() => {
+    const loadCodeFont = () => {
+      const storedCodeFont = localStorage.getItem('codeFont') || 'Berkeley Mono (default)';
+      setCodeFont(storedCodeFont);
+    };
+
+    loadCodeFont();
+
+    // Listen for storage changes from other tabs/windows
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'codeFont') {
+        loadCodeFont();
+      }
+    };
+
+    // Listen for custom storage events from same tab
+    const handleCustomStorageChange = (event: CustomEvent) => {
+      if (event.detail.key === 'codeFont') {
+        loadCodeFont();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('localStorageChange', handleCustomStorageChange as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChange', handleCustomStorageChange as EventListener);
+    };
+  }, []);
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -375,6 +408,8 @@ const Message: React.FC<MessageProps> = ({
       </div>
     );
   };
+  // Get the actual font family name (remove "(default)" suffix)
+  const fontFamily = codeFont.split(' (')[0];
 
   return (
     <motion.div

@@ -25,6 +25,15 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
         setTimeout(() => setIsSaved(false), 2000);
     };
 
+    // Dispatch custom event when code font changes to notify other components
+    const handleCodeFontChange = (codeFont: string) => {
+        updateSettings({ codeFont });
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('localStorageChange', {
+            detail: { key: 'codeFont', value: codeFont }
+        }));
+    };
     const mainFontOptions = ['Montserrat', 'Lato', 'Open Sans', 'Roboto', 'Source Sans Pro'];
     const codeFontOptions = ['Berkeley Mono (default)', 'Intel One Mono', 'Atkinson Hyperlegible Mono', 'System Monospace Font'];
 
@@ -88,7 +97,7 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
                                 description="Used in code blocks and inline code in chat messages."
                                 options={codeFontOptions}
                                 selected={settings.codeFont}
-                                onSelect={(option) => updateSettings({codeFont: option})}
+                                onSelect={handleCodeFontChange}
                                 animationsDisabled={settings.animationsDisabled}
                             />
                         </div>
