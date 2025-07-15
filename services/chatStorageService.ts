@@ -13,8 +13,8 @@ import {
   where,
   Timestamp,
   writeBatch,
-  limit,
-  startAfter
+  limit as firestoreLimit,
+  startAfter as firestoreStartAfter
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ChatConversation, ChatMessage } from '../types/chat';
