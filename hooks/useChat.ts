@@ -570,16 +570,17 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [streamingState]);
 
   const selectConversation = useCallback((conversation: ChatConversation | null) => {
-    if (conversation && conversation.messages.length === 0) {
-      // Load messages for this conversation
-      loadConversationMessages(conversation.id);
-    }
+    // Always set the current conversation first
+    setCurrentConversation(conversation);
     
     // Reset message pagination state when selecting a new conversation
     setHasMoreMessages(true);
     setMessagesLastDoc(null);
     
-    setCurrentConversation(conversation);
+    if (conversation && conversation.messages.length === 0) {
+      // Load messages for this conversation
+      loadConversationMessages(conversation.id);
+    }
   }, [loadConversationMessages]);
 
   const deleteConversation = useCallback((conversationId: string) => {
