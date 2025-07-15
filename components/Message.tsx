@@ -15,6 +15,10 @@ const SyntaxHighlighter = React.lazy(() =>
 
 const syntaxStyles = {
   dark: React.lazy(() => 
+    import('react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus')
+  )
+};
+
 // Lazy load markdown processor
 const createMarkdownProcessor = () => 
   Promise.all([
@@ -515,16 +519,6 @@ const Message: React.FC<MessageProps> = ({
           {isStreaming && !isUser && (
             <div className="mt-3 flex items-center justify-between">
               <TypingIndicator />
-              {/* {onStopStreaming && (
-                <button
-                  onClick={onStopStreaming}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors"
-                  aria-label="Stop generation"
-                >
-                  <X className="w-3 h-3" />
-                  Stop
-                </button>
-              )} */}
             </div>
           )}
         </div>
