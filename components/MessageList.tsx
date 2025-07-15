@@ -41,9 +41,9 @@ const MessageList: React.FC<MessageListProps> = ({
             />
           ))}
         </AnimatePresence>
-        {/* Bottom padding to account for the overlay chat input
+        {/* Bottom padding to account for the overlay chat input */}
         <div className="h-32 md:h-36"></div>
-        <div ref={messagesEndRef} /> */}
+        <div ref={messagesEndRef} />
       </div>
     </div>
   );

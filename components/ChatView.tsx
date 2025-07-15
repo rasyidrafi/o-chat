@@ -4,8 +4,6 @@ import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
 import {
-  LinkIcon,
-  MoreHorizontal,
   SlidersHorizontal,
   Sun,
   Moon,
@@ -237,15 +235,22 @@ const ChatView: React.FC<ChatViewProps> = ({
         )}
       </main>
 
-      <footer className="w-full">
-        <div className="max-w-4xl pt-4 mx-auto px-4 md:px-6 lg:px-8 xl:px-16">
+      {/* Floating Chat Input */}
+      <div className="fixed bottom-4 left-0 right-0 z-40 pointer-events-none">
+        <div
+          className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 pointer-events-auto"
+          style={{
+            paddingLeft: `${sidebarWidth + 16}px`,
+            paddingRight: "16px",
+          }}
+        >
           <ChatInput
             onMessageSend={handleSendMessage}
             onModelSelect={handleModelSelection}
             disabled={streamingState.isStreaming || isLoading}
           />
         </div>
-      </footer>
+      </div>
     </div>
   );
 };

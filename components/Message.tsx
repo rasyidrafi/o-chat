@@ -110,8 +110,8 @@ const MarkdownComponents = {
     
     // Block code (handled by rehype-highlight)
     return (
-      <code className={className} {...props}>
-        {children}
+      <code className={`${className} mb-2`} {...props}>
+      {children}
       </code>
     );
   },
@@ -253,12 +253,12 @@ const Message: React.FC<MessageProps> = ({
 
   const getMessageStyles = () => {
     if (isUser) {
-      return 'bg-gradient-to-r from-pink-600 to-purple-600 text-white';
+      return 'bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-2xl px-4 py-3';
     }
     if (message.isError) {
-      return 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200';
+      return 'bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3';
     }
-    return 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100';
+    return 'text-zinc-900 dark:text-zinc-100'; // Remove background and padding for AI responses
   };
 
   const processedContent = useMemo(() => {
@@ -309,8 +309,8 @@ const Message: React.FC<MessageProps> = ({
       transition={{ duration: animationsDisabled ? 0 : 0.3 }}
       className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
     >
-      <div className={`flex flex-col ${isUser ? 'max-w-[80%] items-end' : 'w-full items-start'}`}>
-        <div className={`rounded-2xl px-4 py-3 ${getMessageStyles()}`}>
+      <div className={`my-4 flex flex-col ${isUser ? 'max-w-[80%] items-end' : 'w-full items-start'}`}>
+        <div className={getMessageStyles()}>
           {renderContent()}
           {isStreaming && !isUser && (
             <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
@@ -319,7 +319,7 @@ const Message: React.FC<MessageProps> = ({
           {isStreaming && !isUser && (
             <div className="mt-3 flex items-center justify-between">
               <TypingIndicator />
-              {onStopStreaming && (
+              {/* {onStopStreaming && (
                 <button
                   onClick={onStopStreaming}
                   className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors"
@@ -328,7 +328,7 @@ const Message: React.FC<MessageProps> = ({
                   <X className="w-3 h-3" />
                   Stop
                 </button>
-              )}
+              )} */}
             </div>
           )}
         </div>

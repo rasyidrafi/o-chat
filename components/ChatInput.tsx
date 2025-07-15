@@ -207,28 +207,28 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="bg-zinc-200 dark:bg-[#2a2a2a] rounded-t-xl p-2 shadow-lg">
+    <div className="bg-white dark:bg-[#1c1c1c] rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-xl p-3">
       <div className="relative">
         <textarea
           value={message}
           onChange={handleTextareaChange}
           onKeyPress={handleKeyPress}
           placeholder="Type your message here..."
-          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-2 pb-2 text-sm max-h-32 overflow-y-auto thin-scrollbar"
-          rows={3}
+          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-24 overflow-y-auto thin-scrollbar"
+          rows={1}
           disabled={disabled}
         />
       </div>
-      <div className="flex items-center justify-between flex-wrap gap-2 mt-1.5 pt-1.5 border-t border-zinc-300 dark:border-zinc-700">
+      <div className="flex items-center justify-between flex-wrap gap-2 mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-700">
         <div className="flex items-center flex-wrap gap-2">
           <div ref={dropdownRef} className="relative">
             <button 
               onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-              className="flex items-center gap-1.5 text-sm py-1.5 px-3 rounded-lg bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors w-48"
+              className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors w-40"
             >
-              <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
+              <Sparkles className="w-3 h-3 text-purple-400 flex-shrink-0" />
               <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">{selectedModelLabel}</span>
-              <ChevronDown className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3 h-3 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {isModelDropdownOpen && (
               <div className="absolute bottom-full mb-2 left-0 w-64 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10">
@@ -248,21 +248,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
               </div>
             )}
           </div>
-          <button className="flex items-center gap-1.5 text-sm py-1.5 px-3 rounded-lg bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400 dark:hover:bg-zinc-600 transition-colors">
-            <Globe className="w-4 h-4 text-blue-400" />
+          <button className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+            <Globe className="w-3 h-3 text-blue-400" />
             <span className="text-zinc-900 dark:text-white">Search</span>
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button className="p-2 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors" aria-label="Attach file">
-            <Paperclip className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+          <button className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" aria-label="Attach file">
+            <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
           </button>
           <button 
             onClick={handleSendMessage}
             className={`p-1.5 rounded-full transition-colors ${
               message.trim() && !disabled 
                 ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700' 
-                : 'bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
+                : 'bg-zinc-200 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
             }`}
             disabled={!message.trim() || disabled}
             aria-label={disabled ? "Sending..." : "Send message"}

@@ -220,12 +220,40 @@ const App: React.FC = () => {
     root.classList.remove(isDark ? 'light' : 'dark');
     root.classList.add(isDark ? 'dark' : 'light');
 
+    // Remove existing highlight.js theme
+    const existingHighlightLink = document.getElementById('highlight-theme');
+    if (existingHighlightLink) {
+      existingHighlightLink.remove();
+    }
+
+    // Add appropriate highlight.js theme
+    const highlightLink = document.createElement('link');
+    highlightLink.id = 'highlight-theme';
+    highlightLink.rel = 'stylesheet';
+    highlightLink.href = isDark 
+      ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/panda-syntax-dark.min.css'
+      : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/panda-syntax-light.min.css';
+    document.head.appendChild(highlightLink);
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
       if (settings.theme === 'system') {
         const isSystemDark = mediaQuery.matches;
         root.classList.remove(isSystemDark ? 'light' : 'dark');
         root.classList.add(isSystemDark ? 'dark' : 'light');
+        
+        // Update highlight.js theme for system theme changes
+        const currentHighlightLink = document.getElementById('highlight-theme');
+        if (currentHighlightLink) {
+          currentHighlightLink.remove();
+        }
+        const newHighlightLink = document.createElement('link');
+        newHighlightLink.id = 'highlight-theme';
+        newHighlightLink.rel = 'stylesheet';
+        newHighlightLink.href = isSystemDark
+          ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/panda-syntax-dark.min.css'
+          : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/panda-syntax-light.min.css';
+        document.head.appendChild(newHighlightLink);
       }
     };
 
@@ -286,7 +314,6 @@ const App: React.FC = () => {
           user={user}
           animationsDisabled={settings.animationsDisabled}
           chat={chat}
-          settings={settings}
         />
         {isMobileMenuOpen && (
           <div 
