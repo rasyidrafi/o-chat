@@ -14,7 +14,7 @@ export default defineConfig(() => {
               'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
               'ui-vendor': ['framer-motion'],
               'markdown-vendor': ['unified', 'remark-parse', 'remark-gfm', 'remark-rehype', 'rehype-react'],
-              'syntax-vendor': ['react-syntax-highlighter'],
+              'syntax-vendor': ['highlight.js'],
               'chart-vendor': ['mermaid']
             }
           }

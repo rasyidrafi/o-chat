@@ -5,6 +5,7 @@ import CustomDropdown from '../../ui/CustomDropdown';
 import FontPreview from '../FontPreview';
 import Button from '../../ui/Button';
 import { AppSettings } from '../../../App';
+import HorizontalRule from '@/components/ui/HorizontalRule';
 
 interface CustomizationTabProps {
     settings: AppSettings;
@@ -25,17 +26,7 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
         setTimeout(() => setIsSaved(false), 2000);
     };
 
-    // Dispatch custom event when code font changes to notify other components
-    const handleCodeFontChange = (codeFont: string) => {
-        updateSettings({ codeFont });
-        
-        // Dispatch custom event to notify other components
-        window.dispatchEvent(new CustomEvent('localStorageChange', {
-            detail: { key: 'codeFont', value: codeFont }
-        }));
-    };
     const mainFontOptions = ['Montserrat', 'Lato', 'Open Sans', 'Roboto', 'Source Sans Pro'];
-    const codeFontOptions = ['JetBrains Mono (default)', 'Fira Code', 'Source Code Pro', 'Roboto Mono', 'System Monospace'];
 
     return (
         <div>
@@ -51,14 +42,15 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
                         placeholder="You are a helpful assistant..." 
                     />
                 </div>
-                <div className="flex justify-start items-center gap-3 mt-8">
+                <div className="flex justify-start items-center gap-3 mt-4">
                     <Button onClick={handleSaveCustomInstruction}>
                         {isSaved ? 'Saved!' : 'Save Preferences'}
                     </Button>
                 </div>
             </div>
 
-            <div className="my-10 border-t border-zinc-200 dark:border-zinc-800"></div>
+            {/* @ts-ignore */}
+            <HorizontalRule className="my-8" />
             
             {/* Visual Options Section */}
             <div>
@@ -92,20 +84,11 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
                                 onSelect={(option) => updateSettings({mainFont: option.replace(' (default)', '')})}
                                 animationsDisabled={settings.animationsDisabled}
                             />
-                            <CustomDropdown 
-                                label="Code Font"
-                                description="Used in code blocks and inline code in chat messages."
-                                options={codeFontOptions}
-                                selected={settings.codeFont}
-                                onSelect={handleCodeFontChange}
-                                animationsDisabled={settings.animationsDisabled}
-                            />
                         </div>
                         <div className="space-y-2">
                             <h4 className="font-medium text-zinc-900 dark:text-white">Fonts Preview</h4>
                             <FontPreview
                                 mainFont={settings.mainFont}
-                                codeFont={settings.codeFont}
                             />
                         </div>
                     </div>

@@ -101,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
   }, {});
 
   return (
-    <aside className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-zinc-100 dark:bg-[#111111] text-zinc-600 dark:text-zinc-400 p-4 z-80
+    <aside className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-zinc-100 dark:bg-[#111111] text-zinc-600 dark:text-zinc-400 p-4 z-60
                        transition-all duration-300 ease-in-out
                        md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
                        w-64 ${isCollapsed ? 'md:w-20' : ''}`}>
