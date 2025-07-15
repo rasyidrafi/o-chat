@@ -102,9 +102,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     console.log('loadConversationMessages called for:', conversationId);
     try {
       setIsLoadingMessages(true);
-      console.log('About to call ChatStorageService.loadMessagesPaginated');
-      const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 30);
-      console.log('ChatStorageService.loadMessagesPaginated result:', result);
+      const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 100);
       
       // Update conversations array
       setConversations(prev => {
@@ -140,7 +138,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     
     try {
       setIsLoadingMoreMessages(true);
-      const result = await ChatStorageService.loadMessagesPaginated(currentConversation.id, user, 30, messagesLastDoc);
+      const result = await ChatStorageService.loadMessagesPaginated(currentConversation.id, user, 100, messagesLastDoc);
       
       // Prepend older messages to the beginning
       setConversations(prev => prev.map(conv => 
