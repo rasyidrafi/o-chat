@@ -75,10 +75,15 @@ export class ChatStorageService {
       if (!stored) return [];
       
       const messages = JSON.parse(stored);
-      return messages.map((msg: any) => ({
+      const parsedMessages = messages.map((msg: any) => ({
         ...msg,
         timestamp: new Date(msg.timestamp)
       }));
+      
+      // Ensure consistent sorting by timestamp to prevent duplicate keys
+      return parsedMessages.sort((a: ChatMessage, b: ChatMessage) => 
+        a.timestamp.getTime() - b.timestamp.getTime()
+      );
     } catch (error) {
       console.error('Error loading messages from localStorage:', error);
       return [];
@@ -349,16 +354,37 @@ export class ChatStorageService {
       return await this.getMessagesFromFirestorePaginated(user.uid, conversationId, limit, lastDoc);
     } else {
       const allMessages = this.getMessagesFromLocal(conversationId);
-      // For local storage, simulate pagination from the end (latest messages first)
-      const startIndex = lastDoc ? lastDoc.index + 1 : 0;
-      const endIndex = Math.min(startIndex + limit, allMessages.length);
-      const paginatedMessages = allMessages.slice(-(endIndex)).slice(-(limit));
       
-      return {
-        messages: paginatedMessages,
-        hasMore: endIndex < allMessages.length,
-        lastDoc: endIndex < allMessages.length ? { index: endIndex } : null
-      };
+      if (!lastDoc) {
+        // First load: get the latest messages
+        const latestMessages = allMessages.slice(-limit);
+        return {
+          messages: latestMessages,
+          hasMore: allMessages.length > limit,
+          lastDoc: latestMessages.length > 0 ? { 
+            timestamp: latestMessages[0].timestamp.getTime(),
+            index: allMessages.length - latestMessages.length
+          } : null
+        };
+      } else {
+        // Load older messages before the lastDoc timestamp
+        const lastTimestamp = lastDoc.timestamp;
+        const olderMessages = allMessages.filter(msg => 
+          msg.timestamp.getTime() < lastTimestamp
+        );
+        
+        // Get the latest 'limit' number of older messages
+        const paginatedMessages = olderMessages.slice(-limit);
+        
+        return {
+          messages: paginatedMessages,
+          hasMore: olderMessages.length > limit,
+          lastDoc: paginatedMessages.length > 0 ? {
+            timestamp: paginatedMessages[0].timestamp.getTime(),
+            index: lastDoc.index - paginatedMessages.length
+          } : null
+        };
+      }
     }
   }
 

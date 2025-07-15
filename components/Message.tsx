@@ -120,11 +120,8 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
             whiteSpace: 'pre', // Preserve formatting but allow scroll
             wordWrap: 'normal',
             wordBreak: 'normal',
-            // Mobile-specific styles
-            '@media (max-width: 768px)': {
-              fontSize: '0.7rem',
-              padding: '0.75rem',
-            }
+            // Mobile styles handled via CSS classes instead of media queries
+            padding: '0.75rem',
           }}
           wrapLines={true}
           wrapLongLines={true}
