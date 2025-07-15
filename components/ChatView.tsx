@@ -236,7 +236,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       </main>
 
       {/* Floating Chat Input */}
-      <div className="fixed bottom-4 left-0 right-0 z-40 pointer-events-none">
+      <div className="fixed bottom-4 left-0 right-0 z-30 pointer-events-none">
         <div
           className="max-w-4xl mx-auto pointer-events-auto"
           style={{
