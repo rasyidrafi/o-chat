@@ -56,7 +56,7 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
   // Load code font from localStorage and listen for changes
   useEffect(() => {
     const loadCodeFont = () => {
-      const storedCodeFont = localStorage.getItem('codeFont') || 'Berkeley Mono (default)';
+      const storedCodeFont = localStorage.getItem('codeFont') || 'JetBrains Mono (default)';
       setCodeFont(storedCodeFont);
     };
 

@@ -35,7 +35,7 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
         }));
     };
     const mainFontOptions = ['Montserrat', 'Lato', 'Open Sans', 'Roboto', 'Source Sans Pro'];
-    const codeFontOptions = ['Berkeley Mono (default)', 'Intel One Mono', 'Atkinson Hyperlegible Mono', 'System Monospace Font'];
+    const codeFontOptions = ['JetBrains Mono (default)', 'Fira Code', 'Source Code Pro', 'Roboto Mono', 'System Monospace'];
 
     return (
         <div>

@@ -46,7 +46,7 @@ const App: React.FC = () => {
   const loadGuestSettings = (): AppSettings => ({
     theme: (localStorage.getItem('theme') as Theme) || 'system',
     mainFont: localStorage.getItem('mainFont') || 'Montserrat',
-    codeFont: localStorage.getItem('codeFont') || 'Berkeley Mono (default)',
+    codeFont: localStorage.getItem('codeFont') || 'JetBrains Mono (default)',
     animationsDisabled: localStorage.getItem('animationsDisabled') === 'true',
     customInstruction: localStorage.getItem('customInstruction') || '',
     hidePersonalInfo: localStorage.getItem('hidePersonalInfo') === 'true',

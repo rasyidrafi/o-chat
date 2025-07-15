@@ -6,7 +6,7 @@ interface FontPreviewProps {
 }
 
 const FontPreview: React.FC<FontPreviewProps> = ({ mainFont, codeFont }) => {
-    const codeFontFamily = codeFont.split(' (')[0];
+    const codeFontFamily = codeFont === 'System Monospace' ? 'monospace' : codeFont.split(' (')[0];
 
     return (
         <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
