@@ -106,22 +106,27 @@ export const useChat = (settings?: AppSettings | undefined) => {
       const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 30);
       console.log('ChatStorageService.loadMessagesPaginated result:', result);
       
-      // Find the conversation to update
-      let updatedConversation: ChatConversation | null = null;
+      // Update conversations array
+      setConversations(prev => {
+        const updated = prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, messages: result.messages }
+            : conv
+        );
+        console.log('Updated conversations with messages for:', conversationId, 'message count:', result.messages.length);
+        return updated;
+      });
       
-      // Update the conversation with loaded messages
-      setConversations(prev => prev.map(conv => 
-        conv.id === conversationId 
-          ? (updatedConversation = { ...conv, messages: result.messages })
-          : conv
-      ));
-      console.log('Updated conversations with messages for:', conversationId, 'message count:', result.messages.length);
-      
-      // Also update currentConversation if it matches
-      if (updatedConversation) {
-        setCurrentConversation(updatedConversation);
-        console.log('Updated currentConversation with messages:', result.messages.length);
-      }
+      // Update currentConversation separately
+      setCurrentConversation(prev => {
+        if (prev && prev.id === conversationId) {
+          const updatedCurrent = { ...prev, messages: result.messages };
+          console.log('Updated currentConversation with messages:', result.messages.length, updatedCurrent);
+          return updatedCurrent;
+        }
+        console.log('currentConversation not updated - no match or null');
+        return prev;
+      });
       
       setHasMoreMessages(result.hasMore);
       setMessagesLastDoc(result.lastDoc);
