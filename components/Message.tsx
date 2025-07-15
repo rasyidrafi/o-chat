@@ -102,7 +102,7 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
   const fontFamily = codeFont.split(' (')[0];
 
   return (
-    <div className="relative group mb-4">
+    <div className="relative group mb-4 w-full overflow-hidden">
       <div className="relative">
         <SyntaxHighlighter
           language={language}
@@ -111,17 +111,24 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
             margin: 0,
             borderRadius: '0.5rem',
             background: isDark ? '#1f2937' : '#f3f4f6',
-            fontSize: '0.875rem',
+            fontSize: '0.75rem', // Smaller font on mobile
             lineHeight: '1.5',
             fontFamily: fontFamily,
-            maxWidth: '100%',
-            overflowX: 'auto',
-            wordBreak: 'break-all',
-            whiteSpace: 'pre-wrap',
+            width: '100%',
+            overflowX: 'auto', // Enable horizontal scroll
+            overflowY: 'hidden',
+            whiteSpace: 'pre', // Preserve formatting but allow scroll
+            wordWrap: 'normal',
+            wordBreak: 'normal',
+            // Mobile-specific styles
+            '@media (max-width: 768px)': {
+              fontSize: '0.7rem',
+              padding: '0.75rem',
+            }
           }}
-          wrapLines={false}
-          wrapLongLines={false}
-          showLineNumbers={false}
+          wrapLines={true}
+          wrapLongLines={true}
+          showLineNumbers={false} // Keep disabled for mobile
           PreTag="div"
         >
           {children}
@@ -426,7 +433,7 @@ const Message: React.FC<MessageProps> = ({
       transition={{ duration: animationsDisabled ? 0 : 0.3 }}
       className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
     >
-      <div className={`my-4 flex flex-col ${isUser ? 'max-w-[80%] items-end' : 'w-full items-start'}`}>
+      <div className={`my-4 flex flex-col ${isUser ? 'max-w-[80%] items-end' : 'w-full items-start min-w-0'}`}>
         <div className={getMessageStyles()}>
           {renderContent()}
           {isStreaming && !isUser && (

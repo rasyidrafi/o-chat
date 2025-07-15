@@ -29,7 +29,7 @@ const MessageList: React.FC<MessageListProps> = ({
 
   return (
     <div className="absolute inset-0 overflow-y-auto custom-scrollbar pt-8">
-      <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto">
+      <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto overflow-x-hidden">
         <AnimatePresence mode="popLayout">
           {messages.map((message) => (
             <Message
