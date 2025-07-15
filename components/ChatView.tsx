@@ -89,16 +89,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   const hasContent =
     currentConversation && currentConversation.messages.length > 0;
   
-  console.log('ChatView render:', {
-    currentConversation: currentConversation?.id,
-    hasContent,
-    isLoadingMessages,
-    isLoading,
-    streamingState: streamingState.isStreaming
-  });
-  
   const shouldShowWelcome = !currentConversation;
-  console.log('shouldShowWelcome:', shouldShowWelcome);
 
   const getThemeIcon = () => {
     const iconProps = {

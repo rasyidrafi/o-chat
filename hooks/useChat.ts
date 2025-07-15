@@ -98,12 +98,9 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [user, hasMoreConversations, isLoadingMore, conversationsLastDoc]);
 
   // Load messages for a conversation
-  const loadConversationMessages = useCallback(async (conversationId: string) => {
     console.log('loadConversationMessages called for:', conversationId);
     try {
-      setIsLoadingMessages(true);
       console.log('About to call ChatStorageService.loadMessagesPaginated');
-      const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 30);
       console.log('ChatStorageService.loadMessagesPaginated result:', result);
       
       // Update conversations array
@@ -112,19 +109,15 @@ export const useChat = (settings?: AppSettings | undefined) => {
           conv.id === conversationId 
             ? { ...conv, messages: result.messages }
             : conv
-        );
         console.log('Updated conversations with messages for:', conversationId, 'message count:', result.messages.length);
         return updated;
       });
       
-      // Update currentConversation separately
       setCurrentConversation(prev => {
         if (prev && prev.id === conversationId) {
           const updatedCurrent = { ...prev, messages: result.messages };
-          console.log('Updated currentConversation with messages:', result.messages.length, updatedCurrent);
           return updatedCurrent;
         }
-        console.log('currentConversation not updated - no match or null');
         return prev;
       });
       
@@ -589,11 +582,9 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [streamingState]);
 
   const selectConversation = useCallback((conversation: ChatConversation | null) => {
-    console.log('selectConversation called with:', conversation?.id, conversation?.title);
     
     // Always set the current conversation first so UI updates immediately
     setCurrentConversation(conversation);
-    console.log('Current conversation set to:', conversation?.id);
     
     // Reset message pagination state when selecting a new conversation
     setHasMoreMessages(true);
@@ -602,14 +593,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
     if (conversation) {
       // Set loading state immediately when selecting a conversation
       setIsLoadingMessages(true);
-      console.log('Loading messages set to true for conversation:', conversation.id);
       
       // Load messages for this conversation
       loadConversationMessages(conversation.id);
     }
   }, [loadConversationMessages]);
 
-      console.log('Setting isLoadingMessages to false');
   const deleteConversation = useCallback((conversationId: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== conversationId));
     if (currentConversation?.id === conversationId) {
