@@ -34,6 +34,7 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [codeFont, setCodeFont] = useState('Berkeley Mono (default)');
+  const [codeFont, setCodeFont] = useState('Berkeley Mono (default)');
   
   // Detect dark mode
   useEffect(() => {
@@ -53,6 +54,38 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
     return () => observer.disconnect();
   }, []);
   
+  // Load code font from localStorage and listen for changes
+  useEffect(() => {
+    const loadCodeFont = () => {
+      const storedCodeFont = localStorage.getItem('codeFont') || 'Berkeley Mono (default)';
+      setCodeFont(storedCodeFont);
+    };
+
+    loadCodeFont();
+
+    // Listen for storage changes from other tabs/windows
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'codeFont') {
+        loadCodeFont();
+      }
+    };
+
+    // Listen for custom storage events from same tab
+    const handleCustomStorageChange = (event: CustomEvent) => {
+      if (event.detail.key === 'codeFont') {
+        loadCodeFont();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('localStorageChange', handleCustomStorageChange as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChange', handleCustomStorageChange as EventListener);
+    };
+  }, []);
+  
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(children);
@@ -65,6 +98,9 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
 
   // Extract language from className (e.g., "language-javascript" -> "javascript")
   const language = className?.replace('language-', '') || 'text';
+  
+  // Get the actual font family name (remove "(default)" suffix)
+  const fontFamily = codeFont.split(' (')[0];
 
   return (
     <div className="relative group mb-4">
@@ -323,37 +359,6 @@ const Message: React.FC<MessageProps> = ({
       });
   }, []);
 
-  // Load code font from localStorage and listen for changes
-  useEffect(() => {
-    const loadCodeFont = () => {
-      const storedCodeFont = localStorage.getItem('codeFont') || 'Berkeley Mono (default)';
-      setCodeFont(storedCodeFont);
-    };
-
-    loadCodeFont();
-
-    // Listen for storage changes from other tabs/windows
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'codeFont') {
-        loadCodeFont();
-      }
-    };
-
-    // Listen for custom storage events from same tab
-    const handleCustomStorageChange = (event: CustomEvent) => {
-      if (event.detail.key === 'codeFont') {
-        loadCodeFont();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('localStorageChange', handleCustomStorageChange as EventListener);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('localStorageChange', handleCustomStorageChange as EventListener);
-    };
-  }, []);
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -408,8 +413,6 @@ const Message: React.FC<MessageProps> = ({
       </div>
     );
   };
-  // Get the actual font family name (remove "(default)" suffix)
-  const fontFamily = codeFont.split(' (')[0];
 
   return (
     <motion.div
