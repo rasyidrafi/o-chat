@@ -165,6 +165,14 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
   const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
+  // Enhanced ID generation to ensure uniqueness
+  const generateUniqueId = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substr(2, 9);
+    const counter = Math.floor(Math.random() * 1000);
+    return `${timestamp}_${random}_${counter}`;
+  };
+
   const createNewConversation = useCallback((title: string = 'New Chat', model: string = 'gemini-1.5-flash'): ChatConversation => {
     // Prevent creating new conversation if already creating one
     if (isCreatingNewChat) return currentConversation!;
@@ -185,7 +193,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     setIsCreatingNewChat(true);
     
     const newConversation: ChatConversation = {
-      id: generateId(),
+      id: generateUniqueId(),
       title,
       messages: [],
       createdAt: new Date(),
@@ -285,7 +293,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       // Create new conversation with message content as title
       const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
       conversation = {
-        id: generateId(),
+        id: generateUniqueId(),
         title,
         messages: [],
         createdAt: new Date(),
@@ -312,7 +320,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
     // Create user message
     const userMessage: ChatMessage = {
-      id: generateId(),
+      id: generateUniqueId(),
       role: 'user',
       content: content.trim(),
       timestamp: new Date(),
@@ -321,7 +329,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
     // Create AI message
     const aiMessage: ChatMessage = {
-      id: generateId(),
+      id: generateUniqueId(),
       role: 'assistant',
       content: '',
       model,

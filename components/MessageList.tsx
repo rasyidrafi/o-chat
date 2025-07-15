@@ -99,7 +99,7 @@ const MessageList: React.FC<MessageListProps> = ({
         <AnimatePresence mode="popLayout">
           {messages.map((message) => (
             <Message
-              key={message.id}
+              key={`${message.id}-${message.timestamp.getTime()}`}
               message={message}
               isStreaming={streamingMessageId === message.id}
               onStopStreaming={streamingMessageId === message.id ? onStopStreaming : undefined}
