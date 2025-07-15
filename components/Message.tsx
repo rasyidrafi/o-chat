@@ -34,7 +34,6 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [codeFont, setCodeFont] = useState('Berkeley Mono (default)');
-  const [codeFont, setCodeFont] = useState('Berkeley Mono (default)');
   
   // Detect dark mode
   useEffect(() => {
