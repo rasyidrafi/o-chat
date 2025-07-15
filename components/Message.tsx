@@ -369,7 +369,23 @@ const Message: React.FC<MessageProps> = ({
   }, []);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    
+    if (diffInHours < 24) {
+      // Today - show time
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 48) {
+      // Yesterday
+      return `Yesterday ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (diffInDays < 7) {
+      // Within a week - show day and time
+      return `${diffInDays} days ago ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      // More than a week - show date and time
+      return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
   };
 
   const getMessageStyles = () => {
