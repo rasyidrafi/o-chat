@@ -1,5 +1,5 @@
 // Simplified ChatView with cleaner logic and better separation of concerns
-import React from "react";
+import React, { useCallback } from "react";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
@@ -54,31 +54,31 @@ const ChatView: React.FC<ChatViewProps> = ({
     providerId: "",
   });
 
-  const handleSendMessage = (
+  const handleSendMessage = useCallback((
     message: string,
     model: string,
     source: string = "system",
     providerId?: string
   ) => {
     sendMessage(message, model, source, providerId);
-  };
+  }, [sendMessage]);
 
-  const handlePromptSelect = (prompt: string) => {
+  const handlePromptSelect = useCallback((prompt: string) => {
     sendMessage(
       prompt,
       selectedModelInfo.model,
       selectedModelInfo.source,
       selectedModelInfo.providerId
     );
-  };
+  }, [sendMessage, selectedModelInfo]);
 
-  const handleModelSelection = (
+  const handleModelSelection = useCallback((
     model: string,
     source: string,
     providerId?: string
   ) => {
-    setSelectedModelInfo({ model, source, providerId });
-  };
+    setSelectedModelInfo({ model, source, providerId: providerId || "" });
+  }, []);
 
   // Calculate sidebar width based on collapsed state
   const sidebarWidth = isSidebarCollapsed ? 80 : 256; // w-20 = 80px, w-64 = 256px

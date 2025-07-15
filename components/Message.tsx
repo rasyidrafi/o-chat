@@ -1,7 +1,6 @@
 // Clean Message component with unified markdown processing
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '../types/chat';
-import { X } from './Icons';
 import { motion } from 'framer-motion';
 import TypingIndicator from './TypingIndicator';
 import ReasoningDisplay from './ReasoningDisplay';
@@ -9,10 +8,11 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
-import rehypeHighlight from 'rehype-highlight';
 import rehypeReact from 'rehype-react';
 import mermaid from 'mermaid';
 import * as prod from 'react/jsx-runtime';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface MessageProps {
   message: ChatMessage;
@@ -28,6 +28,81 @@ mermaid.initialize({
   securityLevel: 'loose',
   fontFamily: 'ui-sans-serif, system-ui, sans-serif',
 });
+
+// Custom CodeBlock component with copy functionality and syntax highlighting
+const CodeBlock: React.FC<{ children: string; className?: string }> = ({ children, className }) => {
+  const [copied, setCopied] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+  
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDarkMode();
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { 
+      attributes: true, 
+      attributeFilter: ['class'] 
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+  
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(children);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  // Extract language from className (e.g., "language-javascript" -> "javascript")
+  const language = className?.replace('language-', '') || 'text';
+
+  return (
+    <div className="relative group mb-4">
+      <div className="relative">
+        <SyntaxHighlighter
+          language={language}
+          style={isDark ? vscDarkPlus : vs}
+          customStyle={{
+            margin: 0,
+            borderRadius: '0.5rem',
+            background: isDark ? '#1f2937' : '#f3f4f6',
+            fontSize: '0.875rem',
+            lineHeight: '1.5',
+          }}
+          wrapLines={true}
+          wrapLongLines={true}
+        >
+          {children}
+        </SyntaxHighlighter>
+        
+        <button
+          onClick={copyToClipboard}
+          className="absolute bottom-2 right-2 p-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded transition-colors opacity-0 group-hover:opacity-100"
+          title={copied ? 'Copied!' : 'Copy to clipboard'}
+        >
+          {copied ? (
+            <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // Custom components for rehype-react
 const MarkdownComponents = {
@@ -108,12 +183,8 @@ const MarkdownComponents = {
       );
     }
     
-    // Block code (handled by rehype-highlight)
-    return (
-      <code className={`${className} mb-2`} {...props}>
-      {children}
-      </code>
-    );
+    // Block code with copy functionality
+    return <CodeBlock className={className} {...props}>{children}</CodeBlock>;
   },
   
   // Table components for GFM
@@ -177,6 +248,13 @@ const MarkdownComponents = {
     }
     return <input type={type} {...props} />;
   },
+  
+  // Custom horizontal rule
+  hr: ({ ...props }: any) => (
+    <div className="flex justify-center my-4" {...props}>
+      <div className="w-4/5 h-px bg-gradient-to-r from-transparent via-zinc-300 dark:via-zinc-600 to-transparent" />
+    </div>
+  ),
 };
 
 // Mermaid diagram component
@@ -236,10 +314,6 @@ const Message: React.FC<MessageProps> = ({
       .use(remarkParse)
       .use(remarkGfm) // GitHub Flavored Markdown
       .use(remarkRehype, { allowDangerousHtml: true })
-      .use(rehypeHighlight, {
-        detect: true,
-        ignoreMissing: true,
-      })
       .use(rehypeReact, {
         // @ts-ignore
         ...prod,
@@ -332,8 +406,8 @@ const Message: React.FC<MessageProps> = ({
             </div>
           )}
         </div>
-        
-        <div className={`text-xs text-zinc-500 dark:text-zinc-400 my-1 ${isUser ? 'text-right' : 'text-left mb-4'}`}>
+
+        <div className={`text-xs text-zinc-500 dark:text-zinc-400 ${isUser ? 'text-right mt-2' : 'text-left mt-4'}`}>
           {formatTime(message.timestamp)}
           {message.model && isAssistant && (
             <span className="ml-2">• {message.model}</span>

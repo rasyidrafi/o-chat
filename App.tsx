@@ -55,7 +55,6 @@ const App: React.FC = () => {
 
   const [settings, setSettings] = useState<AppSettings>(() => {
     const initialSettings = loadGuestSettings();
-    console.log('Initial settings loaded:', initialSettings);
     return initialSettings;
   });
 
@@ -108,7 +107,6 @@ const App: React.FC = () => {
             const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const firestoreSettings = snapshot.data() as Partial<AppSettings>;
-                    console.log('Firestore settings loaded:', firestoreSettings);
                     setSettings(prev => ({ ...prev, ...firestoreSettings }));
                     setSettingsLoaded(true);
                 }
@@ -127,7 +125,6 @@ const App: React.FC = () => {
                         title: "Choose Your Settings",
                         description: "You have settings saved on this device and in the cloud. Which version would you like to use?",
                         onConfirm: () => { // Use Cloud
-                            console.log('Using cloud settings:', cloudSettings);
                             setSettings(cloudSettings);
                             setSettingsLoaded(true);
                             clearLocalSettings();
@@ -138,7 +135,6 @@ const App: React.FC = () => {
                         confirmVariant: 'primary',
                         cancelText: 'Use Local',
                         onCancel: async () => { // Use Local
-                            console.log('Using local settings:', localSettings);
                             setSettings(localSettings);
                             setSettingsLoaded(true);
                             await setDoc(settingsRef, localSettings);
@@ -148,26 +144,22 @@ const App: React.FC = () => {
                         }
                     });
                 } else {
-                    console.log('Settings match, using local:', localSettings);
                     setSettings(localSettings);
                     setSettingsLoaded(true);
                     setupFirestoreListener();
                 }
             } else if (docSnap.exists()) {
                 const cloudSettings = { ...loadGuestSettings(), ...docSnap.data() as Partial<AppSettings> };
-                console.log('Using cloud settings only:', cloudSettings);
                 setSettings(cloudSettings);
                 setSettingsLoaded(true);
                 setupFirestoreListener();
             } else if (hasLocalSettings) {
-                console.log('Migrating local settings to cloud:', localSettings);
                 await setDoc(settingsRef, localSettings);
                 setSettings(localSettings);
                 setSettingsLoaded(true);
                 clearLocalSettings();
                 setupFirestoreListener();
             } else {
-                console.log('Using default settings for authenticated user');
                 setSettings(loadGuestSettings());
                 setSettingsLoaded(true);
                 setupFirestoreListener();
@@ -179,7 +171,6 @@ const App: React.FC = () => {
         }
 
       } else {
-        console.log('Using guest settings');
         setSettings(loadGuestSettings());
         setSettingsLoaded(true);
       }
@@ -219,46 +210,6 @@ const App: React.FC = () => {
 
     root.classList.remove(isDark ? 'light' : 'dark');
     root.classList.add(isDark ? 'dark' : 'light');
-
-    // Remove existing highlight.js theme
-    const existingHighlightLink = document.getElementById('highlight-theme');
-    if (existingHighlightLink) {
-      existingHighlightLink.remove();
-    }
-
-    // Add appropriate highlight.js theme
-    const highlightLink = document.createElement('link');
-    highlightLink.id = 'highlight-theme';
-    highlightLink.rel = 'stylesheet';
-    highlightLink.href = isDark 
-      ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/panda-syntax-dark.min.css'
-      : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/panda-syntax-light.min.css';
-    document.head.appendChild(highlightLink);
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (settings.theme === 'system') {
-        const isSystemDark = mediaQuery.matches;
-        root.classList.remove(isSystemDark ? 'light' : 'dark');
-        root.classList.add(isSystemDark ? 'dark' : 'light');
-        
-        // Update highlight.js theme for system theme changes
-        const currentHighlightLink = document.getElementById('highlight-theme');
-        if (currentHighlightLink) {
-          currentHighlightLink.remove();
-        }
-        const newHighlightLink = document.createElement('link');
-        newHighlightLink.id = 'highlight-theme';
-        newHighlightLink.rel = 'stylesheet';
-        newHighlightLink.href = isSystemDark
-          ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/panda-syntax-dark.min.css'
-          : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/panda-syntax-light.min.css';
-        document.head.appendChild(newHighlightLink);
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
   }, [settings.theme]);
 
   useEffect(() => {

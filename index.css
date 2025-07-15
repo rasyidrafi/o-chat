@@ -1,3 +1,9 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+    --font-sans: var(--font-main, 'Montserrat'), sans-serif;
+}
+
 html {
     overflow: hidden;
     height: 100%;
