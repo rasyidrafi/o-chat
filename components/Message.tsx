@@ -114,9 +114,15 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
             fontSize: '0.875rem',
             lineHeight: '1.5',
             fontFamily: fontFamily,
+            maxWidth: '100%',
+            overflowX: 'auto',
+            wordBreak: 'break-all',
+            whiteSpace: 'pre-wrap',
           }}
-          wrapLines={true}
-          wrapLongLines={true}
+          wrapLines={false}
+          wrapLongLines={false}
+          showLineNumbers={false}
+          PreTag="div"
         >
           {children}
         </SyntaxHighlighter>
