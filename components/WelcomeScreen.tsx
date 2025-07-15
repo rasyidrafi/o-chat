@@ -112,7 +112,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user, onPromptSelect }) =
       </div>
 
         {/* Bottom padding to account for the overlay chat input */}
-        <div className="h-16 md:h-24"></div>
+        <div className="h-20 md:h-20"></div>
     </div>
   );
 };
