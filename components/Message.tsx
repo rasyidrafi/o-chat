@@ -4,15 +4,50 @@ import { ChatMessage } from '../types/chat';
 import { motion } from 'framer-motion';
 import TypingIndicator from './TypingIndicator';
 import ReasoningDisplay from './ReasoningDisplay';
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import remarkGfm from 'remark-gfm';
-import remarkRehype from 'remark-rehype';
-import rehypeReact from 'rehype-react';
-import mermaid from 'mermaid';
 import * as prod from 'react/jsx-runtime';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+// Lazy load heavy dependencies
+const SyntaxHighlighter = React.lazy(() => 
+  import('react-syntax-highlighter').then(module => ({ 
+    default: module.Prism 
+  }))
+);
+
+const syntaxStyles = {
+  dark: React.lazy(() => 
+    import('react-syntax-highlighter/dist/esm/styles/prism').then(module => ({ 
+      default: module.vscDarkPlus 
+    }))
+  ),
+  light: React.lazy(() => 
+    import('react-syntax-highlighter/dist/esm/styles/prism').then(module => ({ 
+      default: module.vs 
+    }))
+  )
+};
+
+// Lazy load markdown processor
+const createMarkdownProcessor = React.lazy(() => 
+  Promise.all([
+    import('unified'),
+    import('remark-parse'),
+    import('remark-gfm'),
+    import('remark-rehype'),
+    import('rehype-react')
+  ]).then(([unified, remarkParse, remarkGfm, remarkRehype, rehypeReact]) => ({
+    default: () => unified.unified()
+      .use(remarkParse.default)
+      .use(remarkGfm.default)
+      .use(remarkRehype.default, { allowDangerousHtml: true })
+      .use(rehypeReact.default, {
+        ...prod,
+        components: MarkdownComponents,
+      })
+  }))
+);
+
+// Lazy load mermaid
+const mermaid = React.lazy(() => import('mermaid'));
 
 interface MessageProps {
   message: ChatMessage;
@@ -21,19 +56,13 @@ interface MessageProps {
   animationsDisabled: boolean;
 }
 
-// Initialize Mermaid
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'dark',
-  securityLevel: 'loose',
-  fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-});
-
 // Custom CodeBlock component with copy functionality and syntax highlighting
 const CodeBlock: React.FC<{ children: string; className?: string }> = ({ children, className }) => {
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [codeFont, setCodeFont] = useState('Berkeley Mono (default)');
+  const [darkStyle, setDarkStyle] = useState<any>(null);
+  const [lightStyle, setLightStyle] = useState<any>(null);
   
   // Detect dark mode
   useEffect(() => {
@@ -85,6 +114,21 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
     };
   }, []);
   
+  // Load syntax highlighting styles
+  useEffect(() => {
+    syntaxStyles.dark().then(module => setDarkStyle(module.default));
+    syntaxStyles.light().then(module => setLightStyle(module.default));
+  }, []);
+
+  // Don't render until styles are loaded
+  if (!darkStyle || !lightStyle) {
+    return (
+      <pre className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-4 overflow-x-auto text-sm">
+        <code>{children}</code>
+      </pre>
+    );
+  }
+
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(children);
@@ -104,10 +148,11 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
   return (
     <div className="relative group mb-4 w-full overflow-hidden">
       <div className="relative">
-        <SyntaxHighlighter
-          language={language}
-          style={isDark ? vscDarkPlus : vs}
-          customStyle={{
+        <React.Suspense fallback={<pre className="bg-zinc-100 dark:bg-zinc-800 rounded-lg p-4 overflow-x-auto text-sm"><code>{children}</code></pre>}>
+          <SyntaxHighlighter
+            language={language}
+            style={isDark ? darkStyle : lightStyle}
+            customStyle={{
             margin: 0,
             borderRadius: '0.5rem',
             background: isDark ? '#1f2937' : '#f3f4f6',
@@ -122,14 +167,15 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({ childre
             wordBreak: 'normal',
             // Mobile styles handled via CSS classes instead of media queries
             padding: '0.75rem',
-          }}
-          wrapLines={true}
-          wrapLongLines={true}
-          showLineNumbers={false} // Keep disabled for mobile
-          PreTag="div"
-        >
-          {children}
-        </SyntaxHighlighter>
+            }}
+            wrapLines={true}
+            wrapLongLines={true}
+            showLineNumbers={false}
+            PreTag="div"
+          >
+            {children}
+          </SyntaxHighlighter>
+        </React.Suspense>
         
         <button
           onClick={copyToClipboard}
@@ -306,15 +352,31 @@ const MarkdownComponents = {
 
 // Mermaid diagram component
 const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
+  const [mermaidLib, setMermaidLib] = useState<any>(null);
+
+  useEffect(() => {
+    mermaid().then(module => {
+      module.default.initialize({
+        startOnLoad: false,
+        theme: 'dark',
+        securityLevel: 'loose',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+      });
+      setMermaidLib(module.default);
+    });
+  }, []);
+
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = React.useState<string>('');
   const [error, setError] = React.useState<string>('');
 
   useEffect(() => {
     const renderDiagram = async () => {
+      if (!mermaidLib) return;
+
       try {
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg: renderedSvg } = await mermaid.render(id, code);
+        const { svg: renderedSvg } = await mermaidLib.render(id, code);
         setSvg(renderedSvg);
         setError('');
       } catch (err) {
@@ -324,7 +386,7 @@ const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
     };
 
     renderDiagram();
-  }, [code]);
+  }, [code, mermaidLib]);
 
   if (error) {
     return (
@@ -334,6 +396,12 @@ const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
           {code}
         </pre>
       </div>
+    );
+  }
+
+  if (!svg) {
+    return (
+      <div className="my-4 flex justify-center bg-white dark:bg-zinc-900 rounded-lg p-4 text-zinc-500">Loading diagram...</div>
     );
   }
 
@@ -354,19 +422,16 @@ const Message: React.FC<MessageProps> = ({
 }) => {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
+  const [processor, setProcessor] = useState<any>(null);
 
-  // Create markdown processor with unified
-  const processor = useMemo(() => {
-    return unified()
-      .use(remarkParse)
-      .use(remarkGfm) // GitHub Flavored Markdown
-      .use(remarkRehype, { allowDangerousHtml: true })
-      .use(rehypeReact, {
-        // @ts-ignore
-        ...prod,
-        components: MarkdownComponents,
+  // Load markdown processor lazily
+  useEffect(() => {
+    if (!isUser && !processor) {
+      createMarkdownProcessor().then(module => {
+        setProcessor(module.default());
       });
-  }, []);
+    }
+  }, [isUser, processor]);
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -401,6 +466,10 @@ const Message: React.FC<MessageProps> = ({
   const processedContent = useMemo(() => {
     if (isUser || !message.content) return null;
     
+    if (!processor) {
+      return <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>;
+    }
+
     try {
       const result = processor.processSync(message.content);
       return result.result as React.ReactElement;
