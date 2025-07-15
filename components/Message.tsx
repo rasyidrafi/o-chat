@@ -43,8 +43,7 @@ const createMarkdownProcessor = () =>
         ...prod,
         components: MarkdownComponents,
       })
-  }))
-  );
+  }));
 
 // Lazy load mermaid
 const mermaid = React.lazy(() => import('mermaid'));
