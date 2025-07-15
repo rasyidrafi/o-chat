@@ -98,9 +98,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [user, hasMoreConversations, isLoadingMore, conversationsLastDoc]);
 
   // Load messages for a conversation
+  const loadConversationMessages = useCallback(async (conversationId: string) => {
     console.log('loadConversationMessages called for:', conversationId);
     try {
+      setIsLoadingMessages(true);
       console.log('About to call ChatStorageService.loadMessagesPaginated');
+      const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 30);
       console.log('ChatStorageService.loadMessagesPaginated result:', result);
       
       // Update conversations array
@@ -109,6 +112,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
           conv.id === conversationId 
             ? { ...conv, messages: result.messages }
             : conv
+        );
         console.log('Updated conversations with messages for:', conversationId, 'message count:', result.messages.length);
         return updated;
       });
@@ -545,7 +549,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
             }
           : prev
       );
-      console.log('Updated currentConversation with messages for:', conversationId, 'message count:', result.messages.length);
 
       // Save error conversation
       setConversations(current => {
