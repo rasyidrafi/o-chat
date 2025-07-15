@@ -7,3 +7,4 @@ interface FontPreviewProps {
 
 const FontPreview: React.FC<FontPreviewProps> = ({ mainFont, codeFont }) => {
     const codeFontFamily = codeFont.split(' (')[0];
+}
