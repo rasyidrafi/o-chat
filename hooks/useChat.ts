@@ -214,73 +214,63 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [user, isCreatingNewChat, currentConversation]);
 
   const updateMessage = useCallback((conversationId: string, messageId: string, content: string) => {
-    let updatedConversation: ChatConversation | null = null;
-    
-    setConversations(prev => prev.map(conv =>
-      conv.id === conversationId
-        ? (updatedConversation = {
+    setConversations(prev => {
+      return prev.map(conv => {
+        if (conv.id === conversationId) {
+          return {
             ...conv,
             messages: conv.messages.map(msg =>
               msg.id === messageId ? { ...msg, content } : msg
             ),
             updatedAt: new Date()
-          })
-        : conv
-    ));
-
-    setCurrentConversation(prev => 
-      prev && prev.id === conversationId 
-        ? (updatedConversation = {
-            ...prev,
-            messages: prev.messages.map(msg =>
-              msg.id === messageId ? { ...msg, content } : msg
-            ),
-            updatedAt: new Date()
-          })
-        : prev
-    );
-    
-    // Save updated conversation to storage
-    if (updatedConversation) {
-      ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
-        console.error('Error saving updated conversation:', error);
+          };
+        }
+        return conv;
       });
-    }
+    });
+
+    setCurrentConversation(prev => {
+      if (prev && prev.id === conversationId) {
+        return {
+          ...prev,
+          messages: prev.messages.map(msg =>
+            msg.id === messageId ? { ...msg, content } : msg
+          ),
+          updatedAt: new Date()
+        };
+      }
+      return prev;
+    });
   }, [user]);
 
   const updateMessageReasoning = useCallback((conversationId: string, messageId: string, reasoning: string) => {
-    let updatedConversation: ChatConversation | null = null;
-    
-    setConversations(prev => prev.map(conv =>
-      conv.id === conversationId
-        ? (updatedConversation = {
+    setConversations(prev => {
+      return prev.map(conv => {
+        if (conv.id === conversationId) {
+          return {
             ...conv,
             messages: conv.messages.map(msg =>
               msg.id === messageId ? { ...msg, reasoning } : msg
             ),
             updatedAt: new Date()
-          })
-        : conv
-    ));
-
-    setCurrentConversation(prev => 
-      prev && prev.id === conversationId 
-        ? (updatedConversation = {
-            ...prev,
-            messages: prev.messages.map(msg =>
-              msg.id === messageId ? { ...msg, reasoning } : msg
-            ),
-            updatedAt: new Date()
-          })
-        : prev
-    );
-
-    // Save updated conversation with reasoning to storage
-    if (updatedConversation) {
-      ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
-        console.error('Error saving conversation with reasoning:', error);
+          };
+        }
+        return conv;
       });
-    }
+    });
+
+    setCurrentConversation(prev => {
+      if (prev && prev.id === conversationId) {
+        return {
+          ...prev,
+          messages: prev.messages.map(msg =>
+            msg.id === messageId ? { ...msg, reasoning } : msg
+          ),
+          updatedAt: new Date()
+        };
+      }
+      return prev;
+    });
   }, [user]);
 
   const sendMessage = useCallback(async (content: string, model: string, source: string = 'system', providerId?: string) => {
@@ -420,9 +410,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
       const onCompleteCallback = () => {
         // Mark message as complete including reasoning
-        setConversations(prev => prev.map(conv =>
-          conv.id === updatedConversation.id
-            ? {
+        setConversations(prev => {
+          return prev.map(conv => {
+            if (conv.id === updatedConversation.id) {
+              return {
                 ...conv,
                 messages: conv.messages.map(msg =>
                   msg.id === aiMessage.id ? { 
@@ -431,24 +422,27 @@ export const useChat = (settings?: AppSettings | undefined) => {
                     isReasoningComplete: true 
                   } : msg
                 )
-              }
-            : conv
-        ));
+              };
+            }
+            return conv;
+          });
+        });
 
-        setCurrentConversation(prev => 
-          prev && prev.id === updatedConversation.id
-            ? {
-                ...prev,
-                messages: prev.messages.map(msg =>
-                  msg.id === aiMessage.id ? { 
-                    ...msg, 
-                    isStreaming: false, 
-                    isReasoningComplete: true 
-                  } : msg
-                )
-              }
-            : prev
-        );
+        setCurrentConversation(prev => {
+          if (prev && prev.id === updatedConversation.id) {
+            return {
+              ...prev,
+              messages: prev.messages.map(msg =>
+                msg.id === aiMessage.id ? { 
+                  ...msg, 
+                  isStreaming: false, 
+                  isReasoningComplete: true 
+                } : msg
+              )
+            };
+          }
+          return prev;
+        });
 
         // Save final conversation with complete AI message including reasoning
         setConversations(current => {
@@ -475,27 +469,31 @@ export const useChat = (settings?: AppSettings | undefined) => {
         const errorMessage = `Error: ${error.message}`;
         updateMessage(updatedConversation.id, aiMessage.id, errorMessage);
 
-        setConversations(prev => prev.map(conv =>
-          conv.id === updatedConversation.id
-            ? {
+        setConversations(prev => {
+          return prev.map(conv => {
+            if (conv.id === updatedConversation.id) {
+              return {
                 ...conv,
                 messages: conv.messages.map(msg =>
                   msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
                 )
-              }
-            : conv
-        ));
+              };
+            }
+            return conv;
+          });
+        });
 
-        setCurrentConversation(prev => 
-          prev && prev.id === updatedConversation.id
-            ? {
-                ...prev,
-                messages: prev.messages.map(msg =>
-                  msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                )
-              }
-            : prev
-        );
+        setCurrentConversation(prev => {
+          if (prev && prev.id === updatedConversation.id) {
+            return {
+              ...prev,
+              messages: prev.messages.map(msg =>
+                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+              )
+            };
+          }
+          return prev;
+        });
 
         // Save error conversation
         setConversations(current => {
@@ -533,27 +531,31 @@ export const useChat = (settings?: AppSettings | undefined) => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       updateMessage(updatedConversation.id, aiMessage.id, `Error: ${errorMessage}`);
 
-      setConversations(prev => prev.map(conv =>
-        conv.id === updatedConversation.id
-          ? {
+      setConversations(prev => {
+        return prev.map(conv => {
+          if (conv.id === updatedConversation.id) {
+            return {
               ...conv,
               messages: conv.messages.map(msg =>
                 msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
               )
-            }
-          : conv
-      ));
+            };
+          }
+          return conv;
+        });
+      });
 
-      setCurrentConversation(prev => 
-        prev && prev.id === updatedConversation.id
-          ? {
-              ...prev,
-              messages: prev.messages.map(msg =>
-                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-              )
-            }
-          : prev
-      );
+      setCurrentConversation(prev => {
+        if (prev && prev.id === updatedConversation.id) {
+          return {
+            ...prev,
+            messages: prev.messages.map(msg =>
+              msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+            )
+          };
+        }
+        return prev;
+      });
 
       // Save error conversation
       setConversations(current => {
