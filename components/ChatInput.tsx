@@ -35,7 +35,7 @@ interface ChatInputProps {
 }
 
 const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
-  ({ onMessageSend, onModelSelect, disabled = false }) => {
+  ({ onMessageSend, onModelSelect, disabled = false }, ref) => {
     const [message, setMessage] = useState("");
     const [selectedModel, setSelectedModel] =
       useState<string>("gemini-1.5-flash");
@@ -282,6 +282,7 @@ const ChatInput = forwardRef<HTMLDivElement, ChatInputProps>(
 
     return (
       <div
+        ref={ref}
         className="bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 shadow-2xl drop-shadow-2xl dark:drop-shadow-[0_25px_25px_rgba(0,0,0,0.8)] p-3 rounded-2xl w-full
           sm:rounded-2xl
           rounded-t-2xl rounded-b-none
