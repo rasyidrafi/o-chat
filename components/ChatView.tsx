@@ -45,6 +45,10 @@ const ChatView: React.FC<ChatViewProps> = ({
     sendMessage,
     stopStreaming,
     isLoading,
+    isLoadingMessages,
+    isLoadingMoreMessages,
+    hasMoreMessages,
+    loadMoreMessages,
   } = chat;
 
   // State to track selected model info from ChatInput
