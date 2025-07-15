@@ -12,6 +12,7 @@ import { AppSettings } from '../App';
 export const useChat = (settings?: AppSettings | undefined) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null);
+  const [newlyCreatedConversations, setNewlyCreatedConversations] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreConversations, setHasMoreConversations] = useState(true);
@@ -201,6 +202,9 @@ export const useChat = (settings?: AppSettings | undefined) => {
       model,
       source: getModelSource(model)
     };
+
+    // Mark this conversation as newly created
+    setNewlyCreatedConversations(prev => new Set(prev).add(newConversation.id));
 
     // Update conversations state immediately
     setConversations(prev => {
@@ -463,6 +467,13 @@ export const useChat = (settings?: AppSettings | undefined) => {
         setConversations(current => {
           const finalConv = current.find(conv => conv.id === updatedConversation.id);
           if (finalConv) {
+            // Remove from newly created set once the conversation is saved
+            setNewlyCreatedConversations(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(updatedConversation.id);
+              return newSet;
+            });
+            
             ChatStorageService.saveConversation(finalConv, user).catch(error => {
               console.error('Error saving final conversation:', error);
             });
@@ -514,6 +525,13 @@ export const useChat = (settings?: AppSettings | undefined) => {
         setConversations(current => {
           const errorConv = current.find(conv => conv.id === updatedConversation.id);
           if (errorConv) {
+            // Remove from newly created set even on error
+            setNewlyCreatedConversations(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(updatedConversation.id);
+              return newSet;
+            });
+            
             ChatStorageService.saveConversation(errorConv, user).catch(error => {
               console.error('Error saving error conversation:', error);
             });
@@ -576,6 +594,13 @@ export const useChat = (settings?: AppSettings | undefined) => {
       setConversations(current => {
         const errorConv = current.find(conv => conv.id === updatedConversation.id);
         if (errorConv) {
+          // Remove from newly created set even on error
+          setNewlyCreatedConversations(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(updatedConversation.id);
+            return newSet;
+          });
+          
           ChatStorageService.saveConversation(errorConv, user).catch(error => {
             console.error('Error saving error conversation:', error);
           });
@@ -616,16 +641,31 @@ export const useChat = (settings?: AppSettings | undefined) => {
     setMessagesLastDoc(null);
     
     if (conversation) {
-      // Set loading state immediately when selecting a conversation
-      setIsLoadingMessages(true);
-      
-      // Load messages for this conversation
-      loadConversationMessages(conversation.id);
+      // Check if this is a newly created conversation
+      if (newlyCreatedConversations.has(conversation.id)) {
+        // Don't load messages from storage for newly created conversations
+        // They already have their messages in memory
+        setIsLoadingMessages(false);
+      } else {
+        // Set loading state immediately when selecting a conversation
+        setIsLoadingMessages(true);
+        
+        // Load messages for this conversation
+        loadConversationMessages(conversation.id);
+      }
     }
-  }, [loadConversationMessages]);
+  }, [loadConversationMessages, newlyCreatedConversations]);
 
   const deleteConversation = useCallback((conversationId: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+    
+    // Remove from newly created set if it exists
+    setNewlyCreatedConversations(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(conversationId);
+      return newSet;
+    });
+    
     if (currentConversation?.id === conversationId) {
       setCurrentConversation(null);
     }
