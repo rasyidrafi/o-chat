@@ -467,15 +467,20 @@ export const useChat = (settings?: AppSettings | undefined) => {
         setConversations(current => {
           const finalConv = current.find(conv => conv.id === updatedConversation.id);
           if (finalConv) {
-            // Remove from newly created set once the conversation is saved
-            setNewlyCreatedConversations(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(updatedConversation.id);
-              return newSet;
-            });
+            console.log('Saving final conversation:', updatedConversation.id);
             
             ChatStorageService.saveConversation(finalConv, user).catch(error => {
               console.error('Error saving final conversation:', error);
+            }).finally(() => {
+              // Only remove from newly created set after successful save AND after a delay
+              setTimeout(() => {
+                console.log('Removing from newly created set:', updatedConversation.id);
+                setNewlyCreatedConversations(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(updatedConversation.id);
+                  return newSet;
+                });
+              }, 1000); // 1 second delay to ensure no race conditions
             });
           }
           return current;
@@ -525,15 +530,24 @@ export const useChat = (settings?: AppSettings | undefined) => {
         setConversations(current => {
           const errorConv = current.find(conv => conv.id === updatedConversation.id);
           if (errorConv) {
-            // Remove from newly created set even on error
-            setNewlyCreatedConversations(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(updatedConversation.id);
-              return newSet;
-            });
-            
-            ChatStorageService.saveConversation(errorConv, user).catch(error => {
-              console.error('Error saving error conversation:', error);
+            console.log('Saving error conversation (catch block):', updatedConversation.id);
+              setTimeout(() => {
+                console.log('Removing from newly created set (error case):', updatedConversation.id);
+                setNewlyCreatedConversations(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(updatedConversation.id);
+                  return newSet;
+                });
+              }, 1000);
+            }).finally(() => {
+              setTimeout(() => {
+                console.log('Removing from newly created set (catch case):', updatedConversation.id);
+                setNewlyCreatedConversations(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(updatedConversation.id);
+                  return newSet;
+                });
+              }, 1000);
             });
           }
           return current;
@@ -632,6 +646,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [streamingState]);
 
   const selectConversation = useCallback((conversation: ChatConversation | null) => {
+    console.log('selectConversation called with:', conversation?.id, 'isNewlyCreated:', conversation ? newlyCreatedConversations.has(conversation.id) : false);
     
     // Always set the current conversation first so UI updates immediately
     setCurrentConversation(conversation);
@@ -643,10 +658,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
     if (conversation) {
       // Check if this is a newly created conversation
       if (newlyCreatedConversations.has(conversation.id)) {
+        console.log('Skipping message loading for newly created conversation:', conversation.id);
         // Don't load messages from storage for newly created conversations
         // They already have their messages in memory
         setIsLoadingMessages(false);
       } else {
+        console.log('Loading messages for existing conversation:', conversation.id);
         // Set loading state immediately when selecting a conversation
         setIsLoadingMessages(true);
         
