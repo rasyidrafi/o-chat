@@ -49,6 +49,7 @@ const saveSelectedModelsToStorage = (providerId: string, selectedModelIds: strin
 const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
     const [selectedProvider, setSelectedProvider] = useState<string>('');
+    const [activeByokTab, setActiveByokTab] = useState<'selected' | 'available'>('available');
     const [availableProviders, setAvailableProviders] = useState<Array<Provider>>([]);
     const [fetchedModels, setFetchedModels] = useState<Model[]>([]);
     const [isLoadingModels, setIsLoadingModels] = useState(false);
@@ -247,6 +248,11 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             }
         }
         
+        // Filter by tab selection (Selected vs Available)
+        if (activeByokTab === 'selected') {
+            byokModels = byokModels.filter(model => selectedModelIds.includes(model.id));
+        }
+        
         // Apply feature filtering
         if (selectedFeatures.length > 0) {
             byokModels = byokModels.filter(model => 
@@ -280,7 +286,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             hasNextPage: currentPage < totalPages,
             hasPreviousPage: currentPage > 1
         };
-    }, [selectedProvider, selectedFeatures, searchQuery, currentPage, fetchedModels, itemsPerPage]);
+    }, [selectedProvider, selectedFeatures, searchQuery, currentPage, fetchedModels, itemsPerPage, activeByokTab, selectedModelIds]);
 
     const handleModelToggle = (modelId: string, enabled: boolean) => {
         if (enabled) {
@@ -483,6 +489,38 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         </div>
                     </div>
 
+                    {/* BYOK Tabs */}
+                    {selectedProvider && (
+                        <div className="flex border-b border-zinc-200 dark:border-zinc-800 mb-6">
+                            <button
+                                onClick={() => setActiveByokTab('available')}
+                                className={`relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors focus:outline-none 
+                                    ${activeByokTab === 'available' 
+                                        ? 'text-pink-500' 
+                                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                                    }`}
+                            >
+                                Available
+                                {activeByokTab === 'available' && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500" />
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveByokTab('selected')}
+                                className={`relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors focus:outline-none 
+                                    ${activeByokTab === 'selected' 
+                                        ? 'text-pink-500' 
+                                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                                    }`}
+                            >
+                                Selected ({selectedModelIds.length})
+                                {activeByokTab === 'selected' && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500" />
+                                )}
+                            </button>
+                        </div>
+                    )}
+
                     {/* Search Bar */}
                     {selectedProvider && (
                         <div className="mb-6">
@@ -531,12 +569,17 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         ) : filteredAndPaginatedModels.byokModels.length === 0 ? (
                             <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
                                 <p className="text-lg mb-2">
-                                    {searchQuery.trim() ? 'No Models Found' : 'No Models Available'}
+                                    {activeByokTab === 'selected' 
+                                        ? 'No Selected Models' 
+                                        : searchQuery.trim() ? 'No Models Found' : 'No Models Available'
+                                    }
                                 </p>
                                 <p className="text-sm">
-                                    {searchQuery.trim() 
-                                        ? 'No models match your search criteria. Try adjusting your search terms or filters.'
-                                        : 'No models match the selected provider and feature filters.'
+                                    {activeByokTab === 'selected'
+                                        ? 'You haven\'t selected any models yet. Switch to the Available tab to select models.'
+                                        : searchQuery.trim() 
+                                            ? 'No models match your search criteria. Try adjusting your search terms or filters.'
+                                            : 'No models match the selected provider and feature filters.'
                                     }
                                 </p>
                             </div>
