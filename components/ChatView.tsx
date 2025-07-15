@@ -88,8 +88,17 @@ const ChatView: React.FC<ChatViewProps> = ({
   const sidebarWidth = isSidebarCollapsed ? 80 : 256; // w-20 = 80px, w-64 = 256px
   const hasContent =
     currentConversation && currentConversation.messages.length > 0;
-  const shouldShowWelcome =
-    !hasContent && !streamingState.isStreaming && !isLoading;
+  
+  console.log('ChatView render:', {
+    currentConversation: currentConversation?.id,
+    hasContent,
+    isLoadingMessages,
+    isLoading,
+    streamingState: streamingState.isStreaming
+  });
+  
+  const shouldShowWelcome = !currentConversation;
+  console.log('shouldShowWelcome:', shouldShowWelcome);
 
   const getThemeIcon = () => {
     const iconProps = {

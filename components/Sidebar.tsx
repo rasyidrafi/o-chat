@@ -56,6 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
   };
 
   const handleConversationSelect = (conversation: any) => {
+    console.log('Sidebar: handleConversationSelect called with:', conversation.id, conversation.title);
     selectConversation(conversation);
     setIsMobileMenuOpen(false);
   };
