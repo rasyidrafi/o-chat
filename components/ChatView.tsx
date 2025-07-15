@@ -1,20 +1,15 @@
 // Simplified ChatView with cleaner logic and better separation of concerns
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
-import {
-  SlidersHorizontal,
-  Sun,
-  Moon,
-  Desktop,
-  Menu,
-} from "./Icons";
+import { SlidersHorizontal, Sun, Moon, Desktop, Menu } from "./Icons";
 import { Theme } from "../App";
 import { Tab as SettingsTab } from "./SettingsPage";
 import { User as FirebaseUser } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { useChat } from "../hooks/useChat";
+import SmallButton from "./ui/SmallButton";
 
 interface ChatViewProps {
   onMenuClick: () => void;
@@ -51,6 +46,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     loadMoreMessages,
   } = chat;
 
+
   // State to track selected model info from ChatInput
   const [selectedModelInfo, setSelectedModelInfo] = React.useState({
     model: "gemini-1.5-flash",
@@ -58,37 +54,42 @@ const ChatView: React.FC<ChatViewProps> = ({
     providerId: "",
   });
 
-  const handleSendMessage = useCallback((
-    message: string,
-    model: string,
-    source: string = "system",
-    providerId?: string
-  ) => {
-    sendMessage(message, model, source, providerId);
-  }, [sendMessage]);
+  const handleSendMessage = useCallback(
+    (
+      message: string,
+      model: string,
+      source: string = "system",
+      providerId?: string
+    ) => {
+      sendMessage(message, model, source, providerId);
+    },
+    [sendMessage]
+  );
 
-  const handlePromptSelect = useCallback((prompt: string) => {
-    sendMessage(
-      prompt,
-      selectedModelInfo.model,
-      selectedModelInfo.source,
-      selectedModelInfo.providerId
-    );
-  }, [sendMessage, selectedModelInfo]);
+  const handlePromptSelect = useCallback(
+    (prompt: string) => {
+      sendMessage(
+        prompt,
+        selectedModelInfo.model,
+        selectedModelInfo.source,
+        selectedModelInfo.providerId
+      );
+    },
+    [sendMessage, selectedModelInfo]
+  );
 
-  const handleModelSelection = useCallback((
-    model: string,
-    source: string,
-    providerId?: string
-  ) => {
-    setSelectedModelInfo({ model, source, providerId: providerId || "" });
-  }, []);
+  const handleModelSelection = useCallback(
+    (model: string, source: string, providerId?: string) => {
+      setSelectedModelInfo({ model, source, providerId: providerId || "" });
+    },
+    []
+  );
 
   // Calculate sidebar width based on collapsed state
   const sidebarWidth = isSidebarCollapsed ? 80 : 256; // w-20 = 80px, w-64 = 256px
   const hasContent =
     currentConversation && currentConversation.messages.length > 0;
-  
+
   const shouldShowWelcome = !currentConversation;
 
   const getThemeIcon = () => {
@@ -125,6 +126,16 @@ const ChatView: React.FC<ChatViewProps> = ({
           </motion.div>
         );
     }
+  };
+
+  // State to control scroll-to-bottom button visibility
+  const [showScrollToBottom, setShowScrollToBottom] = React.useState(false);
+
+  // Handler to scroll to bottom
+  const handleScrollToBottom = () => {
+    // Use a custom event to trigger scroll in MessageList
+    const event = new CustomEvent("scrollToBottom");
+    window.dispatchEvent(event);
   };
 
   return (
@@ -240,18 +251,61 @@ const ChatView: React.FC<ChatViewProps> = ({
               isLoadingMoreMessages={isLoadingMoreMessages}
               hasMoreMessages={hasMoreMessages}
               onLoadMoreMessages={() => {}}
+              onShowScrollToBottom={setShowScrollToBottom}
             />
           </div>
         )}
       </main>
 
-      {/* Floating Chat Input */}
-      <div className="fixed bottom-4 left-0 right-0 z-30 pointer-events-none">
+      {/* Container for scroll button - positioned above the chat input */}
+      {showScrollToBottom && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+          <div
+            className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 flex justify-center"
+            style={{
+              paddingLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${sidebarWidth + 16}px` : "16px",
+              paddingRight: "16px",
+              paddingBottom: typeof window !== 'undefined' && window.innerWidth >= 768 ? `160px` : "140px",
+            }}
+          >
+            <SmallButton
+              onClick={handleScrollToBottom}
+              aria-label="Scroll to bottom"
+              animationsDisabled={animationsDisabled}
+              className="shadow-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/90 transition-all duration-200"
+            >
+              Scroll to bottom
+              <svg
+                className="w-4 h-4 ml-1"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </SmallButton>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Input Container - separate from scroll button */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
         <div
-          className="max-w-4xl mx-auto pointer-events-auto"
+          className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"
           style={{
-            paddingLeft: window.innerWidth >= 768 ? `${sidebarWidth + 16}px` : "16px",
-            paddingRight: "16px",
+            paddingLeft:
+              typeof window !== "undefined" && window.innerWidth < 768
+          ? "0"
+          : `${sidebarWidth + 16}px`,
+            paddingRight:
+              typeof window !== "undefined" && window.innerWidth < 768
+          ? "0"
+          : "16px",
           }}
         >
           <ChatInput

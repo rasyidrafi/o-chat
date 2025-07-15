@@ -1,9 +1,10 @@
 // Simplified MessageList with cleaner rendering logic
-import React, { useEffect, useRef, useState } from 'react';
-import { ChatMessage } from '../types/chat';
-import Message from './Message';
-import { AnimatePresence } from 'framer-motion';
-import Button from './ui/Button';
+import React, { useEffect, useRef, useState } from "react";
+import { ChatMessage } from "../types/chat";
+import Message from "./Message";
+import { AnimatePresence } from "framer-motion";
+import Button from "./ui/Button";
+import SmallButton from "./ui/SmallButton";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -14,49 +15,103 @@ interface MessageListProps {
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
   onLoadMoreMessages: () => void;
+  onShowScrollToBottom?: (show: boolean) => void;
 }
 
-const MessageList: React.FC<MessageListProps> = ({ 
-  messages, 
+const MessageList: React.FC<MessageListProps> = ({
+  messages,
   streamingMessageId,
   onStopStreaming,
   animationsDisabled,
   isLoadingMessages,
-  isLoadingMoreMessages,
-  hasMoreMessages,
-  onLoadMoreMessages
+  onShowScrollToBottom,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
-  const handleLoadPreviousMessages = () => {
+  // Show/hide "Scroll to bottom" button based on scroll position
+  useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    const previousScrollHeight = container.scrollHeight;
-    setShouldScrollToBottom(false);
-    
-    onLoadMoreMessages();
-    
-    // Maintain scroll position after loading more messages
-    setTimeout(() => {
-      const newScrollHeight = container.scrollHeight;
-      const scrollDiff = newScrollHeight - previousScrollHeight;
-      container.scrollTop = scrollDiff;
-    }, 100);
-  };
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // More generous threshold - show button when user has scrolled up more than 100px from bottom
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      const shouldShowButton = !isNearBottom && messages.length > 0;
 
+      console.log("Scroll position:", {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+        distanceFromBottom: scrollHeight - scrollTop - clientHeight,
+        isNearBottom,
+        shouldShowButton,
+      });
+
+      if (onShowScrollToBottom) {
+        onShowScrollToBottom(shouldShowButton);
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+
+    // Initial check after a brief delay to ensure content is rendered
+    const timer = setTimeout(() => {
+      handleScroll();
+    }, 100);
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      clearTimeout(timer);
+    };
+  }, [messages.length, onShowScrollToBottom]);
+
+  // Listen for scrollToBottom event from parent
+  useEffect(() => {
+    const handler = () => {
+      setShouldScrollToBottom(true);
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      // Hide the scroll button when scrolling to bottom
+      if (onShowScrollToBottom) {
+        onShowScrollToBottom(false);
+      }
+    };
+    window.addEventListener("scrollToBottom", handler);
+    return () => window.removeEventListener("scrollToBottom", handler);
+  }, [onShowScrollToBottom]);
+
+  // Auto-scroll to bottom for new messages (but not when user has scrolled up)
   useEffect(() => {
     if (shouldScrollToBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, streamingMessageId, shouldScrollToBottom]);
 
   // Reset scroll behavior when messages change (new conversation)
   useEffect(() => {
     setShouldScrollToBottom(true);
-  }, [messages.length === 0]);
+    // Reset scroll button state for new conversation
+    if (onShowScrollToBottom) {
+      onShowScrollToBottom(false);
+    }
+  }, [messages.length === 0, onShowScrollToBottom]);
+
+  // Auto-scroll to bottom when new messages arrive, but only if user was already at bottom
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || messages.length === 0) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const wasAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+    if (wasAtBottom) {
+      setShouldScrollToBottom(true);
+    } else {
+      setShouldScrollToBottom(false);
+    }
+  }, [messages.length]);
 
   if (messages.length === 0) {
     if (isLoadingMessages) {
@@ -73,7 +128,7 @@ const MessageList: React.FC<MessageListProps> = ({
   }
 
   return (
-    <div 
+    <div
       ref={messagesContainerRef}
       className="absolute inset-0 overflow-y-auto custom-scrollbar pt-8"
     >
@@ -105,14 +160,16 @@ const MessageList: React.FC<MessageListProps> = ({
             <div className="text-xs">Loading more messages...</div>
           </div>
         )} */}
-        
+
         <AnimatePresence mode="popLayout">
           {messages.map((message) => (
             <Message
               key={message.id}
               message={message}
               isStreaming={streamingMessageId === message.id}
-              onStopStreaming={streamingMessageId === message.id ? onStopStreaming : undefined}
+              onStopStreaming={
+                streamingMessageId === message.id ? onStopStreaming : undefined
+              }
               animationsDisabled={animationsDisabled}
             />
           ))}
