@@ -171,7 +171,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     
     // Check if we're already on the welcome page (no current conversation or empty conversation)
     if (!currentConversation || currentConversation.messages.length === 0) {
-      return currentConversation || {
+      const newOrExisting = currentConversation || {
         id: generateId(),
         title,
         messages: [],
@@ -180,6 +180,14 @@ export const useChat = (settings?: AppSettings | undefined) => {
         model,
         source: getModelSource(model)
       };
+      
+      // For new conversations, set hasMoreMessages to false
+      if (!currentConversation) {
+        setHasMoreMessages(false);
+        setMessagesLastDoc(null);
+      }
+      
+      return newOrExisting;
     }
     
     setIsCreatingNewChat(true);
@@ -193,6 +201,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
       model,
       source: getModelSource(model)
     };
+
+    // For new conversations, set hasMoreMessages to false
+    setHasMoreMessages(false);
+    setMessagesLastDoc(null);
 
     // Update conversations state immediately
     setConversations(prev => {

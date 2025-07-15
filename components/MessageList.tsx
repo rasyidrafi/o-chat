@@ -79,7 +79,7 @@ const MessageList: React.FC<MessageListProps> = ({
     >
       <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto overflow-x-hidden">
         {/* Load Previous Messages Button */}
-        {hasMoreMessages && !isLoadingMessages && (
+        {hasMoreMessages && !isLoadingMessages && !isNewConversation && (
           <div className="flex justify-center mb-6">
             <Button
               onClick={handleLoadPreviousMessages}
@@ -101,7 +101,7 @@ const MessageList: React.FC<MessageListProps> = ({
         )}
         
         {/* Loading more messages indicator (only when button is clicked) */}
-        {isLoadingMoreMessages && !hasMoreMessages && (
+        {isLoadingMoreMessages && !hasMoreMessages && !isNewConversation && (
           <div className="flex flex-col items-center justify-center py-4 text-zinc-500 dark:text-zinc-400">
             <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-2"></div>
             <div className="text-xs">Loading more messages...</div>
