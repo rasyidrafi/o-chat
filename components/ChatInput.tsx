@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Sparkles, ChevronDown, Globe, Paperclip, ArrowUp, Check } from './Icons';
 import LoadingIndicator from './ui/LoadingIndicator';
+import HorizontalRule from './ui/HorizontalRule';
 
 interface ModelOption {
   label: string;
@@ -207,7 +208,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-[#1c1c1c] rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-xl p-3">
+    <div className="bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md rounded-2xl border border-zinc-200/50 dark:border-zinc-700/50 shadow-xl p-3">
       <div className="relative">
         <textarea
           value={message}
@@ -219,25 +220,26 @@ const ChatInput: React.FC<ChatInputProps> = ({
           disabled={disabled}
         />
       </div>
-      <div className="flex items-center justify-between flex-wrap gap-2 mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-700">
+      <HorizontalRule />
+      <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
         <div className="flex items-center flex-wrap gap-2">
           <div ref={dropdownRef} className="relative">
             <button 
               onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-              className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors w-40"
+              className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-48"
             >
-              <Sparkles className="w-3 h-3 text-purple-400 flex-shrink-0" />
+              <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
               <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">{selectedModelLabel}</span>
-              <ChevronDown className={`w-3 h-3 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {isModelDropdownOpen && (
-              <div className="absolute bottom-full mb-2 left-0 w-64 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10">
+              <div className="absolute bottom-full mb-2 left-0 w-64 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
                 <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
                   {modelOptions.map(option => (
                     <button
                       key={`${option.value}-${option.providerId || 'system'}`}
                       onClick={() => handleModelSelect(option)}
-                      className="w-full text-left flex items-center justify-between px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                      className="w-full text-left flex items-center justify-between px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
                       title={option.label}
                     >
                       <span className="truncate flex-1 mr-2">{option.label}</span>
@@ -248,13 +250,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
               </div>
             )}
           </div>
-          <button className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
-            <Globe className="w-3 h-3 text-blue-400" />
+          <button className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors">
+            <Globe className="w-4 h-4 text-blue-400" />
             <span className="text-zinc-900 dark:text-white">Search</span>
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" aria-label="Attach file">
+          <button className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors" aria-label="Attach file">
             <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
           </button>
           <button 
@@ -262,7 +264,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             className={`p-1.5 rounded-full transition-colors ${
               message.trim() && !disabled 
                 ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700' 
-                : 'bg-zinc-200 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
+                : 'bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
             }`}
             disabled={!message.trim() || disabled}
             aria-label={disabled ? "Sending..." : "Send message"}

@@ -145,7 +145,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={toggleSidebar}
-          className="flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 bg-white dark:bg-[#1c1c1c] border border-zinc-200 dark:border-zinc-700 rounded-lg"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200"
           style={{
             width: "40px",
             height: "40px",
@@ -155,6 +155,27 @@ const ChatView: React.FC<ChatViewProps> = ({
           <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
         </button>
       </motion.div>
+
+      {/* Top-left positioned menu button for mobile */}
+      <div
+        className="fixed z-50 md:hidden"
+        style={{
+          top: "10px",
+          left: "10px",
+        }}
+      >
+        <button
+          onClick={onMenuClick}
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200"
+          style={{
+            width: "40px",
+            height: "40px",
+          }}
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+        </button>
+      </div>
 
       {/* Top-right positioned buttons */}
       <div
@@ -166,7 +187,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={() => onOpenSettings()}
-          className="flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 bg-white dark:bg-[#1c1c1c] border border-zinc-200 dark:border-zinc-700 rounded-bl-lg rounded-tl-lg"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200"
           style={{
             width: "40px",
             height: "40px",
@@ -176,7 +197,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           <SlidersHorizontal className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
         </button>
         <button
-          className="flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 bg-white dark:bg-[#1c1c1c] border border-zinc-200 dark:border-zinc-700 rounded-tr-lg rounded-br-lg"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200"
           onClick={toggleTheme}
           aria-label={`Switch to ${
             theme === "light" ? "dark" : theme === "dark" ? "system" : "light"
@@ -191,25 +212,6 @@ const ChatView: React.FC<ChatViewProps> = ({
           </AnimatePresence>
         </button>
       </div>
-
-      <header className="flex md:hidden items-center justify-between p-3 text-zinc-500 dark:text-zinc-400">
-        <div className="flex items-center">
-          <button
-            className="flex items-center justify-center p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 bg-white dark:bg-[#1c1c1c] border border-zinc-200 dark:border-zinc-700 rounded-lg md:hidden"
-            onClick={onMenuClick}
-            aria-label="Open menu"
-            style={{
-              width: "40px",
-              height: "40px",
-            }}
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          {/* Remove the desktop toggle button from header since it's now in top-left */}
-        </div>
-        {/* Empty div to maintain header structure */}
-        <div></div>
-      </header>
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {isLoading ? (
@@ -237,6 +239,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               isLoadingMessages={isLoadingMessages}
               isLoadingMoreMessages={isLoadingMoreMessages}
               hasMoreMessages={hasMoreMessages}
+              onLoadMoreMessages={() => {}}
             />
           </div>
         )}

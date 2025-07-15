@@ -4,6 +4,7 @@ import { ChatMessage } from '../types/chat';
 import { motion } from 'framer-motion';
 import TypingIndicator from './TypingIndicator';
 import ReasoningDisplay from './ReasoningDisplay';
+import HorizontalRule from './ui/HorizontalRule';
 import * as prod from 'react/jsx-runtime';
 
 // Lazy load heavy dependencies
@@ -12,12 +13,6 @@ const SyntaxHighlighter = React.lazy(() =>
     default: module.Prism 
   }))
 );
-
-const syntaxStyles = {
-  dark: React.lazy(() => 
-    import('react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus')
-  )
-};
 
 // Lazy load markdown processor
 const createMarkdownProcessor = () => 
@@ -337,11 +332,7 @@ const MarkdownComponents = {
   },
   
   // Custom horizontal rule
-  hr: ({ ...props }: any) => (
-    <div className="flex justify-center my-4" {...props}>
-      <div className="w-4/5 h-px bg-gradient-to-r from-transparent via-zinc-300 dark:via-zinc-600 to-transparent" />
-    </div>
-  ),
+  hr: (props: any) => <HorizontalRule {...props} />, // Use extracted component
 };
 
 // Mermaid diagram component
