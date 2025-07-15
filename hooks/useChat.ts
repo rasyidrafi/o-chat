@@ -570,14 +570,17 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [streamingState]);
 
   const selectConversation = useCallback((conversation: ChatConversation | null) => {
-    // Always set the current conversation first
+    // Always set the current conversation first so UI updates immediately
     setCurrentConversation(conversation);
     
     // Reset message pagination state when selecting a new conversation
     setHasMoreMessages(true);
     setMessagesLastDoc(null);
     
-    if (conversation && conversation.messages.length === 0) {
+    if (conversation) {
+      // Set loading state immediately when selecting a conversation
+      setIsLoadingMessages(true);
+      
       // Load messages for this conversation
       loadConversationMessages(conversation.id);
     }
