@@ -13,6 +13,7 @@ interface MessageListProps {
   isLoadingMessages: boolean;
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
+  onLoadMoreMessages: () => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({ 
@@ -24,6 +25,7 @@ const MessageList: React.FC<MessageListProps> = ({
   isLoadingMoreMessages,
   hasMoreMessages,
   onLoadMoreMessages
+}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
