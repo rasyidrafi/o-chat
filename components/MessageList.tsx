@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '../types/chat';
 import Message from './Message';
 import { AnimatePresence } from 'framer-motion';
+import Button from './ui/Button';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -12,7 +13,6 @@ interface MessageListProps {
   isLoadingMessages: boolean;
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
-  onLoadMoreMessages: () => void;
 }
 
 const MessageList: React.FC<MessageListProps> = ({ 
@@ -24,38 +24,26 @@ const MessageList: React.FC<MessageListProps> = ({
   isLoadingMoreMessages,
   hasMoreMessages,
   onLoadMoreMessages
-}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
-  // Handle scroll to load more messages
-  useEffect(() => {
+  const handleLoadPreviousMessages = () => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    const handleScroll = () => {
-      const { scrollTop } = container;
-      const isNearTop = scrollTop <= 100; // 100px threshold from top
-      
-      if (isNearTop && hasMoreMessages && !isLoadingMoreMessages && !isLoadingMessages) {
-        const previousScrollHeight = container.scrollHeight;
-        setShouldScrollToBottom(false);
-        
-        onLoadMoreMessages();
-        
-        // Maintain scroll position after loading more messages
-        setTimeout(() => {
-          const newScrollHeight = container.scrollHeight;
-          const scrollDiff = newScrollHeight - previousScrollHeight;
-          container.scrollTop = scrollTop + scrollDiff;
-        }, 100);
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [hasMoreMessages, isLoadingMoreMessages, isLoadingMessages, onLoadMoreMessages]);
+    const previousScrollHeight = container.scrollHeight;
+    setShouldScrollToBottom(false);
+    
+    onLoadMoreMessages();
+    
+    // Maintain scroll position after loading more messages
+    setTimeout(() => {
+      const newScrollHeight = container.scrollHeight;
+      const scrollDiff = newScrollHeight - previousScrollHeight;
+      container.scrollTop = scrollDiff;
+    }, 100);
+  };
 
   useEffect(() => {
     if (shouldScrollToBottom) {
@@ -88,8 +76,30 @@ const MessageList: React.FC<MessageListProps> = ({
       className="absolute inset-0 overflow-y-auto custom-scrollbar pt-8"
     >
       <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto overflow-x-hidden">
-        {/* Loading more messages indicator */}
-        {isLoadingMoreMessages && (
+        {/* Load Previous Messages Button */}
+        {hasMoreMessages && !isLoadingMessages && (
+          <div className="flex justify-center mb-6">
+            <Button
+              onClick={handleLoadPreviousMessages}
+              variant="secondary"
+              size="sm"
+              disabled={isLoadingMoreMessages}
+              className="gap-2"
+            >
+              {isLoadingMoreMessages ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  Loading...
+                </>
+              ) : (
+                'Load Previous Messages'
+              )}
+            </Button>
+          </div>
+        )}
+        
+        {/* Loading more messages indicator (only when button is clicked) */}
+        {isLoadingMoreMessages && !hasMoreMessages && (
           <div className="flex flex-col items-center justify-center py-4 text-zinc-500 dark:text-zinc-400">
             <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-2"></div>
             <div className="text-xs">Loading more messages...</div>

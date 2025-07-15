@@ -237,7 +237,6 @@ const ChatView: React.FC<ChatViewProps> = ({
               isLoadingMessages={isLoadingMessages}
               isLoadingMoreMessages={isLoadingMoreMessages}
               hasMoreMessages={hasMoreMessages}
-              onLoadMoreMessages={loadMoreMessages}
             />
           </div>
         )}

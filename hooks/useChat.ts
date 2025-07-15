@@ -625,7 +625,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
     isLoadingMoreMessages,
     hasMoreMessages,
     isCreatingNewChat,
-    user,
     sendMessage,
     stopStreaming,
     createNewConversation,
