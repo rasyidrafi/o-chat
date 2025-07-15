@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, User, X, LogIn, Plus, Check } from './Icons';
 import { User as FirebaseUser } from 'firebase/auth';
 import Button from './ui/Button';
@@ -16,8 +16,38 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed, user, onLoginClick, onSignOutClick, chat }) => {
-  const { conversations, currentConversation, selectConversation, createNewConversation, deleteConversation, isCreatingNewChat, isLoading } = chat;
+  const { 
+    conversations, 
+    currentConversation, 
+    selectConversation, 
+    createNewConversation, 
+    deleteConversation, 
+    isCreatingNewChat, 
+    isLoading,
+    isLoadingMore,
+    hasMoreConversations,
+    loadMoreConversations
+  } = chat;
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle scroll to load more conversations
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100; // 100px threshold
+      
+      if (isNearBottom && hasMoreConversations && !isLoadingMore && !isLoading) {
+        loadMoreConversations();
+      }
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [hasMoreConversations, isLoadingMore, isLoading, loadMoreConversations]);
 
   const handleNewChat = () => {
     // Only redirect to welcome page by clearing current conversation
@@ -101,7 +131,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
         />
       </div>
 
-      <div className={`flex-grow overflow-y-auto block thin-scrollbar ${isCollapsed ? 'md:hidden' : ''}`}>
+      <div 
+        ref={scrollContainerRef}
+        className={`flex-grow overflow-y-auto block thin-scrollbar ${isCollapsed ? 'md:hidden' : ''}`}
+      >
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">
             <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -163,6 +196,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
                 </ul>
               </div>
             ))}
+            
+            {/* Loading more indicator */}
+            {isLoadingMore && (
+              <div className="flex flex-col items-center justify-center py-4 text-zinc-500 dark:text-zinc-400">
+                <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <div className="text-xs">Loading more...</div>
+              </div>
+            )}
             
             {conversations.length === 0 && (
               <div className="text-center text-zinc-500 dark:text-zinc-400 text-sm py-8">

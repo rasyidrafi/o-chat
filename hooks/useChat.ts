@@ -13,6 +13,13 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreConversations, setHasMoreConversations] = useState(true);
+  const [conversationsLastDoc, setConversationsLastDoc] = useState<any>(null);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [messagesLastDoc, setMessagesLastDoc] = useState<any>(null);
   const [isCreatingNewChat, setIsCreatingNewChat] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [streamingState, setStreamingState] = useState<StreamingState>({
@@ -45,8 +52,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const loadConversations = useCallback(async () => {
     try {
       setIsLoading(true);
-      const loadedConversations = await ChatStorageService.loadConversations(user);
-      setConversations(loadedConversations);
+      const result = await ChatStorageService.loadConversationsPaginated(user, 20);
+      setConversations(result.conversations);
+      setHasMoreConversations(result.hasMore);
+      setConversationsLastDoc(result.lastDoc);
     } catch (error) {
       console.error('Error loading conversations:', error);
     } finally {
@@ -70,6 +79,74 @@ export const useChat = (settings?: AppSettings | undefined) => {
       ChatStorageService.handleUserLogout();
     }
   }, [user, loadConversations]);
+
+  // Load more conversations
+  const loadMoreConversations = useCallback(async () => {
+    if (!hasMoreConversations || isLoadingMore) return;
+    
+    try {
+      setIsLoadingMore(true);
+      const result = await ChatStorageService.loadConversationsPaginated(user, 20, conversationsLastDoc);
+      setConversations(prev => [...prev, ...result.conversations]);
+      setHasMoreConversations(result.hasMore);
+      setConversationsLastDoc(result.lastDoc);
+    } catch (error) {
+      console.error('Error loading more conversations:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [user, hasMoreConversations, isLoadingMore, conversationsLastDoc]);
+
+  // Load messages for a conversation
+  const loadConversationMessages = useCallback(async (conversationId: string) => {
+    try {
+      setIsLoadingMessages(true);
+      const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 30);
+      
+      // Update the conversation with loaded messages
+      setConversations(prev => prev.map(conv => 
+        conv.id === conversationId 
+          ? { ...conv, messages: result.messages }
+          : conv
+      ));
+      
+      setHasMoreMessages(result.hasMore);
+      setMessagesLastDoc(result.lastDoc);
+    } catch (error) {
+      console.error('Error loading conversation messages:', error);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  }, [user]);
+
+  // Load more messages for current conversation
+  const loadMoreMessages = useCallback(async () => {
+    if (!currentConversation || !hasMoreMessages || isLoadingMoreMessages) return;
+    
+    try {
+      setIsLoadingMoreMessages(true);
+      const result = await ChatStorageService.loadMessagesPaginated(currentConversation.id, user, 30, messagesLastDoc);
+      
+      // Prepend older messages to the beginning
+      setConversations(prev => prev.map(conv => 
+        conv.id === currentConversation.id 
+          ? { ...conv, messages: [...result.messages, ...conv.messages] }
+          : conv
+      ));
+      
+      setCurrentConversation(prev => prev ? {
+        ...prev,
+        messages: [...result.messages, ...prev.messages]
+      } : null);
+      
+      setHasMoreMessages(result.hasMore);
+      setMessagesLastDoc(result.lastDoc);
+    } catch (error) {
+      console.error('Error loading more messages:', error);
+    } finally {
+      setIsLoadingMoreMessages(false);
+    }
+  }, [currentConversation, user, hasMoreMessages, isLoadingMoreMessages, messagesLastDoc]);
 
   const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
@@ -493,8 +570,17 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [streamingState]);
 
   const selectConversation = useCallback((conversation: ChatConversation | null) => {
+    if (conversation && conversation.messages.length === 0) {
+      // Load messages for this conversation
+      loadConversationMessages(conversation.id);
+    }
+    
+    // Reset message pagination state when selecting a new conversation
+    setHasMoreMessages(true);
+    setMessagesLastDoc(null);
+    
     setCurrentConversation(conversation);
-  }, []);
+  }, [loadConversationMessages]);
 
   const deleteConversation = useCallback((conversationId: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== conversationId));
@@ -513,6 +599,11 @@ export const useChat = (settings?: AppSettings | undefined) => {
     currentConversation,
     streamingState,
     isLoading,
+    isLoadingMore,
+    hasMoreConversations,
+    isLoadingMessages,
+    isLoadingMoreMessages,
+    hasMoreMessages,
     isCreatingNewChat,
     user,
     sendMessage,
@@ -520,6 +611,8 @@ export const useChat = (settings?: AppSettings | undefined) => {
     createNewConversation,
     selectConversation,
     deleteConversation,
-    loadConversations
+    loadConversations,
+    loadMoreConversations,
+    loadMoreMessages
   };
 };

@@ -12,7 +12,9 @@ import {
   collectionGroup,
   where,
   Timestamp,
-  writeBatch
+  writeBatch,
+  limit,
+  startAfter
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ChatConversation, ChatMessage } from '../types/chat';
@@ -277,6 +279,128 @@ export class ChatStorageService {
       await this.saveConversationToFirestore(conversation, user.uid);
     } else {
       this.saveConversationToLocal(conversation);
+    }
+  }
+
+  // Load conversations with pagination
+  static async loadConversationsPaginated(user?: User | null, limit: number = 20, lastDoc?: any): Promise<{ conversations: ChatConversation[], hasMore: boolean, lastDoc: any }> {
+    if (user) {
+      return await this.getConversationsFromFirestorePaginated(user.uid, limit, lastDoc);
+    } else {
+      const conversations = this.getConversationsFromLocal();
+      // For local storage, we'll simulate pagination
+      const startIndex = lastDoc ? lastDoc.index + 1 : 0;
+      const endIndex = startIndex + limit;
+      const paginatedConversations = conversations.slice(startIndex, endIndex);
+      
+      return {
+        conversations: paginatedConversations.map(conv => ({
+          ...conv,
+          messages: [] // Don't load messages initially
+        })),
+        hasMore: endIndex < conversations.length,
+        lastDoc: paginatedConversations.length > 0 ? { index: endIndex - 1 } : null
+      };
+    }
+  }
+
+  // Get conversations from Firestore with pagination
+  private static async getConversationsFromFirestorePaginated(userId: string, limit: number, lastDoc?: any): Promise<{ conversations: ChatConversation[], hasMore: boolean, lastDoc: any }> {
+    try {
+      const chatRef = doc(db, 'chats', userId);
+      const conversationsRef = collection(chatRef, 'conversations');
+      
+      let q = query(conversationsRef, orderBy('updatedAt', 'desc'), limit(limit));
+      
+      if (lastDoc) {
+        q = query(conversationsRef, orderBy('updatedAt', 'desc'), startAfter(lastDoc), limit(limit));
+      }
+      
+      const snapshot = await getDocs(q);
+      const conversations: ChatConversation[] = [];
+      
+      snapshot.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        conversations.push({
+          id: data.id,
+          title: data.title,
+          model: data.model,
+          source: data.source || 'server',
+          createdAt: data.createdAt.toDate(),
+          updatedAt: data.updatedAt.toDate(),
+          messages: [] // Don't load messages initially
+        });
+      });
+      
+      return {
+        conversations,
+        hasMore: snapshot.docs.length === limit,
+        lastDoc: snapshot.docs[snapshot.docs.length - 1] || null
+      };
+    } catch (error) {
+      console.error('Error loading conversations from Firestore:', error);
+      return { conversations: [], hasMore: false, lastDoc: null };
+    }
+  }
+
+  // Load messages for a specific conversation with pagination
+  static async loadMessagesPaginated(conversationId: string, user?: User | null, limit: number = 30, lastDoc?: any): Promise<{ messages: ChatMessage[], hasMore: boolean, lastDoc: any }> {
+    if (user) {
+      return await this.getMessagesFromFirestorePaginated(user.uid, conversationId, limit, lastDoc);
+    } else {
+      const allMessages = this.getMessagesFromLocal(conversationId);
+      // For local storage, simulate pagination from the end (latest messages first)
+      const startIndex = lastDoc ? lastDoc.index + 1 : 0;
+      const endIndex = Math.min(startIndex + limit, allMessages.length);
+      const paginatedMessages = allMessages.slice(-(endIndex)).slice(-(limit));
+      
+      return {
+        messages: paginatedMessages,
+        hasMore: endIndex < allMessages.length,
+        lastDoc: endIndex < allMessages.length ? { index: endIndex } : null
+      };
+    }
+  }
+
+  // Get messages from Firestore with pagination (latest first)
+  private static async getMessagesFromFirestorePaginated(userId: string, conversationId: string, limit: number, lastDoc?: any): Promise<{ messages: ChatMessage[], hasMore: boolean, lastDoc: any }> {
+    try {
+      const chatRef = doc(db, 'chats', userId);
+      const conversationRef = doc(collection(chatRef, 'conversations'), conversationId);
+      const messagesRef = collection(conversationRef, 'messages');
+      
+      let q = query(messagesRef, orderBy('timestamp', 'desc'), limit(limit));
+      
+      if (lastDoc) {
+        q = query(messagesRef, orderBy('timestamp', 'desc'), startAfter(lastDoc), limit(limit));
+      }
+      
+      const snapshot = await getDocs(q);
+      const messages = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: data.id,
+          role: data.role,
+          content: data.content,
+          timestamp: data.timestamp.toDate(),
+          model: data.model,
+          isError: data.isError || false,
+          source: data.source || 'server',
+          reasoning: data.reasoning
+        };
+      });
+      
+      // Reverse to show oldest first in UI
+      messages.reverse();
+      
+      return {
+        messages,
+        hasMore: snapshot.docs.length === limit,
+        lastDoc: snapshot.docs[snapshot.docs.length - 1] || null
+      };
+    } catch (error) {
+      console.error('Error loading messages from Firestore:', error);
+      return { messages: [], hasMore: false, lastDoc: null };
     }
   }
 
