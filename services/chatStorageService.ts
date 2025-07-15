@@ -369,10 +369,10 @@ export class ChatStorageService {
       const conversationRef = doc(collection(chatRef, 'conversations'), conversationId);
       const messagesRef = collection(conversationRef, 'messages');
       
-      let q = query(messagesRef, orderBy('timestamp', 'desc'), limit(limit));
+      let q = query(messagesRef, orderBy('timestamp', 'desc'), firestoreLimit(limit));
       
       if (lastDoc) {
-        q = query(messagesRef, orderBy('timestamp', 'desc'), startAfter(lastDoc), limit(limit));
+        q = query(messagesRef, orderBy('timestamp', 'desc'), firestoreStartAfter(lastDoc), firestoreLimit(limit));
       }
       
       const snapshot = await getDocs(q);
