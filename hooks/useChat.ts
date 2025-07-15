@@ -531,17 +531,11 @@ export const useChat = (settings?: AppSettings | undefined) => {
           const errorConv = current.find(conv => conv.id === updatedConversation.id);
           if (errorConv) {
             console.log('Saving error conversation (catch block):', updatedConversation.id);
-              setTimeout(() => {
-                console.log('Removing from newly created set (error case):', updatedConversation.id);
-                setNewlyCreatedConversations(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete(updatedConversation.id);
-                  return newSet;
-                });
-              }, 1000);
+            ChatStorageService.saveConversation(errorConv, user).catch(error => {
+              console.error('Error saving error conversation:', error);
             }).finally(() => {
               setTimeout(() => {
-                console.log('Removing from newly created set (catch case):', updatedConversation.id);
+                console.log('Removing from newly created set (error case):', updatedConversation.id);
                 setNewlyCreatedConversations(prev => {
                   const newSet = new Set(prev);
                   newSet.delete(updatedConversation.id);
