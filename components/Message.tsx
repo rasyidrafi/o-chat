@@ -117,54 +117,75 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({
   };
 
   return (
-    <div className="relative group mb-4 w-full">
-      {/* Scrollable container with custom scrollbar */}
-      <div className="relative overflow-x-auto thin-scrollbar">
-        <div className="relative">
+    <div className="relative group mb-4 w-full max-w-full overflow-hidden">
+      {/* Force container constraints */}
+      <div
+        className="relative w-full bg-zinc-50 dark:bg-zinc-900 rounded-lg"
+        style={{
+          maxWidth: "100%",
+          width: "100%",
+          overflow: "hidden",
+        }}
+      >
+        {/* Scrollable wrapper */}
+        <div
+          className="overflow-x-auto thin-scrollbar"
+          style={{
+            maxWidth: "100%",
+            width: "100%",
+          }}
+        >
           <code
             ref={codeRef}
             className={`${
               className ? className + " hljs" : "hljs"
-            } block rounded-lg p-4 text-sm leading-relaxed whitespace-pre-wrap break-words`}
+            } block p-4 text-sm leading-relaxed whitespace-pre`}
+            style={{
+              margin: 0,
+              width: "max-content",
+              minWidth: "100%",
+              maxWidth: "none",
+            }}
             dangerouslySetInnerHTML={{ __html: highlighted }}
           />
-          {/* Copy button with absolute positioning */}
-          <button
-            onClick={copyToClipboard}
-            className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 shadow-sm hover:bg-zinc-100 dark:hover:bg-zinc-600 rounded transition-colors opacity-0 group-hover:opacity-100 z-10"
-            title={copied ? "Copied!" : "Copy to clipboard"}
-          >
-            {copied ? (
-              <svg
-                className="w-4 h-4 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-4 h-4 text-zinc-700 dark:text-zinc-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                />
-              </svg>
-            )}
-          </button>
         </div>
+
+        {/* Copy button */}
+        <button
+          onClick={copyToClipboard}
+          className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-zinc-800/90 hover:bg-white dark:hover:bg-zinc-800 rounded transition-colors opacity-0 group-hover:opacity-100 z-10 shadow-sm"
+          title={copied ? "Copied!" : "Copy to clipboard"}
+        >
+          {copied ? (
+            <svg
+              className="w-4 h-4 text-green-600 dark:text-green-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+          )}
+        </button>
       </div>
     </div>
   );
@@ -470,12 +491,12 @@ const Message: React.FC<MessageProps> = ({
 
   const getMessageStyles = () => {
     if (isUser) {
-      return "bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-2xl px-4 py-3";
+      return "bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-2xl px-4 py-3 max-w-[80%]";
     }
     if (message.isError) {
-      return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3";
+      return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
     }
-    return "text-zinc-900 dark:text-zinc-100"; // Remove background and padding for AI responses
+    return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0"; // Added width constraints
   };
 
   const processedContent = useMemo(() => {
@@ -513,14 +534,19 @@ const Message: React.FC<MessageProps> = ({
 
     // For AI responses, render reasoning first then content
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 w-full max-w-full min-w-0">
+        {" "}
+        {/* Added width constraints */}
         <ReasoningDisplay
           reasoning={message.reasoning || ""}
           isReasoningComplete={message.isReasoningComplete || false}
           isStreaming={isStreaming}
         />
-
-        <div className="text-sm leading-relaxed">{processedContent}</div>
+        <div className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden">
+          {" "}
+          {/* Added constraints */}
+          {processedContent}
+        </div>
       </div>
     );
   };
@@ -534,8 +560,10 @@ const Message: React.FC<MessageProps> = ({
     >
       <div
         className={`my-4 flex flex-col ${
-          isUser ? "max-w-[80%] items-end" : "w-full items-start min-w-0"
-        }`}
+          isUser
+            ? "max-w-[80%] items-end"
+            : "w-full max-w-full items-start min-w-0"
+        }`} // Added max-w-full constraint
       >
         <div className={getMessageStyles()}>
           {renderContent()}

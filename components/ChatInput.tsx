@@ -250,10 +250,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
               </div>
             )}
           </div>
-          <button className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors">
+          {/* <button className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors">
             <Globe className="w-4 h-4 text-blue-400" />
             <span className="text-zinc-900 dark:text-white">Search</span>
-          </button>
+          </button> */}
         </div>
         <div className="flex items-center gap-2">
           <button className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors" aria-label="Attach file">
