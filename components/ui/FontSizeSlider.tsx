@@ -24,10 +24,11 @@ const FontSizeSlider: React.FC<FontSizeSliderProps> = ({
     const currentOption = fontSizeOptions.find(option => option.value === value) || fontSizeOptions[0];
 
     return (
-        <div>
-            <h4 className="font-medium text-zinc-900 dark:text-white">{label}</h4>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">{description}</p>
-            
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
+            <div className="space-y-2">
+                <h4 className="font-medium text-zinc-900 dark:text-white">{label}</h4>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">{description}</p>
+            </div>
             <div className="space-y-4">
                 {/* Slider */}
                 <div className="relative">
@@ -71,40 +72,40 @@ const FontSizeSlider: React.FC<FontSizeSliderProps> = ({
                     </span>
                 </div>
             </div>
-
-            <style jsx>{`
-                .slider::-webkit-slider-thumb {
-                    appearance: none;
-                    height: 20px;
-                    width: 20px;
-                    border-radius: 50%;
-                    background: #ec4899;
-                    cursor: pointer;
-                    border: 2px solid #ffffff;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                }
-
-                .slider::-moz-range-thumb {
-                    height: 20px;
-                    width: 20px;
-                    border-radius: 50%;
-                    background: #ec4899;
-                    cursor: pointer;
-                    border: 2px solid #ffffff;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                }
-
-                .slider::-webkit-slider-track {
-                    height: 8px;
-                    border-radius: 4px;
-                }
-
-                .slider::-moz-range-track {
-                    height: 8px;
-                    border-radius: 4px;
-                }
-            `}</style>
         </div>
+
+        <style jsx>{`
+            .slider::-webkit-slider-thumb {
+                appearance: none;
+                height: 20px;
+                width: 20px;
+                border-radius: 50%;
+                background: #ec4899;
+                cursor: pointer;
+                border: 2px solid #ffffff;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .slider::-moz-range-thumb {
+                height: 20px;
+                width: 20px;
+                border-radius: 50%;
+                background: #ec4899;
+                cursor: pointer;
+                border: 2px solid #ffffff;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .slider::-webkit-slider-track {
+                height: 8px;
+                border-radius: 4px;
+            }
+
+            .slider::-moz-range-track {
+                height: 8px;
+                border-radius: 4px;
+            }
+        `}</style>
     );
 };
 
