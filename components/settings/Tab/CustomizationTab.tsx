@@ -63,13 +63,21 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
                         isOn={settings.animationsDisabled}
                         onToggle={() => updateSettings({animationsDisabled: !settings.animationsDisabled})}
                     />
-                    <FontSizeSlider
-                        label="Font Size"
-                        description="Adjust the overall text size throughout the app."
-                        value={settings.fontSize}
-                        onChange={(fontSize) => updateSettings({ fontSize })}
-                        animationsDisabled={settings.animationsDisabled}
-                    />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <h4 className="font-medium text-zinc-900 dark:text-white">Font Size</h4>
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400">Adjust the overall text size throughout the app.</p>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <FontSizeSlider
+                                value={settings.fontSize}
+                                onChange={(fontSize) => updateSettings({ fontSize })}
+                                animationsDisabled={settings.animationsDisabled}
+                            />
+                        </div>
+                    </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
                         <div className="space-y-6">
                             <CustomDropdown 
