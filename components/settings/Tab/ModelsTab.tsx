@@ -266,7 +266,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         
         // Filter by tab selection (Selected vs Available)
         if (activeByokTab === 'selected') {
-            byokModels = byokModels.filter(model => selectedModelIds.includes(model.id));
+            byokModels = byokModels.filter(model => selectedModels.some(selected => selected.id === model.id));
         }
         
         // Apply feature filtering
@@ -639,7 +639,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         transform: translateY(0);
                     }
                 }
-
                 .animate-fadeIn {
                     animation: fadeIn 0.3s ease-out forwards;
                 }
