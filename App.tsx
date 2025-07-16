@@ -48,7 +48,7 @@ const App: React.FC = () => {
     theme: (localStorage.getItem('theme') as Theme) || 'system',
     mainFont: localStorage.getItem('mainFont') || 'Montserrat',
     codeFont: localStorage.getItem('codeFont') || 'JetBrains Mono (default)',
-    fontSize: parseInt(localStorage.getItem('fontSize') || '1'),
+    fontSize: parseFloat(localStorage.getItem('fontSize') || '1'),
     animationsDisabled: localStorage.getItem('animationsDisabled') === 'true',
     customInstruction: localStorage.getItem('customInstruction') || '',
     hidePersonalInfo: localStorage.getItem('hidePersonalInfo') === 'true',

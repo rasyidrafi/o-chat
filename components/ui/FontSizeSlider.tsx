@@ -13,8 +13,8 @@ const FontSizeSlider: React.FC<FontSizeSliderProps> = ({
 }) => {
     const fontSizeOptions = [
         { value: 1, label: 'Default' },
-        { value: 2, label: 'Big' },
-        { value: 3, label: 'Large' }
+        { value: 1.2, label: 'Big' },
+        { value: 1.5, label: 'Large' }
     ];
 
     const currentOption = fontSizeOptions.find(option => option.value === value) || fontSizeOptions[0];
@@ -26,10 +26,16 @@ const FontSizeSlider: React.FC<FontSizeSliderProps> = ({
                 <input
                     type="range"
                     min="1"
-                    max="3"
-                    step="1"
+                    max="1.5"
+                    step="0.1"
                     value={value}
-                    onChange={(e) => onChange(parseInt(e.target.value))}
+                    onChange={(e) => {
+                        const newValue = parseFloat(e.target.value);
+                        // Snap to closest valid value
+                        if (newValue <= 1.1) onChange(1);
+                        else if (newValue <= 1.35) onChange(1.2);
+                        else onChange(1.5);
+                    }}
                     className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer slider"
                 />
                 
