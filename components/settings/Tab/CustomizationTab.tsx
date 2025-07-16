@@ -57,18 +57,6 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
                 <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">Visual Options</h2>
                 <div className="space-y-6 mt-6">
                     <SettingsToggle 
-                        label="Hide Personal Information"
-                        description="Hides your name and email from the UI."
-                        isOn={settings.hidePersonalInfo}
-                        onToggle={() => updateSettings({hidePersonalInfo: !settings.hidePersonalInfo})}
-                    />
-                    <SettingsToggle 
-                        label="Disable External Link Warning"
-                        description="Skip the confirmation dialog when clicking external links. Note: We cannot guarantee the safety of external links, use this option at your own risk."
-                        isOn={settings.disableLinkWarning}
-                        onToggle={() => updateSettings({disableLinkWarning: !settings.disableLinkWarning})}
-                    />
-                    <SettingsToggle 
                         label="Disable Animation"
                         description="Disables all animations throughout the app for a simpler experience."
                         isOn={settings.animationsDisabled}
