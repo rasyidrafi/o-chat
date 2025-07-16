@@ -318,12 +318,11 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             key={page}
             onClick={() => handlePageChange(page)}
             className={`
-                px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md min-w-[32px] sm:min-w-[40px]
+                px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] border transition-colors
                 ${isActive 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white border-transparent' 
+                    : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700'
                 }
-                ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
             `}
         >
             {page}
@@ -360,12 +359,11 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={!hasPreviousPage}
                         className={`
-                            px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md
+                            px-3 py-2 text-sm font-medium rounded-lg border transition-colors
                             ${hasPreviousPage 
-                                ? 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800' 
-                                : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                                ? 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700' 
+                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 border-zinc-200 dark:border-zinc-700 cursor-not-allowed'
                             }
-                            ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
                         `}
                     >
                         Previous
@@ -374,7 +372,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     {startPage > 1 && (
                         <>
                             {renderPaginationButton(1)}
-                            {startPage > 2 && <span className="px-1 sm:px-2 text-zinc-400 text-xs sm:text-sm">...</span>}
+                            {startPage > 2 && <span className="px-2 text-zinc-400 text-sm">...</span>}
                         </>
                     )}
                     
@@ -382,7 +380,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     
                     {endPage < totalPages && (
                         <>
-                            {endPage < totalPages - 1 && <span className="px-1 sm:px-2 text-zinc-400 text-xs sm:text-sm">...</span>}
+                            {endPage < totalPages - 1 && <span className="px-2 text-zinc-400 text-sm">...</span>}
                             {renderPaginationButton(totalPages)}
                         </>
                     )}
@@ -391,12 +389,11 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={!hasNextPage}
                         className={`
-                            px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md
+                            px-3 py-2 text-sm font-medium rounded-lg border transition-colors
                             ${hasNextPage 
-                                ? 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800' 
-                                : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                                ? 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700' 
+                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 border-zinc-200 dark:border-zinc-700 cursor-not-allowed'
                             }
-                            ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
                         `}
                     >
                         Next
