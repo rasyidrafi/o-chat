@@ -54,6 +54,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     const [fetchedModels, setFetchedModels] = useState<Model[]>([]);
     const [isLoadingModels, setIsLoadingModels] = useState(false);
     const [modelsError, setModelsError] = useState<string | null>(null);
+    const [isChangingPage, setIsChangingPage] = useState(false);
     
     // Pagination and search states
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -311,7 +312,12 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     };
 
     const handlePageChange = (page: number) => {
-        setCurrentPage(page);
+        setIsChangingPage(true);
+        // Small delay to show loading state, then change page
+        setTimeout(() => {
+            setCurrentPage(page);
+            setIsChangingPage(false);
+        }, 150);
     };
 
     const renderPaginationButton = (page: number, isActive: boolean = false) => (
@@ -567,6 +573,13 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                             <div className="text-center py-12 text-red-500 dark:text-red-400">
                                 <p className="text-lg mb-2">Error Loading Models</p>
                                 <p className="text-sm">{modelsError}</p>
+                            </div>
+                        ) : isChangingPage ? (
+                            <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <div className={`w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full ${!settings.animationsDisabled ? 'animate-spin' : ''}`}></div>
+                                    <p className="text-lg">Loading Page...</p>
+                                </div>
                             </div>
                         ) : filteredAndPaginatedModels.byokModels.length === 0 ? (
                             <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
