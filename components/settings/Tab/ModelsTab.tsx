@@ -93,6 +93,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         if (selectedProvider) {
             saveSelectedModelsToStorage(selectedProvider, selectedModels);
         }
+    }, [selectedProvider, selectedModels]);
 
     // Load providers from localStorage
     useEffect(() => {
@@ -265,7 +266,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         
         // Filter by tab selection (Selected vs Available)
         if (activeByokTab === 'selected') {
-            byokModels = byokModels.filter(model => selectedModels.some(selected => selected.id === model.id));
+            byokModels = byokModels.filter(model => selectedModelIds.includes(model.id));
         }
         
         // Apply feature filtering
@@ -303,17 +304,17 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         };
     }, [selectedProvider, selectedFeatures, searchQuery, currentPage, fetchedModels, itemsPerPage, activeByokTab, selectedModelIds]);
 
-    const handleModelToggle = (modelId: string, modelName: string, enabled: boolean) => {
+    const handleModelToggle = (modelId: string, enabled: boolean) => {
         if (enabled) {
-            setSelectedModels(prev => [...prev, { id: modelId, name: modelName }]);
+            setSelectedModelIds(prev => [...prev, modelId]);
         } else {
-            setSelectedModels(prev => prev.filter(model => model.id !== modelId));
+            setSelectedModelIds(prev => prev.filter(id => id !== modelId));
         }
     };
 
     const handleUnselectAll = () => {
         // Clear all selected models for current provider
-        setSelectedModels([]);
+        setSelectedModelIds([]);
     };
 
     const handleFeatureSelect = (feature: string) => {
@@ -528,7 +529,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                         : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                                     }`}
                             >
-                                Selected ({selectedModels.length})
+                                Selected ({selectedModelIds.length})
                                 {activeByokTab === 'selected' && (
                                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500" />
                                 )}
@@ -614,8 +615,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                             name={model.name}
                                             description={model.description}
                                             features={model.features}
-                                            isEnabled={selectedModels.some(selected => selected.id === model.id)}
-                                            onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
+                                            isEnabled={selectedModelIds.includes(model.id)}
+                                            onToggle={(enabled) => handleModelToggle(model.id, enabled)}
                                             animationsDisabled={settings.animationsDisabled}
                                         />
                                     </div>
@@ -632,19 +633,13 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 @keyframes fadeIn {
                     from {
                         opacity: 0;
-const loadSelectedModelsFromStorage = (providerId: string): Array<{id: string, name: string}> => {
                     }
                     to {
                         opacity: 1;
                         transform: translateY(0);
                     }
                 }
-            const parsed = JSON.parse(stored);
-            // Handle legacy format (array of strings) by converting to new format
-            if (parsed.length > 0 && typeof parsed[0] === 'string') {
-                return parsed.map((id: string) => ({ id, name: id }));
-            }
-            return parsed;
+
                 .animate-fadeIn {
                     animation: fadeIn 0.3s ease-out forwards;
                 }
