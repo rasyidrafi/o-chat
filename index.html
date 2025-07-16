@@ -6,39 +6,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="O-Chat - Modern AI Chat Application" />
     <title>O-Chat</title>
-    
+
     <!-- Font preloading for better performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+Pro:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Fira+Code:wght@400;700&family=Source+Code+Pro:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&family=Roboto:wght@400;700&family=Source+Sans+Pro:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Fira+Code:wght@400;700&family=Source+Code+Pro:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Theme and font initialization to prevent FOUC -->
     <script>
-      (function() {
+      (function () {
         // Theme initialization
-        const theme = localStorage.getItem('theme') || 'system';
-        const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        
+        const theme = localStorage.getItem("theme") || "system";
+        const isDark =
+          theme === "dark" ||
+          (theme === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+
         if (isDark) {
-          document.documentElement.classList.add('dark');
+          document.documentElement.classList.add("dark");
         }
-        
+
         // Font initialization
-        const font = localStorage.getItem('mainFont') || 'Montserrat';
-        document.documentElement.style.setProperty('--font-main', font + ', sans-serif');
-        
+        const font = localStorage.getItem("mainFont") || "Montserrat";
+        document.documentElement.style.setProperty(
+          "--font-main",
+          font + ", sans-serif"
+        );
+
         // Listen for system theme changes when using 'system' preference
-        if (theme === 'system') {
-          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-            if (localStorage.getItem('theme') === 'system') {
-              document.documentElement.classList.toggle('dark', e.matches);
-            }
-          });
+        if (theme === "system") {
+          window
+            .matchMedia("(prefers-color-scheme: dark)")
+            .addEventListener("change", function (e) {
+              if (localStorage.getItem("theme") === "system") {
+                document.documentElement.classList.toggle("dark", e.matches);
+              }
+            });
         }
       })();
     </script>
-    <link href="/index.css" rel="stylesheet">
-</head>
+    <link href="/index.css" rel="stylesheet" />
+  </head>
   <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>

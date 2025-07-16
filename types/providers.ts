@@ -4,8 +4,8 @@
 export interface Provider {
     id: string;
     label: string;
-    value: string|null;
-    base_url: string|null;
+    value: string | null;
+    base_url: string | null;
     disabled?: boolean;
 }
 

@@ -59,11 +59,11 @@ export const getAvailableModels = (): ModelOption[] => {
             try {
               const models = JSON.parse(selectedModels);
               // Handle both legacy format (array of strings) and new format (array of objects)
-              const modelArray = models.length > 0 && typeof models[0] === 'string' 
+              const modelArray = models.length > 0 && typeof models[0] === 'string'
                 ? models.map((id: string) => ({ id, name: id }))
                 : models;
-              
-              modelArray.forEach((model: {id: string, name: string}) => {
+
+              modelArray.forEach((model: { id: string, name: string }) => {
                 options.push({
                   label: `${provider.label} - ${model.name}`,
                   value: model.id,

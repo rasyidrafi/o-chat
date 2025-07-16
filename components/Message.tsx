@@ -491,7 +491,7 @@ const Message: React.FC<MessageProps> = ({
 
   const getMessageStyles = () => {
     if (isUser) {
-      return "bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-2xl px-4 py-3 max-w-[80%]";
+      return "bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-2xl px-4 py-3 max-w-100";
     }
     if (message.isError) {
       return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
@@ -561,7 +561,7 @@ const Message: React.FC<MessageProps> = ({
       <div
         className={`my-4 flex flex-col ${
           isUser
-            ? "max-w-[80%] items-end"
+            ? "max-w-full items-end"
             : "w-full max-w-full items-start min-w-0"
         }`} // Added max-w-full constraint
       >

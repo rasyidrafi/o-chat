@@ -31,7 +31,6 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     conversations, 
     currentConversation, 
     selectConversation, 
-    createNewConversation, 
     deleteConversation, 
     isCreatingNewChat, 
     isLoading,
