@@ -74,8 +74,8 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
                             <Slider
                                 options={[
                                     { value: 1, label: 'Default' },
-                                    { value: 1.2, label: 'Big' },
-                                    { value: 1.5, label: 'Large' }
+                                    { value: 1.15, label: 'Big' },
+                                    { value: 1.3, label: 'Large' }
                                 ]}
                                 value={settings.fontSize}
                                 onChange={(fontSize) => updateSettings({ fontSize })}
