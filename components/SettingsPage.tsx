@@ -184,12 +184,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                         <ArrowLeft className="w-4 h-4" />
                         Back to Chat
                     </Button>
-                    {user && (
-                        <Button variant="ghost" size="sm" onClick={onSignOutClick} className="gap-2">
-                            Sign out
-                            <LogOut className="w-4 h-4" />
-                        </Button>
-                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -203,6 +197,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                                        <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-full">{user.email}</p>
                                    )}
                                    <span className="mt-3 text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 py-1 px-3 rounded-full">Signed In</span>
+                                   <Button variant="ghost" size="sm" onClick={onSignOutClick} className="gap-2 mt-3">
+                                       Sign out
+                                       <LogOut className="w-4 h-4" />
+                                   </Button>
                                </div>
                            ) : (
                                <div className="flex flex-col items-center text-center p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl">
