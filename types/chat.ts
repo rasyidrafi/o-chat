@@ -5,6 +5,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   model?: string;
+  modelName?: string;
   isStreaming?: boolean;
   isError?: boolean;
   timestamp: Date;

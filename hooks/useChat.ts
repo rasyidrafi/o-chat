@@ -296,6 +296,34 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const sendMessage = useCallback(async (content: string, model: string, source: string = 'system', providerId?: string) => {
     if (!content.trim()) return;
 
+    // Get model name for BYOK models
+    let modelName = model;
+    if (source === 'custom' && providerId) {
+      try {
+        const customProviders = localStorage.getItem('custom_api_providers');
+        if (customProviders) {
+          const providers = JSON.parse(customProviders);
+          const provider = providers.find((p: any) => p.id === providerId);
+          if (provider) {
+            const providerModelsKey = `models_${providerId}`;
+            const selectedModels = localStorage.getItem(providerModelsKey);
+            if (selectedModels) {
+              const models = JSON.parse(selectedModels);
+              const modelArray = models.length > 0 && typeof models[0] === 'string' 
+                ? models.map((id: string) => ({ id, name: id }))
+                : models;
+              const foundModel = modelArray.find((m: {id: string, name: string}) => m.id === model);
+              if (foundModel) {
+                modelName = foundModel.name;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error getting model name:', error);
+      }
+    }
+
     // Create or get current conversation
     let conversation = currentConversation;
     if (!conversation) {
@@ -342,6 +370,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       role: 'assistant',
       content: '',
       model,
+      modelName: source === 'custom' ? modelName : undefined,
       isStreaming: true,
       timestamp: new Date(Date.now() + 1),
       source: getModelSource(model),

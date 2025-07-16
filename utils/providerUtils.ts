@@ -57,11 +57,16 @@ export const getAvailableModels = (): ModelOption[] => {
           const selectedModels = localStorage.getItem(providerModelsKey);
           if (selectedModels) {
             try {
-              const modelIds = JSON.parse(selectedModels);
-              modelIds.forEach((modelId: string) => {
+              const models = JSON.parse(selectedModels);
+              // Handle both legacy format (array of strings) and new format (array of objects)
+              const modelArray = models.length > 0 && typeof models[0] === 'string' 
+                ? models.map((id: string) => ({ id, name: id }))
+                : models;
+              
+              modelArray.forEach((model: {id: string, name: string}) => {
                 options.push({
-                  label: `${provider.label} - ${modelId}`,
-                  value: modelId,
+                  label: `${provider.label} - ${model.name}`,
+                  value: model.id,
                   source: 'custom',
                   providerId: provider.id
                 });

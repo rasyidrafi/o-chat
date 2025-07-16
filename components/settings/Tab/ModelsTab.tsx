@@ -35,11 +35,27 @@ const saveSelectedModelsToStorage = (providerId: string, selectedModelIds: strin
     
     try {
         const key = getProviderModelsKey(providerId);
-        localStorage.setItem(key, JSON.stringify(selectedModelIds));
+        localStorage.setItem(key, JSON.stringify(selectedModels));
         
         // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('localStorageChange', {
-            detail: { key, value: selectedModelIds }
+            detail: { key, value: selectedModels }
+        }));
+    } catch (error) {
+        console.error('Error saving selected models to localStorage:', error);
+    }
+};
+
+const saveSelectedModelsToStorage = (providerId: string, selectedModels: Array<{id: string, name: string}>) => {
+    if (!providerId) return;
+    
+    try {
+        const key = getProviderModelsKey(providerId);
+        localStorage.setItem(key, JSON.stringify(selectedModels));
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('localStorageChange', {
+            detail: { key, value: selectedModels }
         }));
     } catch (error) {
         console.error('Error saving selected models to localStorage:', error);
@@ -64,20 +80,19 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     const [serverModelsEnabled] = useState<string[]>(['Gemini 1.5 Flash', 'Gemini 1.5 Flash 8B']);
     
     // All selected models for current provider stored in localStorage
-    const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
+    const [selectedModels, setSelectedModels] = useState<Array<{id: string, name: string}>>([]);
 
     // Load selected models from localStorage when provider changes
     useEffect(() => {
         const loadedSelectedModels = loadSelectedModelsFromStorage(selectedProvider);
-        setSelectedModelIds(loadedSelectedModels);
+        setSelectedModels(loadedSelectedModels);
     }, [selectedProvider]);
 
     // Save selected models to localStorage whenever they change
     useEffect(() => {
         if (selectedProvider) {
-            saveSelectedModelsToStorage(selectedProvider, selectedModelIds);
+            saveSelectedModelsToStorage(selectedProvider, selectedModels);
         }
-    }, [selectedModelIds, selectedProvider]);
 
     // Load providers from localStorage
     useEffect(() => {
@@ -250,7 +265,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         
         // Filter by tab selection (Selected vs Available)
         if (activeByokTab === 'selected') {
-            byokModels = byokModels.filter(model => selectedModelIds.includes(model.id));
+            byokModels = byokModels.filter(model => selectedModels.some(selected => selected.id === model.id));
         }
         
         // Apply feature filtering
@@ -288,17 +303,17 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         };
     }, [selectedProvider, selectedFeatures, searchQuery, currentPage, fetchedModels, itemsPerPage, activeByokTab, selectedModelIds]);
 
-    const handleModelToggle = (modelId: string, enabled: boolean) => {
+    const handleModelToggle = (modelId: string, modelName: string, enabled: boolean) => {
         if (enabled) {
-            setSelectedModelIds(prev => [...prev, modelId]);
+            setSelectedModels(prev => [...prev, { id: modelId, name: modelName }]);
         } else {
-            setSelectedModelIds(prev => prev.filter(id => id !== modelId));
+            setSelectedModels(prev => prev.filter(model => model.id !== modelId));
         }
     };
 
     const handleUnselectAll = () => {
         // Clear all selected models for current provider
-        setSelectedModelIds([]);
+        setSelectedModels([]);
     };
 
     const handleFeatureSelect = (feature: string) => {
@@ -513,7 +528,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                         : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                                     }`}
                             >
-                                Selected ({selectedModelIds.length})
+                                Selected ({selectedModels.length})
                                 {activeByokTab === 'selected' && (
                                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500" />
                                 )}
@@ -599,8 +614,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                             name={model.name}
                                             description={model.description}
                                             features={model.features}
-                                            isEnabled={selectedModelIds.includes(model.id)}
-                                            onToggle={(enabled) => handleModelToggle(model.id, enabled)}
+                                            isEnabled={selectedModels.some(selected => selected.id === model.id)}
+                                            onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
                                             animationsDisabled={settings.animationsDisabled}
                                         />
                                     </div>
@@ -617,14 +632,19 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 @keyframes fadeIn {
                     from {
                         opacity: 0;
-                        transform: translateY(10px);
+const loadSelectedModelsFromStorage = (providerId: string): Array<{id: string, name: string}> => {
                     }
                     to {
                         opacity: 1;
                         transform: translateY(0);
                     }
                 }
-                
+            const parsed = JSON.parse(stored);
+            // Handle legacy format (array of strings) by converting to new format
+            if (parsed.length > 0 && typeof parsed[0] === 'string') {
+                return parsed.map((id: string) => ({ id, name: id }));
+            }
+            return parsed;
                 .animate-fadeIn {
                     animation: fadeIn 0.3s ease-out forwards;
                 }

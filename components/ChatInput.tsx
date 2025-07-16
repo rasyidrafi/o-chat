@@ -115,12 +115,16 @@ const ChatInput = ({
             const selectedModels = localStorage.getItem(providerModelsKey);
             if (selectedModels) {
               try {
-                const modelIds = JSON.parse(selectedModels);
-                // For now, add generic models - in a real app, you'd fetch these from the provider
-                modelIds.forEach((modelId: string) => {
+                const models = JSON.parse(selectedModels);
+                // Handle both legacy format (array of strings) and new format (array of objects)
+                const modelArray = models.length > 0 && typeof models[0] === 'string' 
+                  ? models.map((id: string) => ({ id, name: id }))
+                  : models;
+                
+                modelArray.forEach((model: {id: string, name: string}) => {
                   options.push({
-                    label: `${provider.label} - ${modelId}`,
-                    value: modelId,
+                    label: `${provider.label} - ${model.name}`,
+                    value: model.id,
                     source: "custom",
                     providerId: provider.id,
                   });

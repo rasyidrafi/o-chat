@@ -131,6 +131,7 @@ export class ChatStorageService {
           content: message.content,
           timestamp: Timestamp.fromDate(message.timestamp),
           model: message.model || null,
+          modelName: message.modelName || null,
           isError: message.isError || false,
           source: message.source || 'server',
           userId: userId,
