@@ -587,16 +587,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                             </div>
                         ) : (
                             <>
-                                {filteredAndPaginatedModels.byokModels.map((model, index) => (
-                                    <div 
-                                        key={model.id || model.name}
-                                        className={`
-                                            ${!settings.animationsDisabled ? 'animate-fadeIn' : ''}
-                                        `}
-                                        style={{
-                                            animationDelay: !settings.animationsDisabled ? `${index * 100}ms` : undefined
-                                        }}
-                                    >
+                                {filteredAndPaginatedModels.byokModels.map((model) => (
+                                    <div key={model.id || model.name}>
                                         <ModelCard
                                             name={model.name}
                                             description={model.description}
@@ -614,23 +606,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 </div>
             </div>
 
-            {/* CSS for animations */}
-            <style>{`
-                @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                .animate-fadeIn {
-                    animation: fadeIn 0.3s ease-out forwards;
-                }
-            `}</style>
         </div>
     );
 };
