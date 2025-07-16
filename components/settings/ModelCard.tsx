@@ -97,7 +97,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                     {isMultiLine && (
                         <motion.button
                             onClick={() => setShowMore(!showMore)}
-                            className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 font-medium mb-3"
+                            className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 font-medium px-2 py-1 rounded-full bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm border border-zinc-200/50 dark:border-zinc-700/50 shadow-sm z-10"
                             whileHover={animationsDisabled ? {} : { scale: 1.02 }}
                             whileTap={animationsDisabled ? {} : { scale: 0.98 }}
                             transition={animationsDisabled ? { duration: 0 } : { duration: 0.1 }}
