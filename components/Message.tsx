@@ -584,8 +584,8 @@ const Message: React.FC<MessageProps> = ({
           }`}
         >
           {formatTime(message.timestamp)}
-          {message.model && isAssistant && (
-            <span className="ml-2">• {message.model}</span>
+          {(message.model || message.modelName) && isAssistant && (
+            <span className="ml-2">• {message.modelName || message.model}</span>
           )}
         </div>
       </div>

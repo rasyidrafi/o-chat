@@ -195,6 +195,7 @@ export class ChatStorageService {
           content: data.content,
           timestamp: data.timestamp.toDate(),
           model: data.model,
+          modelName: data.modelName,
           isError: data.isError || false,
           source: data.source || 'server',
           reasoning: data.reasoning
@@ -411,6 +412,7 @@ export class ChatStorageService {
           content: data.content,
           timestamp: data.timestamp.toDate(),
           model: data.model,
+          modelName: data.modelName,
           isError: data.isError || false,
           source: data.source || 'server',
           reasoning: data.reasoning
