@@ -37,13 +37,6 @@ const FontSizeSlider: React.FC<FontSizeSliderProps> = ({
                 <div className="flex justify-between mt-2 px-1">
                     {fontSizeOptions.map((option) => (
                         <div key={option.value} className="flex flex-col items-center">
-                            <div 
-                                className={`w-2 h-2 rounded-full ${
-                                    value >= option.value 
-                                        ? 'bg-pink-500' 
-                                        : 'bg-zinc-300 dark:bg-zinc-600'
-                                } ${!animationsDisabled ? 'transition-colors duration-200' : ''}`}
-                            />
                             <span className={`text-xs mt-1 ${
                                 value === option.value 
                                     ? 'text-pink-500 font-medium' 
@@ -55,49 +48,7 @@ const FontSizeSlider: React.FC<FontSizeSliderProps> = ({
                     ))}
                 </div>
             </div>
-
-            {/* Current selection display */}
-            <div className="text-center">
-                <span className="text-sm font-medium text-zinc-900 dark:text-white">
-                    Current: {currentOption.label}
-                </span>
-            </div>
         </div>
-
-        <>
-            <style jsx>{`
-            .slider::-webkit-slider-thumb {
-                appearance: none;
-                height: 20px;
-                width: 20px;
-                border-radius: 50%;
-                background: #ec4899;
-                cursor: pointer;
-                border: 2px solid #ffffff;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
-
-            .slider::-moz-range-thumb {
-                height: 20px;
-                width: 20px;
-                border-radius: 50%;
-                background: #ec4899;
-                cursor: pointer;
-                border: 2px solid #ffffff;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
-
-            .slider::-webkit-slider-track {
-                height: 8px;
-                border-radius: 4px;
-            }
-
-            .slider::-moz-range-track {
-                height: 8px;
-                border-radius: 4px;
-            }
-            `}</style>
-        </>
     );
 };
 
