@@ -600,11 +600,12 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                             </div>
                         ) : (
                             <>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                                     {filteredAndPaginatedModels.byokModels.map((model, index) => (
                                         <div 
                                             key={model.id || model.name}
                                             className={`
+                                                h-full flex
                                                 ${!settings.animationsDisabled ? 'animate-fadeIn' : ''}
                                             `}
                                             style={{

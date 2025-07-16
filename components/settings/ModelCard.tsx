@@ -69,9 +69,9 @@ const ModelCard: React.FC<ModelCardProps> = ({
     };
 
     return (
-        <div className="bg-zinc-50 dark:bg-zinc-800/30 rounded-xl p-6 border border-zinc-200 dark:border-zinc-700">
+        <div className="bg-zinc-50 dark:bg-zinc-800/30 rounded-xl p-6 border border-zinc-200 dark:border-zinc-700 h-full flex flex-col">
             <div className="flex items-start justify-between">
-                <div className="flex-1">
+                <div className="flex-1 flex flex-col h-full">
                     <div className="flex items-center gap-3 mb-3">
                         {renderLogo()}
                         <div>
@@ -83,7 +83,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                         initial={false}
                         animate={animationsDisabled ? false : { height: "auto" }}
                         transition={animationsDisabled ? { duration: 0 } : { duration: 0.3, ease: "easeInOut" }}
-                        className="overflow-hidden"
+                        className="overflow-hidden flex-1"
                     >
                         <p 
                             ref={descriptionRef}
@@ -106,8 +106,8 @@ const ModelCard: React.FC<ModelCardProps> = ({
                         </motion.button>
                     )}
 
-                    {/* Always show features */}
-                    <div className="flex flex-wrap gap-2 mb-3">
+                    {/* Always show features - pushed to bottom */}
+                    <div className="flex flex-wrap gap-2 mb-3 mt-auto">
                         {features.map((feature) => (
                             <span
                                 key={feature}
