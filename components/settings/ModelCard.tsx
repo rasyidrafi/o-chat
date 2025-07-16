@@ -87,7 +87,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
                     >
                         <p 
                             ref={descriptionRef}
-                            className={`text-sm text-zinc-600 dark:text-zinc-400 mb-3 leading-relaxed ${!showMore && isMultiLine ? 'line-clamp-1' : ''}`}
+                            className={`text-left text-sm text-zinc-600 dark:text-zinc-400 mb-3 leading-relaxed ${!showMore && isMultiLine ? 'line-clamp-2' : ''}`}
                         >
                             {description}
                         </p>
