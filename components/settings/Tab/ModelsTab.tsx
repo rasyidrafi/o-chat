@@ -302,19 +302,19 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             hasNextPage: currentPage < totalPages,
             hasPreviousPage: currentPage > 1
         };
-    }, [selectedProvider, selectedFeatures, searchQuery, currentPage, fetchedModels, itemsPerPage, activeByokTab, selectedModelIds]);
+    }, [selectedProvider, selectedFeatures, searchQuery, currentPage, fetchedModels, itemsPerPage, activeByokTab, selectedModels]);
 
-    const handleModelToggle = (modelId: string, enabled: boolean) => {
+    const handleModelToggle = (modelId: string, modelName: string, enabled: boolean) => {
         if (enabled) {
-            setSelectedModelIds(prev => [...prev, modelId]);
+            setSelectedModels(prev => [...prev, { id: modelId, name: modelName }]);
         } else {
-            setSelectedModelIds(prev => prev.filter(id => id !== modelId));
+            setSelectedModels(prev => prev.filter(model => model.id !== modelId));
         }
     };
 
     const handleUnselectAll = () => {
         // Clear all selected models for current provider
-        setSelectedModelIds([]);
+        setSelectedModels([]);
     };
 
     const handleFeatureSelect = (feature: string) => {
@@ -529,7 +529,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                         : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                                     }`}
                             >
-                                Selected ({selectedModelIds.length})
+                                Selected ({selectedModels.length})
                                 {activeByokTab === 'selected' && (
                                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500" />
                                 )}
@@ -615,8 +615,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                             name={model.name}
                                             description={model.description}
                                             features={model.features}
-                                            isEnabled={selectedModelIds.includes(model.id)}
-                                            onToggle={(enabled) => handleModelToggle(model.id, enabled)}
+                                            isEnabled={selectedModels.some(selected => selected.id === model.id)}
+                                            onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
                                             animationsDisabled={settings.animationsDisabled}
                                         />
                                     </div>
@@ -633,12 +633,14 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 @keyframes fadeIn {
                     from {
                         opacity: 0;
+                        transform: translateY(10px);
                     }
                     to {
                         opacity: 1;
                         transform: translateY(0);
                     }
                 }
+
                 .animate-fadeIn {
                     animation: fadeIn 0.3s ease-out forwards;
                 }
