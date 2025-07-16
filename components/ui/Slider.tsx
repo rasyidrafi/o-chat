@@ -20,7 +20,7 @@ const Slider: React.FC<SliderProps> = ({
 }) => {
     const minValue = Math.min(...options.map(opt => opt.value));
     const maxValue = Math.max(...options.map(opt => opt.value));
-    const step = options.length > 1 ? (maxValue - minValue) / (options.length - 1) : 0.1;
+    const step = 0.01; // Small step for smooth sliding
 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = parseFloat(e.target.value);
