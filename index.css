@@ -2,6 +2,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 @theme {
     --font-sans: var(--font-main, 'Montserrat'), sans-serif;
+    --font-size-xs: calc(0.75rem * var(--font-size-scale, 1));
+    --font-size-sm: calc(0.875rem * var(--font-size-scale, 1));
+    --font-size-base: calc(1rem * var(--font-size-scale, 1));
+    --font-size-lg: calc(1.125rem * var(--font-size-scale, 1));
+    --font-size-xl: calc(1.25rem * var(--font-size-scale, 1));
+    --font-size-2xl: calc(1.5rem * var(--font-size-scale, 1));
+    --font-size-3xl: calc(1.875rem * var(--font-size-scale, 1));
+    --font-size-4xl: calc(2.25rem * var(--font-size-scale, 1));
 }
 
 html {
@@ -71,6 +79,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--font-main, 'Montserrat'), sans-serif;
+  font-size: var(--font-size-base);
 }
 
 /* Smooth scrolling */
@@ -151,6 +160,29 @@ html {
 .dark .thin-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #777;
 }
+
+/* Apply font size scaling to common text elements */
+.text-xs { font-size: var(--font-size-xs) !important; }
+.text-sm { font-size: var(--font-size-sm) !important; }
+.text-base { font-size: var(--font-size-base) !important; }
+.text-lg { font-size: var(--font-size-lg) !important; }
+.text-xl { font-size: var(--font-size-xl) !important; }
+.text-2xl { font-size: var(--font-size-2xl) !important; }
+.text-3xl { font-size: var(--font-size-3xl) !important; }
+.text-4xl { font-size: var(--font-size-4xl) !important; }
+
+/* Apply to buttons and inputs */
+button, input, textarea, select {
+  font-size: var(--font-size-sm);
+}
+
+/* Apply to headings */
+h1 { font-size: var(--font-size-3xl); }
+h2 { font-size: var(--font-size-2xl); }
+h3 { font-size: var(--font-size-xl); }
+h4 { font-size: var(--font-size-lg); }
+h5 { font-size: var(--font-size-base); }
+h6 { font-size: var(--font-size-sm); }
 
 /* Hide scrollbar but keep functionality */
 .hide-scrollbar {

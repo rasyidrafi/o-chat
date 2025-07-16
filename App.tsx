@@ -15,6 +15,7 @@ export interface AppSettings {
   theme: Theme;
   mainFont: string;
   codeFont: string;
+  fontSize: number;
   animationsDisabled: boolean;
   customInstruction: string;
   hidePersonalInfo: boolean;
@@ -47,6 +48,7 @@ const App: React.FC = () => {
     theme: (localStorage.getItem('theme') as Theme) || 'system',
     mainFont: localStorage.getItem('mainFont') || 'Montserrat',
     codeFont: localStorage.getItem('codeFont') || 'JetBrains Mono (default)',
+    fontSize: parseInt(localStorage.getItem('fontSize') || '1'),
     animationsDisabled: localStorage.getItem('animationsDisabled') === 'true',
     customInstruction: localStorage.getItem('customInstruction') || '',
     hidePersonalInfo: localStorage.getItem('hidePersonalInfo') === 'true',
@@ -61,7 +63,7 @@ const App: React.FC = () => {
   const chat = useChat(settingsLoaded ? settings : undefined);
   
   const clearLocalSettings = () => {
-    const guestSettingsKeys: Array<keyof AppSettings> = ['theme', 'mainFont', 'codeFont', 'animationsDisabled', 'customInstruction', 'hidePersonalInfo', 'disableLinkWarning'];
+    const guestSettingsKeys: Array<keyof AppSettings> = ['theme', 'mainFont', 'codeFont', 'fontSize', 'animationsDisabled', 'customInstruction', 'hidePersonalInfo', 'disableLinkWarning'];
     guestSettingsKeys.forEach(key => localStorage.removeItem(key));
   };
 
@@ -98,7 +100,7 @@ const App: React.FC = () => {
         setIsAuthModalOpen(false);
 
         const localSettings = loadGuestSettings();
-        const guestSettingsKeys: Array<keyof AppSettings> = ['theme', 'mainFont', 'codeFont', 'animationsDisabled', 'customInstruction', 'hidePersonalInfo', 'disableLinkWarning'];
+        const guestSettingsKeys: Array<keyof AppSettings> = ['theme', 'mainFont', 'codeFont', 'fontSize', 'animationsDisabled', 'customInstruction', 'hidePersonalInfo', 'disableLinkWarning'];
         const hasLocalSettings = guestSettingsKeys.some(key => localStorage.getItem(key) !== null);
 
         const settingsRef = doc(db, 'settings', currentUser.uid);
@@ -214,8 +216,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
       document.documentElement.style.setProperty('--font-main', settings.mainFont);
-  }, [settings.mainFont])
-
+      document.documentElement.style.setProperty('--font-size-scale', settings.fontSize.toString());
+  }, [settings.mainFont, settings.fontSize])
   const handleSignOut = async () => {
       try {
         await signOut(auth);
