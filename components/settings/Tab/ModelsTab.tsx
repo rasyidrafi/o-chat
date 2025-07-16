@@ -318,7 +318,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             key={page}
             onClick={() => handlePageChange(page)}
             className={`
-                px-3 py-2 text-sm font-medium rounded-md
+                px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md min-w-[32px] sm:min-w-[40px]
                 ${isActive 
                     ? 'bg-blue-600 text-white' 
                     : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
@@ -336,7 +336,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         if (totalPages <= 1) return null;
 
         const pages = [];
-        const maxVisiblePages = 5;
+        const maxVisiblePages = window.innerWidth < 640 ? 3 : 5; // Fewer pages on mobile
         
         let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
         let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
@@ -350,17 +350,17 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         }
 
         return (
-            <div className="flex items-center justify-between mt-6">
-                <div className="text-sm text-zinc-600 dark:text-zinc-400">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+                <div className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 order-2 sm:order-1">
                     Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredAndPaginatedModels.totalItems)} to {Math.min(currentPage * itemsPerPage, filteredAndPaginatedModels.totalItems)} of {filteredAndPaginatedModels.totalItems} models
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-2">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={!hasPreviousPage}
                         className={`
-                            px-3 py-2 text-sm font-medium rounded-md
+                            px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md
                             ${hasPreviousPage 
                                 ? 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800' 
                                 : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
@@ -374,7 +374,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     {startPage > 1 && (
                         <>
                             {renderPaginationButton(1)}
-                            {startPage > 2 && <span className="px-2 text-zinc-400">...</span>}
+                            {startPage > 2 && <span className="px-1 sm:px-2 text-zinc-400 text-xs sm:text-sm">...</span>}
                         </>
                     )}
                     
@@ -382,7 +382,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     
                     {endPage < totalPages && (
                         <>
-                            {endPage < totalPages - 1 && <span className="px-2 text-zinc-400">...</span>}
+                            {endPage < totalPages - 1 && <span className="px-1 sm:px-2 text-zinc-400 text-xs sm:text-sm">...</span>}
                             {renderPaginationButton(totalPages)}
                         </>
                     )}
@@ -391,7 +391,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={!hasNextPage}
                         className={`
-                            px-3 py-2 text-sm font-medium rounded-md
+                            px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md
                             ${hasNextPage 
                                 ? 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800' 
                                 : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
@@ -440,8 +440,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 <div>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">BYOK Models</h3>
-                        <div className="flex items-center gap-4">
-                            <div className="w-48">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                            <div className="w-full sm:w-48">
                                 <CustomDropdown
                                     label=""
                                     description=""
@@ -460,7 +460,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                     animationsDisabled={settings.animationsDisabled}
                                 />
                             </div>
-                            <div className="w-64">
+                            <div className="w-full sm:w-64">
                                 <CustomDropdown
                                     label=""
                                     description=""
@@ -476,16 +476,19 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                     animationsDisabled={settings.animationsDisabled}
                                 />
                             </div>
-                            <button
-                                onClick={handleUnselectAll}
-                                className={`
-                                    px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 
-                                    hover:text-zinc-900 dark:hover:text-zinc-100
-                                    ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
-                                `}
-                            >
-                                Unselect All
-                            </button>
+                            <div className="w-full sm:w-auto">
+                                <button
+                                    onClick={handleUnselectAll}
+                                    className={`
+                                        w-full sm:w-auto px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 
+                                        hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800/50 
+                                        rounded-lg border border-zinc-300 dark:border-zinc-700
+                                        ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
+                                    `}
+                                >
+                                    Unselect All
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -523,7 +526,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
                     {/* Search Bar */}
                     {selectedProvider && (
-                        <div className="mb-6">
+                        <div className="mb-4 sm:mb-6">
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <svg className="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -538,7 +541,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                     className={`
                                         w-full pl-10 pr-4 py-2 border border-zinc-300 dark:border-zinc-600 
                                         rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100
-                                        placeholder-zinc-500 dark:placeholder-zinc-400
+                                        placeholder-zinc-500 dark:placeholder-zinc-400 text-sm sm:text-base
                                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                                         ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
                                     `}
