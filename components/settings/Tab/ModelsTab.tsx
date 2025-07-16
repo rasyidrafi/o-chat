@@ -600,26 +600,28 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                             </div>
                         ) : (
                             <>
-                                {filteredAndPaginatedModels.byokModels.map((model, index) => (
-                                    <div 
-                                        key={model.id || model.name}
-                                        className={`
-                                            ${!settings.animationsDisabled ? 'animate-fadeIn' : ''}
-                                        `}
-                                        style={{
-                                            animationDelay: !settings.animationsDisabled ? `${index * 100}ms` : undefined
-                                        }}
-                                    >
-                                        <ModelCard
-                                            name={model.name}
-                                            description={model.description}
-                                            features={model.features}
-                                            isEnabled={selectedModels.some(selected => selected.id === model.id)}
-                                            onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
-                                            animationsDisabled={settings.animationsDisabled}
-                                        />
-                                    </div>
-                                ))}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {filteredAndPaginatedModels.byokModels.map((model, index) => (
+                                        <div 
+                                            key={model.id || model.name}
+                                            className={`
+                                                ${!settings.animationsDisabled ? 'animate-fadeIn' : ''}
+                                            `}
+                                            style={{
+                                                animationDelay: !settings.animationsDisabled ? `${index * 100}ms` : undefined
+                                            }}
+                                        >
+                                            <ModelCard
+                                                name={model.name}
+                                                description={model.description}
+                                                features={model.features}
+                                                isEnabled={selectedModels.some(selected => selected.id === model.id)}
+                                                onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
+                                                animationsDisabled={settings.animationsDisabled}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                                 {renderPagination()}
                             </>
                         )}
