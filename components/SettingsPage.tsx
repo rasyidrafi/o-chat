@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, LogOut, Info } from './Icons';
 import TabButton from './settings/TabButton';
@@ -12,8 +11,6 @@ import { User } from 'firebase/auth';
 import Button from './ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppSettings } from '../App';
-import { collection, doc, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
 import { ChatStorageService } from '../services/chatStorageService';
 
 

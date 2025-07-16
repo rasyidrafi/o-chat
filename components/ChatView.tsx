@@ -46,6 +46,20 @@ const ChatView: React.FC<ChatViewProps> = ({
     loadMoreMessages,
   } = chat;
 
+  const [windowWidth, setWindowWidth] = React.useState(
+    typeof window !== "undefined" ? window.innerWidth : 0
+  );
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
 
   // State to track selected model info from ChatInput
   const [selectedModelInfo, setSelectedModelInfo] = React.useState({
@@ -87,8 +101,6 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // Calculate sidebar width based on collapsed state
   const sidebarWidth = isSidebarCollapsed ? 80 : 256; // w-20 = 80px, w-64 = 256px
-  const hasContent =
-    currentConversation && currentConversation.messages.length > 0;
 
   const shouldShowWelcome = !currentConversation;
 
@@ -257,15 +269,14 @@ const ChatView: React.FC<ChatViewProps> = ({
         )}
       </main>
 
-      {/* Container for scroll button - positioned above the chat input */}
-      {showScrollToBottom && (
+      {showScrollToBottom && !shouldShowWelcome && (
         <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
           <div
             className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 flex justify-center"
             style={{
-              paddingLeft: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${sidebarWidth + 16}px` : "16px",
+              paddingLeft: isMobile ? "16px" : `${sidebarWidth + 16}px`,
               paddingRight: "16px",
-              paddingBottom: typeof window !== 'undefined' && window.innerWidth >= 768 ? `160px` : "140px",
+              paddingBottom: isMobile ? "140px" : "160px",
             }}
           >
             <SmallButton
@@ -298,14 +309,8 @@ const ChatView: React.FC<ChatViewProps> = ({
         <div
           className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"
           style={{
-            paddingLeft:
-              typeof window !== "undefined" && window.innerWidth < 768
-          ? "0"
-          : `${sidebarWidth + 16}px`,
-            paddingRight:
-              typeof window !== "undefined" && window.innerWidth < 768
-          ? "0"
-          : "16px",
+            paddingLeft: isMobile ? "0" : `${sidebarWidth + 16}px`,
+            paddingRight: isMobile ? "0" : "16px",
           }}
         >
           <ChatInput

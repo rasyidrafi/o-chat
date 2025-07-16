@@ -7,7 +7,7 @@ import {
   fetchModels,
   getModelCapabilities,
 } from "../../../services/modelService";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ModelsTabProps {
   settings: AppSettings;
@@ -308,12 +308,12 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       }
     }
 
-    // Filter by tab selection (Selected vs Available)
-    if (activeByokTab === "selected") {
-      byokModels = byokModels.filter((model) =>
-        selectedModels.some((selected) => selected.id === model.id)
-      );
-    }
+    // Filter by tab selection (Selected vs Available) - REMOVED
+    // if (activeByokTab === "selected") {
+    //   byokModels = byokModels.filter((model) =>
+    //     selectedModels.some((selected) => selected.id === model.id)
+    //   );
+    // }
 
     // Apply feature filtering
     if (selectedFeatures.length > 0) {
@@ -358,9 +358,67 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     currentPage,
     fetchedModels,
     itemsPerPage,
-    activeByokTab,
-    selectedModels,
+    // activeByokTab, - REMOVED
+    // selectedModels, - REMOVED
   ]);
+
+  // Calculate selected models separately
+  const selectedByokModels = useMemo(() => {
+    if (!selectedProvider) return [];
+
+    // Check if it's a custom provider (UUID format)
+    const isCustomProvider = selectedProvider.includes("-");
+
+    let allByokModels: any[] = [];
+
+    if (isCustomProvider) {
+      // Use fetched models for custom providers
+      allByokModels = fetchedModels.map((model) => {
+        const capabilities = getModelCapabilities(model.supported_parameters);
+        return {
+          name: model.name,
+          description: model.description,
+          features: [
+            "Text Generation",
+            ...(capabilities.hasTools ? ["Tool Calling"] : []),
+            ...(capabilities.hasReasoning ? ["Reasoning"] : []),
+            ...(capabilities.hasVision ? ["Vision"] : []),
+          ],
+          category: "byok",
+          id: model.id,
+          providerId: selectedProvider,
+        };
+      });
+    } else {
+      // Use static models for built-in providers
+      allByokModels = availableModels.filter(
+        (model) => model.category === "byok"
+      );
+    }
+
+    // Return only selected models
+    return allByokModels.filter((model) =>
+      selectedModels.some((selected) => selected.id === model.id)
+    );
+  }, [selectedProvider, fetchedModels, selectedModels]);
+
+  // Calculate pagination for selected models
+  const selectedModelsPagination = useMemo(() => {
+    const totalItems = selectedByokModels.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedModels = selectedByokModels.slice(startIndex, endIndex);
+
+    return {
+      models: paginatedModels,
+      totalItems,
+      totalPages,
+      currentPage,
+      hasNextPage: currentPage < totalPages,
+      hasPreviousPage: currentPage > 1,
+    };
+  }, [selectedByokModels, currentPage, itemsPerPage]);
 
   const handleModelToggle = (
     modelId: string,
@@ -409,11 +467,16 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   );
 
   const renderPagination = () => {
+    const paginationData =
+      activeByokTab === "selected"
+        ? selectedModelsPagination
+        : filteredAndPaginatedModels;
+
     const { totalPages, currentPage, hasPreviousPage, hasNextPage } =
-      filteredAndPaginatedModels;
+      paginationData;
 
     const pages = [];
-    const maxVisiblePages = window.innerWidth < 640 ? 3 : 5; // Fewer pages on mobile
+    const maxVisiblePages = window.innerWidth < 640 ? 3 : 5;
 
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
@@ -432,14 +495,10 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
           Showing{" "}
           {Math.min(
             (currentPage - 1) * itemsPerPage + 1,
-            filteredAndPaginatedModels.totalItems
+            paginationData.totalItems
           )}{" "}
-          to{" "}
-          {Math.min(
-            currentPage * itemsPerPage,
-            filteredAndPaginatedModels.totalItems
-          )}{" "}
-          of {filteredAndPaginatedModels.totalItems} models
+          to {Math.min(currentPage * itemsPerPage, paginationData.totalItems)}{" "}
+          of {paginationData.totalItems} models
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-2">
@@ -529,7 +588,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
               From Our Servers
             </h3>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             {filteredAndPaginatedModels.serverModels.map((model) => (
               <ModelCard
                 key={model.name}
@@ -541,6 +600,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 animationsDisabled={settings.animationsDisabled}
                 logo={model.logo}
                 disabled={true}
+                hideScroll={true}
               />
             ))}
           </div>
@@ -702,8 +762,10 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             </div>
           </div>
           {/* Models Container */}
-          <div className={`flex flex-col flex-1`}>
-            <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
+          <div className={`flex flex-col flex-1 min-h-[300px]`}>
+            {" "}
+            {/* Added min-h to prevent layout jump */}
+            <div className="text-center py-2 text-zinc-500 dark:text-zinc-400 flex-1 flex flex-col items-center justify-center">
               {!selectedProvider ? (
                 <>
                   <p className="text-lg mb-2">No Provider Selected</p>
@@ -725,9 +787,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     <>
                       <div className="flex items-center justify-center gap-2 mb-2">
                         <div
-                          className={`w-5 h-5 border-2 border-zinc-400 border-t-transparent rounded-full ${
-                            !settings.animationsDisabled ? "animate-spin" : ""
-                          }`}
+                          className={`w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin`}
                         ></div>
                         <p className="text-lg">Loading Models...</p>
                       </div>
@@ -735,45 +795,110 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         Fetching available models from the selected provider.
                       </p>
                     </>
-                  ) : filteredAndPaginatedModels.byokModels.length === 0 ? (
-                    <>
-                      <p className="text-lg mb-2">
-                        {activeByokTab === "selected"
-                          ? "No Selected Models"
-                          : searchQuery.trim()
-                          ? "No Models Found"
-                          : "No Models Available"}
-                      </p>
-                      <p className="text-sm">
-                        {activeByokTab === "selected"
-                          ? "You haven't selected any models yet. Switch to the Available tab to select models."
-                          : searchQuery.trim()
-                          ? "No models match your search criteria. Try adjusting your search terms or filters."
-                          : "No models match the selected provider and feature filters."}
-                      </p>
-                    </>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                      {filteredAndPaginatedModels.byokModels.map((model) => (
-                        <div
-                          key={model.id || model.name}
-                          className="h-full flex"
-                        >
-                          <ModelCard
-                            name={model.name}
-                            description={model.description}
-                            features={model.features}
-                            isEnabled={selectedModels.some(
-                              (selected) => selected.id === model.id
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        // A unique key that changes with the page and tab is crucial
+                        key={
+                          activeByokTab === "selected"
+                            ? `selected-${selectedModelsPagination.currentPage}`
+                            : `available-${filteredAndPaginatedModels.currentPage}`
+                        }
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {activeByokTab === "selected" ? (
+                          selectedModelsPagination.models.length === 0 ? (
+                            <>
+                              <p className="text-lg mb-2">No Selected Models</p>
+                              <p className="text-sm">
+                                You haven't selected any models yet. Switch to
+                                the Available tab to select models.
+                              </p>
+                            </>
+                          ) : (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                              {selectedModelsPagination.models.map((model) => (
+                                <div
+                                  key={model.id || model.name}
+                                  className="h-full flex"
+                                >
+                                  <ModelCard
+                                    name={model.name}
+                                    description={model.description}
+                                    features={model.features}
+                                    isEnabled={true}
+                                    onToggle={(enabled) =>
+                                      handleModelToggle(
+                                        model.id,
+                                        model.name,
+                                        enabled
+                                      )
+                                    }
+                                    animationsDisabled={
+                                      settings.animationsDisabled
+                                    }
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        ) : filteredAndPaginatedModels.byokModels.length ===
+                          0 ? (
+                          <>
+                            <p className="text-lg mb-2">
+                              {searchQuery.trim()
+                                ? "No Models Found"
+                                : "No Models Available"}
+                            </p>
+                            <p className="text-sm">
+                              {searchQuery.trim()
+                                ? "No models match your search criteria. Try adjusting your search terms or filters."
+                                : "No models match the selected provider and feature filters."}
+                            </p>
+                          </>
+                        ) : (
+                          <motion.div
+                            className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start"
+                            layout
+                            transition={{
+                              duration: settings.animationsDisabled ? 0 : 0.3,
+                              ease: "easeInOut",
+                            }}
+                          >
+                            {filteredAndPaginatedModels.byokModels.map(
+                              (model) => (
+                                <div
+                                  key={model.id || model.name}
+                                  className="h-full flex"
+                                >
+                                  <ModelCard
+                                    name={model.name}
+                                    description={model.description}
+                                    features={model.features}
+                                    isEnabled={selectedModels.some(
+                                      (selected) => selected.id === model.id
+                                    )}
+                                    onToggle={(enabled) =>
+                                      handleModelToggle(
+                                        model.id,
+                                        model.name,
+                                        enabled
+                                      )
+                                    }
+                                    animationsDisabled={
+                                      settings.animationsDisabled
+                                    }
+                                  />
+                                </div>
+                              )
                             )}
-                            onToggle={(enabled) =>
-                              handleModelToggle(model.id, model.name, enabled)
-                            }
-                            animationsDisabled={settings.animationsDisabled}
-                          />
-                        </div>
-                      ))}
-                    </div>
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                   )}
                 </>
               )}

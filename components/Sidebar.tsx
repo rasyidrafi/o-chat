@@ -15,7 +15,18 @@ interface SidebarProps {
   chat: ReturnType<typeof useChat>;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed, user, onLoginClick, onSignOutClick, chat }) => {
+const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
+  {
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
+    isCollapsed,
+    user,
+    onLoginClick,
+    onSignOutClick,
+    chat,
+  },
+  ref // <-- forwarded ref
+) => {
   const { 
     conversations, 
     currentConversation, 
@@ -101,10 +112,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
   }, {});
 
   return (
-    <aside className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-zinc-100 dark:bg-[#111111] text-zinc-600 dark:text-zinc-400 p-4 z-60
-                       transition-all duration-300 ease-in-out
-                       md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-                       w-64 ${isCollapsed ? 'md:w-20' : ''}`}>
+    <aside
+      ref={ref} // <-- attach ref
+      className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-zinc-100 dark:bg-[#111111] text-zinc-600 dark:text-zinc-400 p-4 z-60
+                 transition-all duration-300 ease-in-out
+                 md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+                 w-64 ${isCollapsed ? 'md:w-20' : ''}`}>
 
       <div className={`flex items-center justify-between ${isCollapsed ? 'mb-0' : 'mb-4'}`}>
         <div className={`flex items-center justify-center gap-2 w-full ${isCollapsed ? 'md:hidden' : 'flex'}`}>
@@ -246,6 +259,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileMenuOpen, setIsMobileMenuOpen
 
     </aside>
   );
-};
+});
 
+Sidebar.displayName = 'Sidebar';
 export default Sidebar;

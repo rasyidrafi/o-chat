@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatView from './components/ChatView';
 import SettingsPage, { Tab as SettingsTab } from './components/SettingsPage';
@@ -43,6 +43,7 @@ const App: React.FC = () => {
   const [confirmDialogProps, setConfirmDialogProps] = useState(defaultConfirmDialogProps);
   const [settingsUnsubscribe, setSettingsUnsubscribe] = useState<(() => void) | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null); // <-- new ref
 
   const loadGuestSettings = (): AppSettings => ({
     theme: (localStorage.getItem('theme') as Theme) || 'system',
@@ -249,16 +250,19 @@ const App: React.FC = () => {
   return (
     <>
       <div className="flex h-screen w-full bg-white dark:bg-[#1c1c1c] text-zinc-900 dark:text-zinc-200 font-sans overflow-hidden">
-        <Sidebar 
-          isMobileMenuOpen={isMobileMenuOpen} 
-          setIsMobileMenuOpen={setIsMobileMenuOpen} 
+        <Sidebar
+          ref={sidebarRef} // <-- forward ref
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
           isCollapsed={isSidebarCollapsed}
           user={user}
           onLoginClick={() => openSettings('Account')}
           onSignOutClick={onSignOutClick}
           chat={chat}
         />
-        <ChatView 
+        <ChatView
+          isMobileMenuOpen={isMobileMenuOpen}
+          sidebarRef={sidebarRef} // <-- pass ref
           onMenuClick={() => setIsMobileMenuOpen(true)}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           isSidebarCollapsed={isSidebarCollapsed}

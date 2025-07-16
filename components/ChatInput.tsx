@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, ChevronDown, Paperclip, ArrowUp, Check } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
-import HorizontalRule from "./ui/HorizontalRule";
+import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
 
 interface ModelOption {
   label: string;
@@ -117,11 +117,12 @@ const ChatInput = ({
               try {
                 const models = JSON.parse(selectedModels);
                 // Handle both legacy format (array of strings) and new format (array of objects)
-                const modelArray = models.length > 0 && typeof models[0] === 'string' 
-                  ? models.map((id: string) => ({ id, name: id }))
-                  : models;
-                
-                modelArray.forEach((model: {id: string, name: string}) => {
+                const modelArray =
+                  models.length > 0 && typeof models[0] === "string"
+                    ? models.map((id: string) => ({ id, name: id }))
+                    : models;
+
+                modelArray.forEach((model: { id: string; name: string }) => {
                   options.push({
                     label: `${provider.label} - ${model.name}`,
                     value: model.id,
@@ -274,10 +275,12 @@ const ChatInput = ({
 
   return (
     <div
-      className="bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 shadow-xl p-3 rounded-2xl w-full
-          sm:rounded-2xl
-          rounded-t-2xl rounded-b-none
-        "
+      className="bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 p-3 rounded-2xl w-full
+        sm:rounded-2xl
+        rounded-t-2xl rounded-b-none
+        shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.12),0_-4px_16px_-2px_rgba(0,0,0,0.08)]
+        dark:shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.3),0_-4px_16px_-2px_rgba(0,0,0,0.2)]
+      "
     >
       <div className="relative">
         <textarea
@@ -290,7 +293,7 @@ const ChatInput = ({
           disabled={disabled}
         />
       </div>
-      <HorizontalRule />
+      <HorizontalRuleDefault />
       <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
         <div className="flex items-center flex-wrap gap-2">
           <div ref={dropdownRef} className="relative">
