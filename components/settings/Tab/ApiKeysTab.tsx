@@ -339,7 +339,7 @@ const ApiKeysTab: React.FC = () => {
             </div>
             <Button
               onClick={addNewProvider}
-              className="gap-2"
+              className="gap-3"
               disabled={!canAddNewProvider}
               title={
                 !canAddNewProvider
@@ -347,7 +347,7 @@ const ApiKeysTab: React.FC = () => {
                   : ""
               }
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 hidden sm:block" />
               Add Provider
             </Button>
           </div>
