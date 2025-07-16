@@ -198,14 +198,14 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         {
             name: 'Gemini 1.5 Flash',
             description: "Google's fast and efficient model optimized for high-frequency tasks with multimodal capabilities.",
-            features: ['Tool Calling'],
+            features: ['Text Generation', 'Tool Calling'],
             category: 'server',
             logo: 'google'
         },
         {
             name: 'Gemini 1.5 Flash 8B',
             description: "A smaller, faster version of Gemini 1.5 Flash with 8 billion parameters for quick responses.",
-            features: ['Tool Calling'],
+            features: ['Text Generation', 'Tool Calling'],
             category: 'server',
             logo: 'google'
         }
@@ -233,6 +233,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         name: model.name,
                         description: model.description,
                         features: [
+                            'Text Generation',
                             ...(capabilities.hasTools ? ['Tool Calling'] : []),
                             ...(capabilities.hasReasoning ? ['Reasoning'] : []),
                             ...(capabilities.hasVision ? ['Vision'] : [])
