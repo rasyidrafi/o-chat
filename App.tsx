@@ -217,7 +217,8 @@ const App: React.FC = () => {
   useEffect(() => {
       document.documentElement.style.setProperty('--font-main', settings.mainFont);
       document.documentElement.style.setProperty('--font-size-scale', settings.fontSize.toString());
-  }, [settings.mainFont, settings.fontSize])
+  }, [settings.mainFont, settings.fontSize]);
+
   const handleSignOut = async () => {
       try {
         await signOut(auth);
@@ -260,7 +261,7 @@ const App: React.FC = () => {
         <ChatView 
           onMenuClick={() => setIsMobileMenuOpen(true)}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-         isSidebarCollapsed={isSidebarCollapsed}
+          isSidebarCollapsed={isSidebarCollapsed}
           onOpenSettings={openSettings}
           theme={settings.theme}
           toggleTheme={toggleTheme}
