@@ -16,13 +16,12 @@ const FontSizeSlider: React.FC<FontSizeSliderProps> = ({
     animationsDisabled 
 }) => {
     const fontSizeOptions = [
-        { value: 1, label: 'Small' },
-        { value: 2, label: 'Default' },
-        { value: 3, label: 'Large' },
-        { value: 4, label: 'Extra Large' }
+        { value: 1, label: 'Default' },
+        { value: 2, label: 'Big' },
+        { value: 3, label: 'Large' }
     ];
 
-    const currentOption = fontSizeOptions.find(option => option.value === value) || fontSizeOptions[1];
+    const currentOption = fontSizeOptions.find(option => option.value === value) || fontSizeOptions[0];
 
     return (
         <div>
@@ -35,7 +34,7 @@ const FontSizeSlider: React.FC<FontSizeSliderProps> = ({
                     <input
                         type="range"
                         min="1"
-                        max="4"
+                        max="3"
                         step="1"
                         value={value}
                         onChange={(e) => onChange(parseInt(e.target.value))}
