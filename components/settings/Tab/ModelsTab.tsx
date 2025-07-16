@@ -438,57 +438,45 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
                 {/* BYOK Models Section */}
                 <div>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">BYOK Models</h3>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                            <div className="w-full sm:w-48">
-                                <CustomDropdown
-                                    label=""
-                                    description=""
-                                    options={availableProviders.map(p => p.label)}
-                                    disabledOptions={availableProviders.filter(p => p.disabled).map(p => p.label)}
-                                    selected={selectedProvider ? 
-                                        availableProviders.find(p => p.label === selectedProvider)?.label || 'Select Provider' : 
-                                        'Select Provider'
+                    {/* BYOK Models Title */}
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">BYOK Models</h3>
+                    
+                    {/* Controls Row */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
+                        <div className="w-full sm:w-48">
+                            <CustomDropdown
+                                label=""
+                                description=""
+                                options={availableProviders.map(p => p.label)}
+                                disabledOptions={availableProviders.filter(p => p.disabled).map(p => p.label)}
+                                selected={selectedProvider ? 
+                                    availableProviders.find(p => p.label === selectedProvider)?.label || 'Select Provider' : 
+                                    'Select Provider'
+                                }
+                                onSelect={(option) => {
+                                    const provider = availableProviders.find(p => p.label === option);
+                                    if (provider && !provider.disabled) {
+                                        setSelectedProvider(provider.id ?? '');
                                     }
-                                    onSelect={(option) => {
-                                        const provider = availableProviders.find(p => p.label === option);
-                                        if (provider && !provider.disabled) {
-                                            setSelectedProvider(provider.id ?? '');
-                                        }
-                                    }}
-                                    animationsDisabled={settings.animationsDisabled}
-                                />
-                            </div>
-                            <div className="w-full sm:w-64">
-                                <CustomDropdown
-                                    label=""
-                                    description=""
-                                    options={['All Features', ...featureOptions]}
-                                    selected={selectedFeatures.length === 0 ? 'All Features' : selectedFeatures[0]}
-                                    onSelect={(option) => {
-                                        if (option === 'All Features') {
-                                            setSelectedFeatures([]);
-                                        } else {
-                                            handleFeatureSelect(option);
-                                        }
-                                    }}
-                                    animationsDisabled={settings.animationsDisabled}
-                                />
-                            </div>
-                            <div className="w-full sm:w-auto">
-                                <button
-                                    onClick={handleUnselectAll}
-                                    className={`
-                                        w-full sm:w-auto px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 
-                                        hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800/50 
-                                        rounded-lg border border-zinc-300 dark:border-zinc-700
-                                        ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
-                                    `}
-                                >
-                                    Unselect All
-                                </button>
-                            </div>
+                                }}
+                                animationsDisabled={settings.animationsDisabled}
+                            />
+                        </div>
+                        <div className="w-full sm:w-64">
+                            <CustomDropdown
+                                label=""
+                                description=""
+                                options={['All Features', ...featureOptions]}
+                                selected={selectedFeatures.length === 0 ? 'All Features' : selectedFeatures[0]}
+                                onSelect={(option) => {
+                                    if (option === 'All Features') {
+                                        setSelectedFeatures([]);
+                                    } else {
+                                        handleFeatureSelect(option);
+                                    }
+                                }}
+                                animationsDisabled={settings.animationsDisabled}
+                            />
                         </div>
                     </div>
 
@@ -527,25 +515,38 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     {/* Search Bar */}
                     {selectedProvider && (
                         <div className="mb-4 sm:mb-6">
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                                <div className="relative flex-1">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Search models by name, description, or features..."
+                                        value={searchQuery}
+                                        onChange={handleSearchChange}
+                                        className={`
+                                            w-full pl-10 pr-4 py-2 border border-zinc-300 dark:border-zinc-600 
+                                            rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100
+                                            placeholder-zinc-500 dark:placeholder-zinc-400 text-sm sm:text-base
+                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                            ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
+                                        `}
+                                    />
                                 </div>
-                                <input
-                                    type="text"
-                                    placeholder="Search models by name, description, or features..."
-                                    value={searchQuery}
-                                    onChange={handleSearchChange}
+                                <button
+                                    onClick={handleUnselectAll}
                                     className={`
-                                        w-full pl-10 pr-4 py-2 border border-zinc-300 dark:border-zinc-600 
-                                        rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100
-                                        placeholder-zinc-500 dark:placeholder-zinc-400 text-sm sm:text-base
-                                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                        w-full sm:w-auto px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 
+                                        hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800/50 
+                                        rounded-lg border border-zinc-300 dark:border-zinc-700 whitespace-nowrap
                                         ${!settings.animationsDisabled ? 'transition-colors duration-200' : ''}
                                     `}
-                                />
+                                >
+                                    Unselect All
+                                </button>
                             </div>
                         </div>
                     )}
