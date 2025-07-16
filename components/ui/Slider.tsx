@@ -57,23 +57,18 @@ const Slider: React.FC<SliderProps> = ({
                 />
                 
                 {/* Slider track marks */}
-                <div className="relative mt-2">
+                <div className="flex justify-between mt-2">
                     {options.map((option) => (
-                        <div 
-                            key={option.value} 
-                            className="absolute transform -translate-x-1/2"
-                            style={{
-                                left: `${((option.value - minValue) / (maxValue - minValue)) * 100}%`
-                            }}
-                        >
-                            <span className={`text-xs mt-1 text-center ${
+                        <span 
+                            key={option.value}
+                            className={`text-xs text-center ${
                                 value === option.value 
                                     ? 'text-pink-500 font-medium' 
                                     : 'text-zinc-500 dark:text-zinc-400'
-                            } ${!animationsDisabled ? 'transition-colors duration-200' : ''} whitespace-nowrap`}>
-                                {option.label}
-                            </span>
-                        </div>
+                            } ${!animationsDisabled ? 'transition-colors duration-200' : ''}`}
+                        >
+                            {option.label}
+                        </span>
                     ))}
                 </div>
             </div>
