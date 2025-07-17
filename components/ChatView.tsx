@@ -1,4 +1,4 @@
-// Simplified ChatView with cleaner logic and better separation of concerns
+// Improved ChatView with better scroll handling
 import React, { useCallback, useRef } from "react";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
@@ -68,6 +68,15 @@ const ChatView: React.FC<ChatViewProps> = ({
     providerId: "",
   });
 
+  // State to control scroll-to-bottom button visibility
+  const [showScrollToBottom, setShowScrollToBottom] = React.useState(false);
+
+  // Handler to scroll to bottom
+  const handleScrollToBottom = useCallback(() => {
+    const event = new CustomEvent("scrollToBottom");
+    window.dispatchEvent(event);
+  }, []);
+
   const handleSendMessage = useCallback(
     (
       message: string,
@@ -76,8 +85,13 @@ const ChatView: React.FC<ChatViewProps> = ({
       providerId?: string
     ) => {
       sendMessage(message, model, source, providerId);
+      
+      // Trigger scroll to bottom after a brief delay to ensure message is added
+      setTimeout(() => {
+        handleScrollToBottom();
+      }, 50);
     },
-    [sendMessage]
+    [sendMessage, handleScrollToBottom]
   );
 
   const handlePromptSelect = useCallback(
@@ -88,8 +102,13 @@ const ChatView: React.FC<ChatViewProps> = ({
         selectedModelInfo.source,
         selectedModelInfo.providerId
       );
+      
+      // Trigger scroll to bottom after a brief delay to ensure message is added
+      setTimeout(() => {
+        handleScrollToBottom();
+      }, 50);
     },
-    [sendMessage, selectedModelInfo]
+    [sendMessage, selectedModelInfo, handleScrollToBottom]
   );
 
   const handleModelSelection = useCallback(
@@ -138,16 +157,6 @@ const ChatView: React.FC<ChatViewProps> = ({
           </motion.div>
         );
     }
-  };
-
-  // State to control scroll-to-bottom button visibility
-  const [showScrollToBottom, setShowScrollToBottom] = React.useState(false);
-
-  // Handler to scroll to bottom
-  const handleScrollToBottom = () => {
-    // Use a custom event to trigger scroll in MessageList
-    const event = new CustomEvent("scrollToBottom");
-    window.dispatchEvent(event);
   };
 
   return (
