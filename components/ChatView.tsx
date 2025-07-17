@@ -102,13 +102,8 @@ const ChatView: React.FC<ChatViewProps> = ({
         selectedModelInfo.source,
         selectedModelInfo.providerId
       );
-      
-      // Trigger scroll to bottom after a brief delay to ensure message is added
-      setTimeout(() => {
-        handleScrollToBottom();
-      }, 50);
     },
-    [sendMessage, selectedModelInfo, handleScrollToBottom]
+    [sendMessage, selectedModelInfo]
   );
 
   const handleModelSelection = useCallback(

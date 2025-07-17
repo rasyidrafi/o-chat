@@ -1,7 +1,7 @@
 // Clean Message component with unified markdown processing
 import React, { useMemo, useEffect, useRef, useState } from "react";
 import { ChatMessage } from "../types/chat";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import TypingIndicator from "./TypingIndicator";
 import ReasoningDisplay from "./ReasoningDisplay";
 import HorizontalRule from "./ui/HorizontalRule";
@@ -35,6 +35,7 @@ interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
   onStopStreaming?: () => void;
+  onLoaded: () => void;
   animationsDisabled: boolean;
 }
 
@@ -439,20 +440,64 @@ const Message: React.FC<MessageProps> = ({
   message,
   isStreaming = false,
   onStopStreaming,
+  onLoaded,
   animationsDisabled,
 }) => {
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const [processor, setProcessor] = useState<any>(null);
+  const [isProcessorReady, setIsProcessorReady] = useState(false);
+  const [isContentReady, setIsContentReady] = useState(false);
 
   // Load markdown processor lazily
   useEffect(() => {
     if (!isUser && !processor) {
       createMarkdownProcessor().then(({ processor: markdownProcessor }) => {
         setProcessor(markdownProcessor);
+        setIsProcessorReady(true);
       });
+    } else if (isUser) {
+      setIsProcessorReady(true);
     }
   }, [isUser, processor]);
+
+  // Set content ready when processor is ready or for user messages
+  useEffect(() => {
+    if (isProcessorReady) {
+      const timer = setTimeout(() => {
+        setIsContentReady(true);
+      }, 50);
+      
+      const timer2 = setTimeout(() => {
+        onLoaded();
+      }, 300);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(timer2);
+      };
+    }
+  }, [isProcessorReady]);
+
+  // Simple fade animation
+  const fadeVariants = {
+    initial: {
+      opacity: 0,
+    },
+    animate: {
+      opacity: 1,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut",
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  };
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -460,25 +505,21 @@ const Message: React.FC<MessageProps> = ({
     const diffInDays = Math.floor(diffInHours / 24);
 
     if (diffInHours < 24) {
-      // Today - show time
       return date.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       });
     } else if (diffInHours < 48) {
-      // Yesterday
       return `Yesterday ${date.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       })}`;
     } else if (diffInDays < 7) {
-      // Within a week - show day and time
       return `${diffInDays} days ago ${date.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       })}`;
     } else {
-      // More than a week - show date and time
       return `${date.toLocaleDateString([], {
         month: "short",
         day: "numeric",
@@ -496,18 +537,14 @@ const Message: React.FC<MessageProps> = ({
     if (message.isError) {
       return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
     }
-    return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0"; // Added width constraints
+    return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
   };
 
   const processedContent = useMemo(() => {
     if (isUser || !message.content) return null;
 
-    if (!processor) {
-      return (
-        <div className="text-sm leading-relaxed whitespace-pre-wrap">
-          {message.content}
-        </div>
-      );
+    if (!processor || !isProcessorReady) {
+      return null;
     }
 
     try {
@@ -521,7 +558,7 @@ const Message: React.FC<MessageProps> = ({
         </div>
       );
     }
-  }, [message.content, processor, isUser]);
+  }, [message.content, processor, isUser, isProcessorReady]);
 
   const renderContent = () => {
     if (isUser) {
@@ -532,30 +569,51 @@ const Message: React.FC<MessageProps> = ({
       );
     }
 
-    // For AI responses, render reasoning first then content
     return (
       <div className="space-y-3 w-full max-w-full min-w-0">
-        {" "}
-        {/* Added width constraints */}
         <ReasoningDisplay
           reasoning={message.reasoning || ""}
           isReasoningComplete={message.isReasoningComplete || false}
           isStreaming={isStreaming}
         />
-        <div className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden">
-          {" "}
-          {/* Added constraints */}
-          {processedContent}
-        </div>
+        
+        <AnimatePresence mode="wait">
+          {!isContentReady ? (
+            <motion.div
+              key="processing"
+              variants={fadeVariants}
+              initial={animationsDisabled ? {} : "initial"}
+              animate="animate"
+              exit={animationsDisabled ? {} : "exit"}
+              className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
+            >
+              <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
+                <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
+                <span>Processing...</span>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="content"
+              variants={fadeVariants}
+              initial={animationsDisabled ? {} : "initial"}
+              animate="animate"
+              className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
+            >
+              {processedContent}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   };
 
   return (
     <motion.div
-      initial={animationsDisabled ? {} : { opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: animationsDisabled ? 0 : 0.3 }}
+      variants={fadeVariants}
+      initial={animationsDisabled ? {} : "initial"}
+      animate="animate"
+      exit={animationsDisabled ? {} : "exit"}
       className={`flex ${isUser ? "justify-end" : "justify-start"}`}
     >
       <div
@@ -563,10 +621,11 @@ const Message: React.FC<MessageProps> = ({
           isUser
             ? "max-w-full items-end"
             : "w-full max-w-full items-start min-w-0"
-        }`} // Added max-w-full constraint
+        }`}
       >
         <div className={getMessageStyles()}>
           {renderContent()}
+          
           {isStreaming && !isUser && (
             <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
           )}

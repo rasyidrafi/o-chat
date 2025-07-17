@@ -308,13 +308,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       }
     }
 
-    // Filter by tab selection (Selected vs Available) - REMOVED
-    // if (activeByokTab === "selected") {
-    //   byokModels = byokModels.filter((model) =>
-    //     selectedModels.some((selected) => selected.id === model.id)
-    //   );
-    // }
-
     // Apply feature filtering
     if (selectedFeatures.length > 0) {
       byokModels = byokModels.filter((model) =>
@@ -358,8 +351,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     currentPage,
     fetchedModels,
     itemsPerPage,
-    // activeByokTab, - REMOVED
-    // selectedModels, - REMOVED
   ]);
 
   // Calculate selected models separately
@@ -677,7 +668,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
               {activeByokTab === "available" && (
                 <motion.div
                   className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500"
-                  layoutId="active-models-tab-indicator"
                   transition={{
                     duration: settings.animationsDisabled ? 0 : 0.2,
                   }}
@@ -697,7 +687,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
               {activeByokTab === "selected" && (
                 <motion.div
                   className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500"
-                  layoutId="active-models-tab-indicator"
                   transition={{
                     duration: settings.animationsDisabled ? 0 : 0.2,
                   }}
