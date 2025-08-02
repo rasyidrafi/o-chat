@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:extension": "cd firefox-extension && build-extension.bat",
+    "package:extension": "cd firefox-extension && package-extension.bat"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
