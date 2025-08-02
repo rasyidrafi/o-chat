@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:extension": "vite build --config vite.config.extension.ts",
+    "build:extension:clean": "rm -rf extension/popup*.js extension/popup*.css extension/popup.html extension/favicon.png && npm run build:extension",
+    "validate:extension": "./validate-extension.sh",
     "preview": "vite preview"
   },
   "dependencies": {

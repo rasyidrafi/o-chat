@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(() => {
     return {
       plugins: [tailwindcss()],
+      publicDir: false, // Don't copy public directory to avoid overwriting extension files
       build: {
         outDir: 'extension',
         emptyOutDir: false, // Don't empty the extension dir as it has manifest.json
