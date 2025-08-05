@@ -146,7 +146,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
 
       <div 
         ref={scrollContainerRef}
-        className={`flex-grow overflow-y-auto block thin-scrollbar ${isCollapsed ? 'md:hidden' : ''}`}
+        className={`overscroll-none flex-grow overflow-y-auto block thin-scrollbar ${isCollapsed ? 'md:hidden' : ''}`}
       >
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">

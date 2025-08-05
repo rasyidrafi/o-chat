@@ -50,7 +50,7 @@ const ReasoningDisplay: React.FC<ReasoningDisplayProps> = ({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-auto thin-scrollbar"
+            className="overflow-auto thin-scrollbar overscroll-none"
             style={{ maxHeight: '300px' }}
           >
             <div className="p-3 bg-white dark:bg-zinc-900 border-t border-pink-200 dark:border-pink-800/50">
