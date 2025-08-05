@@ -313,7 +313,7 @@ const ChatInput = ({
             </button>
             {isModelDropdownOpen && (
               <div className="absolute bottom-full mb-2 left-0 w-64 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
-                <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
+                <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar overscroll-none">
                   {modelOptions.map((option) => (
                     <button
                       key={`${option.value}-${option.providerId || "system"}`}
