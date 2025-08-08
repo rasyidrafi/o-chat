@@ -1,0 +1,40 @@
+{
+  "manifest_version": 2,
+  "name": "O-Chat",
+  "version": "1.0.0",
+  "description": "Your AI chat companion - Firefox Extension",
+  
+  "permissions": [
+    "storage",
+    "https://firebaseapp.com/*",
+    "https://*.googleapis.com/*",
+    "https://api.openai.com/*",
+    "https://fonts.googleapis.com/*",
+    "https://fonts.gstatic.com/*"
+  ],
+  
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "Open O-Chat",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  
+  "content_security_policy": "script-src 'self' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; object-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://api.openai.com https://*.firebaseapp.com https://*.firebaseio.com wss://*.firebaseio.com;"
+}
