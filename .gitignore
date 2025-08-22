@@ -33,5 +33,3 @@ backend/
 .env.production.local
 
 .firebase/
-.firebaserc
-firebase.json
