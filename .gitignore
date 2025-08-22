@@ -35,3 +35,9 @@ backend/
 .firebase/
 .firebaserc
 firebase.json
+
+# Extension build artifacts (keep source files but exclude built extension)
+extension/popup*.js
+extension/popup*.css
+extension/popup.html
+extension/favicon.png

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="O-Chat - Firefox Extension" />
+    <title>O-Chat</title>
+    
+    <!-- Extension popup styling - smaller size -->
+    <style>
+      body {
+        width: 400px;
+        height: 600px;
+        margin: 0;
+        overflow: hidden;
+      }
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+    
+    <!-- Theme and font initialization script adapted for extension -->
+    <script>
+      (function () {
+        // Use extension storage API instead of localStorage
+        const isExtension = typeof browser !== 'undefined' && browser.storage;
+        
+        if (isExtension) {
+          // Initialize theme from extension storage
+          browser.storage.local.get(['theme', 'mainFont']).then((result) => {
+            const theme = result.theme || 'system';
+            const font = result.mainFont || 'Montserrat';
+            
+            const isDark =
+              theme === "dark" ||
+              (theme === "system" &&
+                window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+            if (isDark) {
+              document.documentElement.classList.add("dark");
+            }
+
+            document.documentElement.style.setProperty(
+              "--font-main",
+              font + ", sans-serif"
+            );
+          });
+        } else {
+          // Fallback to localStorage for development
+          const theme = localStorage.getItem("theme") || "system";
+          const isDark =
+            theme === "dark" ||
+            (theme === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+          if (isDark) {
+            document.documentElement.classList.add("dark");
+          }
+
+          const font = localStorage.getItem("mainFont") || "Montserrat";
+          document.documentElement.style.setProperty(
+            "--font-main",
+            font + ", sans-serif"
+          );
+        }
+      })();
+    </script>
+  </head>
+  <body class="antialiased">
+    <div id="root"></div>
+    <script type="module" src="/extension-index.tsx"></script>
+  </body>
+</html>
