@@ -1,5 +1,5 @@
 {
-  "name": "Copy of O-Chat",
+  "name": "O-Chat",
   "description": "A modern, sleek chat application interface built with React and Tailwind CSS. O-Chat features a dark-themed, two-column layout with a sidebar for conversations and a main view for chat interactions.",
   "requestFramePermissions": [],
   "prompt": ""

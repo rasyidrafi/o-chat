@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import CustomDropdown from "../../ui/CustomDropdown";
 import ModelCard from "../ModelCard";
 import { AppSettings } from "../../../App";
@@ -245,7 +245,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // Reset pagination when search or provider changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedProvider, selectedFeatures]);
+  }, [searchQuery, selectedProvider, selectedFeatures, activeByokTab]);
 
   const availableModels = [
     {
@@ -547,20 +547,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     );
   };
 
-  // Render loading state with preserved height
-  const renderLoadingState = () => (
-    <div className="flex items-center justify-center py-16 flex-1">
-      <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
-        <div
-          className={`w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full ${
-            !settings.animationsDisabled ? "animate-spin" : ""
-          }`}
-        ></div>
-        <p className="text-lg">Loading Page...</p>
-      </div>
-    </div>
-  );
-
   return (
     <div>
       <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
@@ -754,7 +740,13 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
           <div className={`flex flex-col flex-1 min-h-[300px]`}>
             {" "}
             {/* Added min-h to prevent layout jump */}
-            <div className="text-center py-2 text-zinc-500 dark:text-zinc-400 flex-1 flex flex-col items-center justify-center">
+            <div
+              className={`text-center py-2 text-zinc-500 dark:text-zinc-400 flex-1 flex flex-col items-center ${
+                Boolean(modelsError || isLoadingModels || !selectedProvider)
+                  ? "justify-center"
+                  : ""
+              }`}
+            >
               {!selectedProvider ? (
                 <>
                   <p className="text-lg mb-2">No Provider Selected</p>
@@ -796,6 +788,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        style={{ width: "100%" }}
                         transition={{ duration: 0.2 }}
                       >
                         {activeByokTab === "selected" ? (
