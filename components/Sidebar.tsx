@@ -135,7 +135,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
         {isCollapsed ? <Plus className="w-5 h-5" /> : (isCreatingNewChat ? 'Creating...' : 'New Chat')}
       </Button>
 
-      <div className="relative mb-4">
+      <div className="relative mb-2">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
         <input
           type="text"
@@ -146,7 +146,11 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
 
       <div 
         ref={scrollContainerRef}
-        className={`flex-grow overflow-y-auto block thin-scrollbar ${isCollapsed ? 'md:hidden' : ''}`}
+        className={`py-2 flex-grow overflow-y-auto block thin-scrollbar relative ${isCollapsed ? 'md:hidden' : ''}`}
+        style={{
+          maskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)'
+        }}
       >
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">
@@ -156,7 +160,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
         ) : (
           <>
             {Object.entries(groupedConversations).map(([dateGroup, convs]) => (
-              <div key={dateGroup} className="mb-4">
+              <div key={dateGroup} className="mb-4 last:mb-0">
                 <div className="text-xs font-semibold text-zinc-500 mb-2">{dateGroup}</div>
                 <ul className="space-y-1">
                   {convs.map((conversation) => (
@@ -228,10 +232,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
         )}
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-auto pt-2">
         {user ? (
           <div className="flex flex-col">
-            <div className="flex items-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer">
+            <div className="flex items-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer ayam">
               <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email?.charAt(0).toUpperCase() || 'U'}&background=random`} alt={user.displayName || user.email || 'User avatar'} className="w-8 h-8 rounded-full" />
               <div className={`ml-3 flex-grow block overflow-hidden ${isCollapsed ? 'md:hidden' : ''}`}>
                 <div className="font-semibold text-zinc-900 dark:text-white truncate">{user.displayName || user.email}</div>
