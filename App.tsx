@@ -4,6 +4,7 @@ import ChatView from "./components/ChatView";
 import SettingsPage, { Tab as SettingsTab } from "./components/SettingsPage";
 import AuthModal from "./components/auth/AuthModal";
 import ConfirmationDialog from "./components/ui/ConfirmationDialog";
+import SearchCenter from "./components/SearchCenter";
 import { app, auth, db } from "./firebase.ts"; // Import the initialized Firebase app and db
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore";
@@ -41,6 +42,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isSearchCenterOpen, setIsSearchCenterOpen] = useState(false);
   const [confirmDialogProps, setConfirmDialogProps] = useState(
     defaultConfirmDialogProps
   );
@@ -304,6 +306,7 @@ const App: React.FC = () => {
           user={user}
           onLoginClick={() => openSettings("Account")}
           onSignOutClick={onSignOutClick}
+          onOpenSearchCenter={() => setIsSearchCenterOpen(true)}
           chat={chat}
         />
         <ChatView
@@ -352,6 +355,15 @@ const App: React.FC = () => {
       >
         {confirmDialogProps.description}
       </ConfirmationDialog>
+      <SearchCenter
+        isOpen={isSearchCenterOpen}
+        onClose={() => {
+          setIsSearchCenterOpen(false);
+          // Clear search when closing
+          chat.clearSearch();
+        }}
+        chat={chat}
+      />
     </>
   );
 };

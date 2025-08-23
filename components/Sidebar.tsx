@@ -12,6 +12,7 @@ interface SidebarProps {
   user: FirebaseUser | null;
   onLoginClick: () => void;
   onSignOutClick: () => void;
+  onOpenSearchCenter: () => void;
   chat: ReturnType<typeof useChat>;
 }
 
@@ -73,6 +74,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     user,
     onLoginClick,
     onSignOutClick,
+    onOpenSearchCenter,
     chat,
   },
   ref // <-- forwarded ref
@@ -246,25 +248,61 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
         {isCollapsed ? <Plus className="w-5 h-5" /> : (isCreatingNewChat ? 'Creating...' : 'New Chat')}
       </Button>
 
-      <div className="relative mb-2">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-        <input
-          type="text"
-          value={localSearchQuery}
-          onChange={handleSearchChange}
-          placeholder={isCollapsed ? '' : "Search your threads..."}
-          className="w-full bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md py-2 pl-9 pr-9 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-        />
-        {localSearchQuery && (
-          <button
-            onClick={handleClearSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-            aria-label="Clear search"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+      {/* Search Section - Different UI for collapsed vs expanded */}
+      {isCollapsed ? (
+        // Collapsed mode - Show search button (only on desktop)
+        <button
+          onClick={onOpenSearchCenter}
+          className="w-full mb-4 p-2.5 bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors hidden md:flex items-center justify-center"
+          aria-label="Open search"
+        >
+          <Search className="w-4 h-4 text-zinc-500" />
+        </button>
+      ) : (
+        // Expanded mode - Show search input
+        <div className="relative mb-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <input
+            type="text"
+            value={localSearchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search your threads..."
+            className="w-full bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md py-2 pl-9 pr-9 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+          />
+          {localSearchQuery && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Mobile search - always show search input on mobile even when collapsed */}
+      {isCollapsed && (
+        <div className="relative mb-2 md:hidden">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <input
+            type="text"
+            value={localSearchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search your threads..."
+            className="w-full bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md py-2 pl-9 pr-9 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+          />
+          {localSearchQuery && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       <div 
         ref={scrollContainerRef}
