@@ -27,8 +27,8 @@ export class ChatService {
     }
 
     return new OpenAI({
-      apiKey: apiKey || "", // Use provided API key or empty string
-      baseURL: baseURL || "https://api-3ujaavqala-uc.a.run.app",
+      apiKey: apiKey || "",
+      baseURL: baseURL || "",
       defaultHeaders: headers,
       dangerouslyAllowBrowser: true // Allow browser usage
     });
@@ -37,7 +37,7 @@ export class ChatService {
   private static getProviderConfig(source: string, providerId?: string) {
     if (source === 'system') {
       return {
-        baseURL: "https://api-3ujaavqala-uc.a.run.app",
+        baseURL: import.meta.env.VITE_FIREBASE_FUNC_BASE_API,
         apiKey: "",
         requiresAuth: true
       };
@@ -89,12 +89,8 @@ export class ChatService {
       }
     }
 
-    // Default to system
-    return {
-      baseURL: "https://api-3ujaavqala-uc.a.run.app",
-      apiKey: "",
-      requiresAuth: true
-    };
+    // return error
+    throw new Error('No valid provider configuration found');
   }
 
   static async sendMessage(

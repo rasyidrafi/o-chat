@@ -8,6 +8,7 @@ import { Theme } from "../App";
 import { Tab as SettingsTab } from "./SettingsPage";
 import { User as FirebaseUser } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
+import { DEFAULT_MODEL_ID } from "../constants/models";
 import { useChat } from "../hooks/useChat";
 import SmallButton from "./ui/SmallButton";
 
@@ -63,7 +64,7 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // State to track selected model info from ChatInput
   const [selectedModelInfo, setSelectedModelInfo] = React.useState({
-    model: "gemini-1.5-flash",
+    model: DEFAULT_MODEL_ID, // This will be updated when models are loaded
     source: "system",
     providerId: "",
   });

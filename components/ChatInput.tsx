@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, ChevronDown, Paperclip, ArrowUp, Check } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
+import { getSystemModels } from "../services/modelService";
+import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from "../constants/models";
 
 interface ModelOption {
   label: string;
@@ -28,30 +30,59 @@ const ChatInput = ({
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [selectedModel, setSelectedModel] =
-    useState<string>("gemini-1.5-flash");
+    useState<string>(DEFAULT_MODEL_ID);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load available models from localStorage
-  const loadAvailableModels = useCallback(() => {
+  const loadAvailableModels = useCallback(async () => {
     const options: ModelOption[] = [];
 
-    // Always include system models (from our servers)
-    const systemModels = [
-      {
-        label: "Gemini 1.5 Flash",
-        value: "gemini-1.5-flash",
+    try {
+      // Load system models dynamically
+      const systemModels = await getSystemModels();
+      
+      // Load selected server models from localStorage
+      const selectedServerModels = (() => {
+        try {
+          const stored = localStorage.getItem('selected_server_models');
+          return stored ? JSON.parse(stored) : [];
+        } catch (error) {
+          console.error("Error loading selected server models:", error);
+          return [];
+        }
+      })();
+
+      // Filter system models to only include selected ones and fallback models
+      const filteredSystemModels = systemModels.filter(model => {
+        // Always include fallback models (they cannot be deselected)
+        const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(fallback => fallback.id === model.id);
+        if (isFallbackModel) {
+          return true;
+        }
+        
+        // Include only selected non-fallback models
+        return selectedServerModels.some((selected: { id: string; name: string }) => selected.id === model.id);
+      });
+
+      const systemModelOptions = filteredSystemModels.map(model => ({
+        label: model.name,
+        value: model.id,
         source: "system",
-      },
-      {
-        label: "Gemini 1.5 Flash 8B",
-        value: "gemini-1.5-flash-8b",
+      }));
+      options.push(...systemModelOptions);
+    } catch (error) {
+      console.error('Error loading system models:', error);
+      // Use the shared constant for fallback models
+      const fallbackSystemModels = DEFAULT_SYSTEM_MODELS.map(model => ({
+        label: model.name,
+        value: model.id,
         source: "system",
-      },
-    ];
-    options.push(...systemModels);
+      }));
+      options.push(...fallbackSystemModels);
+    }
 
     // Load built-in provider models
     try {
@@ -146,7 +177,10 @@ const ChatInput = ({
 
   // Load models on mount
   useEffect(() => {
-    loadAvailableModels();
+    const loadModels = async () => {
+      await loadAvailableModels();
+    };
+    loadModels();
   }, [loadAvailableModels]);
 
   // Notify parent of initial model selection
@@ -172,6 +206,7 @@ const ChatInput = ({
       if (
         event.key === "builtin_api_providers" ||
         event.key === "custom_api_providers" ||
+        event.key === "selected_server_models" ||
         event.key?.startsWith("models_")
       ) {
         loadAvailableModels();
@@ -186,6 +221,7 @@ const ChatInput = ({
       if (
         event.detail.key === "builtin_api_providers" ||
         event.detail.key === "custom_api_providers" ||
+        event.detail.key === "selected_server_models" ||
         event.detail.key?.startsWith("models_")
       ) {
         loadAvailableModels();

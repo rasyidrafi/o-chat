@@ -6,7 +6,9 @@ import { Provider, Model } from "../../../types/providers";
 import {
   fetchModels,
   getModelCapabilities,
+  fetchSystemModels,
 } from "../../../services/modelService";
+import { DEFAULT_SYSTEM_MODELS } from "../../../constants/models";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ModelsTabProps {
@@ -57,6 +59,43 @@ const saveSelectedModelsToStorage = (
   }
 };
 
+// Helper functions for server models localStorage management
+const getServerModelsKey = (): string => {
+  return 'selected_server_models';
+};
+
+const loadSelectedServerModelsFromStorage = (): Array<{ id: string; name: string }> => {
+  try {
+    const key = getServerModelsKey();
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return [];
+  } catch (error) {
+    console.error("Error loading selected server models from localStorage:", error);
+    return [];
+  }
+};
+
+const saveSelectedServerModelsToStorage = (
+  selectedModels: Array<{ id: string; name: string }>
+) => {
+  try {
+    const key = getServerModelsKey();
+    localStorage.setItem(key, JSON.stringify(selectedModels));
+
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(
+      new CustomEvent("localStorageChange", {
+        detail: { key, value: selectedModels },
+      })
+    );
+  } catch (error) {
+    console.error("Error saving selected server models to localStorage:", error);
+  }
+};
+
 const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string>("");
@@ -70,16 +109,25 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
 
+  // System models states
+  const [systemModels, setSystemModels] = useState<Model[]>([]);
+  const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
+  const [systemModelsError, setSystemModelsError] = useState<string | null>(null);
+
   // Pagination and search states
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(6);
+  
+  // Server models pagination states
+  const [serverCurrentPage, setServerCurrentPage] = useState<number>(1);
+  const [serverSearchQuery, setServerSearchQuery] = useState<string>("");
+  const [serverSelectedFeatures, setServerSelectedFeatures] = useState<string[]>([]);
 
-  // Server models are always enabled - read only
-  const [serverModelsEnabled] = useState<string[]>([
-    "Gemini 1.5 Flash",
-    "Gemini 1.5 Flash 8B",
-  ]);
+  // Selected server models (all models except fallback ones can be toggled)
+  const [selectedServerModels, setSelectedServerModels] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
 
   // All selected models for current provider stored in localStorage
   const [selectedModels, setSelectedModels] = useState<
@@ -93,12 +141,49 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     setSelectedModels(loadedSelectedModels);
   }, [selectedProvider]);
 
+  // Load selected server models from localStorage on component mount
+  useEffect(() => {
+    const loadedSelectedServerModels = loadSelectedServerModelsFromStorage();
+    setSelectedServerModels(loadedSelectedServerModels);
+  }, []);
+
+  // Fetch system models on component mount
+  useEffect(() => {
+    const fetchSystemModelsData = async () => {
+      setIsLoadingSystemModels(true);
+      setSystemModelsError(null);
+      
+      try {
+        const models = await fetchSystemModels();
+        setSystemModels(models);
+        
+        // Clear any previous error if fetch succeeds
+        setSystemModelsError(null);
+      } catch (error) {
+        console.error('Error fetching system models:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch system models';
+        setSystemModelsError(errorMessage);
+        // Set fallback models when fetch fails
+        setSystemModels(DEFAULT_SYSTEM_MODELS);
+      } finally {
+        setIsLoadingSystemModels(false);
+      }
+    };
+
+    fetchSystemModelsData();
+  }, []);
+
   // Save selected models to localStorage whenever they change
   useEffect(() => {
     if (selectedProvider) {
       saveSelectedModelsToStorage(selectedProvider, selectedModels);
     }
   }, [selectedProvider, selectedModels]);
+
+  // Save selected server models to localStorage whenever they change
+  useEffect(() => {
+    saveSelectedServerModelsToStorage(selectedServerModels);
+  }, [selectedServerModels]);
 
   // Load providers from localStorage
   useEffect(() => {
@@ -245,35 +330,83 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // Reset pagination when search or provider changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedProvider, selectedFeatures, activeByokTab]);
+    setServerCurrentPage(1);
+  }, [searchQuery, selectedProvider, selectedFeatures, activeByokTab, serverSearchQuery, serverSelectedFeatures]);
 
-  const availableModels = [
-    {
-      name: "Gemini 1.5 Flash",
-      description:
-        "Google's fast and efficient model optimized for high-frequency tasks with multimodal capabilities.",
-      features: ["Text Generation", "Tool Calling"],
-      category: "server",
-      logo: "google",
-    },
-    {
-      name: "Gemini 1.5 Flash 8B",
-      description:
-        "A smaller, faster version of Gemini 1.5 Flash with 8 billion parameters for quick responses.",
-      features: ["Text Generation", "Tool Calling"],
-      category: "server",
-      logo: "google",
-    },
-  ];
+  // Convert system models to the format expected by the UI
+  const availableModels = useMemo(() => {
+    // If system models failed to load and we have an error, use fallback models
+    const modelsToUse = systemModels.length === 0 && systemModelsError 
+      ? DEFAULT_SYSTEM_MODELS 
+      : systemModels;
+      
+    return modelsToUse.map(model => {
+      const capabilities = getModelCapabilities(model.supported_parameters);
+      return {
+        name: model.name,
+        description: model.description,
+        features: [
+          "Text Generation",
+          ...(capabilities.hasTools ? ["Tool Calling"] : []),
+          ...(capabilities.hasReasoning ? ["Reasoning"] : []),
+          ...(capabilities.hasVision ? ["Vision"] : []),
+        ],
+        category: "server",
+        logo: "google",
+        id: model.id,
+      };
+    });
+  }, [systemModels, systemModelsError]);
+
+  // Filter and paginate server models
+  const filteredAndPaginatedServerModels = useMemo(() => {
+    let filteredServerModels = availableModels.filter(
+      (model) => model.category === "server"
+    );
+
+    // Apply feature filtering for server models
+    if (serverSelectedFeatures.length > 0) {
+      filteredServerModels = filteredServerModels.filter((model) =>
+        serverSelectedFeatures.every((feature) => model.features.includes(feature))
+      );
+    }
+
+    // Apply search filtering for server models
+    if (serverSearchQuery.trim()) {
+      const query = serverSearchQuery.toLowerCase();
+      filteredServerModels = filteredServerModels.filter(
+        (model) =>
+          model.name.toLowerCase().includes(query) ||
+          model.description.toLowerCase().includes(query) ||
+          model.features.some((feature: string) =>
+            feature.toLowerCase().includes(query)
+          )
+      );
+    }
+
+    // Calculate pagination for server models
+    const totalItems = filteredServerModels.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (serverCurrentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedModels = filteredServerModels.slice(startIndex, endIndex);
+
+    return {
+      models: paginatedModels,
+      totalItems,
+      totalPages,
+      currentPage: serverCurrentPage,
+      hasNextPage: serverCurrentPage < totalPages,
+      hasPreviousPage: serverCurrentPage > 1,
+    };
+  }, [availableModels, serverSelectedFeatures, serverSearchQuery, serverCurrentPage, itemsPerPage]);
 
   const featureOptions = ["Tool Calling", "Reasoning", "Vision"];
 
   // Filter and paginate models
   const filteredAndPaginatedModels = useMemo(() => {
-    // Always show server models
-    const serverModels = availableModels.filter(
-      (model) => model.category === "server"
-    );
+    // Use paginated server models from the dedicated useMemo
+    const serverModels = filteredAndPaginatedServerModels.models;
 
     // Handle BYOK models
     let byokModels: any[] = [];
@@ -351,6 +484,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     currentPage,
     fetchedModels,
     itemsPerPage,
+    availableModels,
   ]);
 
   // Calculate selected models separately
@@ -391,7 +525,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     return allByokModels.filter((model) =>
       selectedModels.some((selected) => selected.id === model.id)
     );
-  }, [selectedProvider, fetchedModels, selectedModels]);
+  }, [selectedProvider, fetchedModels, selectedModels, availableModels]);
 
   // Calculate pagination for selected models
   const selectedModelsPagination = useMemo(() => {
@@ -440,10 +574,71 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     setCurrentPage(page);
   };
 
-  const renderPaginationButton = (page: number, isActive: boolean = false) => (
+  const handleServerPageChange = (page: number) => {
+    setServerCurrentPage(page);
+  };
+
+  const handleServerSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setServerSearchQuery(e.target.value);
+  };
+
+  const handleServerFeatureSelect = (feature: string) => {
+    setServerSelectedFeatures([feature]);
+  };
+
+  const handleServerModelToggle = (
+    modelId: string,
+    modelName: string,
+    enabled: boolean
+  ) => {
+    // Don't allow toggling of fallback models
+    const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(model => model.id === modelId);
+    if (isFallbackModel) {
+      return; // Fallback models are always enabled
+    }
+
+    if (enabled) {
+      setSelectedServerModels((prev) => [...prev, { id: modelId, name: modelName }]);
+    } else {
+      setSelectedServerModels((prev) => prev.filter((model) => model.id !== modelId));
+    }
+  };
+
+  // Helper function to check if a server model is enabled
+  const isServerModelEnabled = (modelId: string): boolean => {
+    // Fallback models are always enabled
+    const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(model => model.id === modelId);
+    if (isFallbackModel) {
+      return true;
+    }
+    
+    // Other models are enabled if they're in the selectedServerModels list
+    return selectedServerModels.some(model => model.id === modelId);
+  };
+
+  // Helper function to check if a server model can be toggled
+  const isServerModelToggleable = (modelId: string): boolean => {
+    // Fallback models cannot be toggled (always enabled)
+    return !DEFAULT_SYSTEM_MODELS.some(model => model.id === modelId);
+  };
+
+  const handleServerUnselectAll = () => {
+    // Clear all selected server models (but keep fallback models always enabled)
+    setSelectedServerModels([]);
+  };
+
+  const handleServerSelectAll = () => {
+    // Select all available non-fallback server models
+    const allToggleableModels = availableModels
+      .filter(model => model.category === "server" && isServerModelToggleable(model.id))
+      .map(model => ({ id: model.id, name: model.name }));
+    setSelectedServerModels(allToggleableModels);
+  };
+
+  const renderPaginationButton = (page: number, isActive: boolean = false, handlePageChangeFunc: (page: number) => void) => (
     <button
       key={page}
-      onClick={() => handlePageChange(page)}
+      onClick={() => handlePageChangeFunc(page)}
       className={`
                 px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] border transition-colors
                 ${
@@ -457,11 +652,19 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     </button>
   );
 
-  const renderPagination = () => {
-    const paginationData =
-      activeByokTab === "selected"
+  const renderPagination = (type: 'server' | 'byok' = 'byok') => {
+    let paginationData;
+    let handlePageChangeFunc;
+
+    if (type === 'server') {
+      paginationData = filteredAndPaginatedServerModels;
+      handlePageChangeFunc = handleServerPageChange;
+    } else {
+      paginationData = activeByokTab === "selected"
         ? selectedModelsPagination
         : filteredAndPaginatedModels;
+      handlePageChangeFunc = handlePageChange;
+    }
 
     const { totalPages, currentPage, hasPreviousPage, hasNextPage } =
       paginationData;
@@ -477,7 +680,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     }
 
     for (let i = startPage; i <= endPage; i++) {
-      pages.push(renderPaginationButton(i, i === currentPage));
+      pages.push(renderPaginationButton(i, i === currentPage, handlePageChangeFunc));
     }
 
     return (
@@ -494,7 +697,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
         <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-2">
           <button
-            onClick={() => handlePageChange(currentPage - 1)}
+            onClick={() => handlePageChangeFunc(currentPage - 1)}
             disabled={!hasPreviousPage}
             className={`
                             px-3 py-2 text-sm font-medium rounded-lg border transition-colors
@@ -510,7 +713,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
           {startPage > 1 && (
             <>
-              {renderPaginationButton(1)}
+              {renderPaginationButton(1, false, handlePageChangeFunc)}
               {startPage > 2 && (
                 <span className="px-2 text-zinc-400 text-sm">...</span>
               )}
@@ -524,12 +727,12 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
               {endPage < totalPages - 1 && (
                 <span className="px-2 text-zinc-400 text-sm">...</span>
               )}
-              {renderPaginationButton(totalPages)}
+              {renderPaginationButton(totalPages, false, handlePageChangeFunc)}
             </>
           )}
 
           <button
-            onClick={() => handlePageChange(currentPage + 1)}
+            onClick={() => handlePageChangeFunc(currentPage + 1)}
             disabled={!hasNextPage}
             className={`
                             px-3 py-2 text-sm font-medium rounded-lg border transition-colors
@@ -564,23 +767,166 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
               From Our Servers
             </h3>
+            {systemModelsError && !isLoadingSystemModels && (
+              <div className="text-sm text-amber-500 dark:text-amber-400">
+                Using fallback models
+              </div>
+            )}
           </div>
-          <div className="space-y-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-            {filteredAndPaginatedModels.serverModels.map((model) => (
-              <ModelCard
-                key={model.name}
-                name={model.name}
-                description={model.description}
-                features={model.features}
-                isEnabled={serverModelsEnabled.includes(model.name)}
-                onToggle={() => {}} // No-op for server models
+
+          {/* Server Models Controls */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
+            <div className="w-full sm:w-64">
+              <CustomDropdown
+                label=""
+                description=""
+                options={["All Features", ...featureOptions]}
+                selected={
+                  serverSelectedFeatures.length === 0
+                    ? "All Features"
+                    : serverSelectedFeatures[0]
+                }
+                onSelect={(option) => {
+                  if (option === "All Features") {
+                    setServerSelectedFeatures([]);
+                  } else {
+                    handleServerFeatureSelect(option);
+                  }
+                }}
                 animationsDisabled={settings.animationsDisabled}
-                logo={model.logo}
-                disabled={true}
-                hideScroll={true}
               />
-            ))}
+            </div>
           </div>
+
+          {/* Server Models Search Bar */}
+          <div className="mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg
+                    className="h-5 w-5 text-zinc-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search server models by name, description, or features..."
+                  value={serverSearchQuery}
+                  onChange={handleServerSearchChange}
+                  className={`
+                        w-full pl-10 pr-4 py-2 border border-zinc-300 dark:border-zinc-600 
+                        rounded-md bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100
+                        placeholder-zinc-500 dark:placeholder-zinc-400 text-sm sm:text-base
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                        ${
+                          !settings.animationsDisabled
+                            ? "transition-colors duration-200"
+                            : ""
+                        }
+                    `}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleServerSelectAll}
+                  className={`
+                          w-full sm:w-auto px-4 py-2 text-sm font-medium text-white 
+                          bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg 
+                          hover:from-pink-700 hover:to-purple-700 whitespace-nowrap
+                          ${
+                            !settings.animationsDisabled
+                              ? "transition-colors duration-200"
+                              : ""
+                          }
+                      `}
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={handleServerUnselectAll}
+                  className={`
+                          w-full sm:w-auto px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 
+                          hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800/50 
+                          rounded-lg border border-zinc-300 dark:border-zinc-700 whitespace-nowrap
+                          ${
+                            !settings.animationsDisabled
+                              ? "transition-colors duration-200"
+                              : ""
+                          }
+                      `}
+                >
+                  Unselect All
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Models Container with consistent styling */}
+          <div className="flex flex-col flex-1 min-h-[200px]">
+            <div
+              className={`text-center py-2 text-zinc-500 dark:text-zinc-400 flex-1 flex flex-col items-center ${
+                isLoadingSystemModels ? "justify-center" : ""
+              }`}
+            >
+              {isLoadingSystemModels ? (
+                <>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-lg">Loading System Models...</p>
+                  </div>
+                  <p className="text-sm">
+                    Fetching available models from our servers.
+                  </p>
+                </>
+              ) : filteredAndPaginatedServerModels.models.length === 0 ? (
+                <>
+                  <p className="text-lg mb-2">
+                    {serverSearchQuery.trim() || serverSelectedFeatures.length > 0
+                      ? "No Models Found"
+                      : "No Models Available"}
+                  </p>
+                  <p className="text-sm">
+                    {serverSearchQuery.trim() || serverSelectedFeatures.length > 0
+                      ? "No server models match your search criteria. Try adjusting your search terms or filters."
+                      : "No server models are available at this time."}
+                  </p>
+                </>
+              ) : (
+                <div className="space-y-4 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start w-full">
+                  {filteredAndPaginatedServerModels.models.map((model) => (
+                    <ModelCard
+                      key={model.name}
+                      name={model.name}
+                      description={model.description}
+                      features={model.features}
+                      isEnabled={isServerModelEnabled(model.id)}
+                      onToggle={isServerModelToggleable(model.id) ? (enabled) =>
+                        handleServerModelToggle(model.id, model.name, enabled)
+                      : () => {}} // No-op for fallback models
+                      animationsDisabled={settings.animationsDisabled}
+                      logo={model.logo}
+                      disabled={!isServerModelToggleable(model.id)} // Disable toggle for fallback models
+                      hideScroll={true}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Server Models Pagination */}
+          {!isLoadingSystemModels && filteredAndPaginatedServerModels.totalItems > 0 && (
+            renderPagination('server')
+          )}
         </div>
 
         {/* BYOK Models Section */}
@@ -886,7 +1232,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
               )}
             </div>
           </div>
-          {renderPagination()}
+          {renderPagination('byok')}
         </div>
       </div>
     </div>

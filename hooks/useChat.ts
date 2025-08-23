@@ -8,6 +8,8 @@ import { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { AppSettings } from '../App';
+import { getSystemModels } from '../services/modelService';
+import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from '../constants/models';
 
 export const useChat = (settings?: AppSettings | undefined) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -37,11 +39,28 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const streamingMessageRef = useRef<string>('');
   const streamingReasoningRef = useRef<string>('');
 
+  // State to track system model IDs
+  const [systemModelIds, setSystemModelIds] = useState<string[]>(DEFAULT_SYSTEM_MODELS.map(model => model.id));
+
+  // Load system models and cache their IDs
+  React.useEffect(() => {
+    const loadSystemModelIds = async () => {
+      try {
+        const models = await getSystemModels();
+        setSystemModelIds(models.map(model => model.id));
+      } catch (error) {
+        console.error('Error loading system model IDs:', error);
+        // Keep fallback models
+      }
+    };
+    loadSystemModelIds();
+  }, []);
+
   // Helper function to determine model source
   const getModelSource = (model: string): 'server' | 'byok' => {
-    const serverModels = ['gemini-1.5-flash', 'gemini-1.5-flash-8b'];
-    return serverModels.includes(model) ? 'server' : 'byok';
+    return systemModelIds.includes(model) ? 'server' : 'byok';
   };
+
   // Listen to auth state changes
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -112,7 +131,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
   // Load messages for a conversation
   const loadConversationMessages = useCallback(async (conversationId: string) => {
-    console.log('loadConversationMessages called for:', conversationId);
     try {
       setIsLoadingMessages(true);
       const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 100);
@@ -124,7 +142,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
             ? { ...conv, messages: result.messages }
             : conv
         );
-        console.log('Updated conversations with messages for:', conversationId, 'message count:', result.messages.length);
         return updated;
       });
       
@@ -218,9 +235,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
     return truncated + '...';
   };
 
-  const createNewConversation = useCallback((title: string = 'New Chat', model: string = 'gemini-1.5-flash'): ChatConversation => {
+  const createNewConversation = useCallback((title: string = 'New Chat', model?: string): ChatConversation => {
     // Prevent creating new conversation if already creating one
     if (isCreatingNewChat) return currentConversation!;
+    
+    // Use the first available system model if no model is provided
+    const defaultModel = model || systemModelIds[0] || DEFAULT_MODEL_ID;
     
     // Check if we're already on the welcome page (no current conversation or empty conversation)
     if (!currentConversation || currentConversation.messages.length === 0) {
@@ -230,8 +250,8 @@ export const useChat = (settings?: AppSettings | undefined) => {
         messages: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        model,
-        source: getModelSource(model)
+        model: defaultModel,
+        source: getModelSource(defaultModel)
       };
       
       // For new conversations, set hasMoreMessages to false
@@ -251,8 +271,8 @@ export const useChat = (settings?: AppSettings | undefined) => {
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
-      model,
-      source: getModelSource(model)
+      model: defaultModel,
+      source: getModelSource(defaultModel)
     };
 
     // For new conversations, set hasMoreMessages to false
@@ -276,7 +296,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     });
     
     return newConversation;
-  }, [user, isCreatingNewChat, currentConversation]);
+  }, [user, isCreatingNewChat, currentConversation, systemModelIds, getModelSource]);
 
   const updateMessage = useCallback((conversationId: string, messageId: string, content: string) => {
     let updatedConversation: ChatConversation | null = null;
