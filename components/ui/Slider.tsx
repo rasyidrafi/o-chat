@@ -36,11 +36,10 @@ const Slider: React.FC<SliderProps> = ({
                 closestOption = option;
             }
         }
-        
-        onChange(closestOption.value);
+        if (closestOption) {
+            onChange(closestOption.value);
+        }
     };
-
-    const currentOption = options.find(option => option.value === value) || options[0];
 
     return (
         <div className="space-y-4">
