@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useCallback, useRef } from 'react';
-import { ChatMessage, ChatConversation, StreamingState } from '../types/chat';
+import { ChatMessage, ChatConversation, StreamingState, MessageContent, MessageAttachment, TextContent, ImageContent } from '../types/chat';
 import { ChatService } from '../services/chatService';
 import { ChatMessage as ServiceChatMessage } from '../services/chatService';
 import { ChatStorageService } from '../services/chatStorageService';
@@ -368,8 +368,77 @@ export const useChat = (settings?: AppSettings | undefined) => {
     }
   }, [user]);
 
-  const sendMessage = useCallback(async (content: string, model: string, source: string = 'system', providerId?: string) => {
-    if (!content.trim()) return;
+  // Helper function to extract text from MessageContent for title generation
+  const extractTextFromContent = (content: MessageContent): string => {
+    if (typeof content === 'string') {
+      return content;
+    }
+    
+    const textParts = content
+      .filter(item => item.type === 'text')
+      .map(item => item.text)
+      .join(' ');
+    
+    return textParts || 'Message with attachments';
+  };
+
+  // Helper function to check if content is empty
+  const isContentEmpty = (content: MessageContent): boolean => {
+    if (typeof content === 'string') {
+      return !content.trim();
+    }
+    
+    return content.length === 0 || content.every(item => 
+      item.type === 'text' ? !item.text.trim() : false
+    );
+  };
+
+  const sendMessage = useCallback(async (
+    content: string | MessageContent, 
+    model: string, 
+    source: string = 'system', 
+    providerId?: string,
+    attachments?: MessageAttachment[]
+  ) => {
+    // Build the message content
+    let messageContent: MessageContent;
+    
+    if (typeof content === 'string') {
+      // If we have attachments, build complex content
+      if (attachments && attachments.length > 0) {
+        const contentParts: Array<TextContent | ImageContent> = [];
+        
+        // Add text content if present
+        if (content.trim()) {
+          contentParts.push({
+            type: 'text',
+            text: content.trim()
+          });
+        }
+        
+        // Add image content
+        attachments.forEach(attachment => {
+          if (attachment.type === 'image') {
+            contentParts.push({
+              type: 'image_url',
+              image_url: {
+                url: attachment.url,
+                detail: 'auto',
+                format: attachment.mimeType
+              }
+            });
+          }
+        });
+        
+        messageContent = contentParts;
+      } else {
+        messageContent = content;
+      }
+    } else {
+      messageContent = content;
+    }
+
+    if (isContentEmpty(messageContent)) return;
 
     // Get model name for BYOK models
     let modelName = model;
@@ -403,7 +472,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     let conversation = currentConversation;
     if (!conversation) {
       // Create new conversation with message content as title
-      const title = createSmartTitle(content);
+      const title = createSmartTitle(extractTextFromContent(messageContent));
       conversation = {
         id: generateId(),
         title,
@@ -416,7 +485,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       setCurrentConversation(conversation);
     } else if (conversation.messages.length === 0 && conversation.title === 'New Chat') {
       // Update existing empty conversation title with the message content
-      const messageTitle = createSmartTitle(content);
+      const messageTitle = createSmartTitle(extractTextFromContent(messageContent));
       conversation = {
         ...conversation,
         title: messageTitle,
@@ -434,9 +503,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
     const userMessage: ChatMessage = {
       id: generateId(),
       role: 'user',
-      content: content.trim(),
+      content: messageContent,
       timestamp: new Date(),
-      source: getModelSource(model)
+      source: getModelSource(model),
+      attachments: attachments
     };
 
     // Create AI message

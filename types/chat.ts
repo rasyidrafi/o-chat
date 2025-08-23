@@ -1,9 +1,25 @@
 // Types for the chat system
 
+export interface ImageContent {
+  type: 'image_url';
+  image_url: {
+    url: string;
+    detail?: 'low' | 'high' | 'auto';
+    format?: string;
+  };
+}
+
+export interface TextContent {
+  type: 'text';
+  text: string;
+}
+
+export type MessageContent = string | Array<TextContent | ImageContent>;
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: MessageContent;
   model?: string;
   modelName?: string;
   isStreaming?: boolean;
@@ -12,6 +28,17 @@ export interface ChatMessage {
   source: 'server' | 'byok';
   reasoning?: string;
   isReasoningComplete?: boolean;
+  attachments?: MessageAttachment[];
+}
+
+export interface MessageAttachment {
+  id: string;
+  type: 'image';
+  url: string;
+  gcsPath?: string; // For Firebase Storage path
+  filename: string;
+  size: number;
+  mimeType: string;
 }
 
 export interface ChatConversation {

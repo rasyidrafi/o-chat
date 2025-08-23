@@ -1,10 +1,46 @@
 // Chat service for handling AI model interactions
 import OpenAI from "openai";
 import { User } from 'firebase/auth';
+import { MessageContent } from '../types/chat';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: MessageContent;
+}
+
+// Helper function to convert our MessageContent to OpenAI format
+function convertToOpenAIMessage(message: ChatMessage): OpenAI.Chat.Completions.ChatCompletionMessageParam {
+  if (typeof message.content === 'string') {
+    // Simple text message
+    return {
+      role: message.role,
+      content: message.content
+    } as OpenAI.Chat.Completions.ChatCompletionMessageParam;
+  } else {
+    // Complex content with images/text
+    const content = message.content.map(item => {
+      if (item.type === 'text') {
+        return {
+          type: 'text' as const,
+          text: item.text
+        };
+      } else if (item.type === 'image_url') {
+        return {
+          type: 'image_url' as const,
+          image_url: {
+            url: item.image_url.url,
+            detail: item.image_url.detail || 'auto'
+          }
+        };
+      }
+      return item;
+    });
+
+    return {
+      role: message.role,
+      content: content
+    } as OpenAI.Chat.Completions.ChatCompletionMessageParam;
+  }
 }
 
 export interface ChatResponse {
@@ -125,12 +161,15 @@ export class ChatService {
       // Create OpenAI instance with the appropriate configuration
       const openai = this.createOpenAIInstance(idToken, config.baseURL, config.apiKey);
 
+      // Convert our message format to OpenAI format
+      const openAIMessages = messages.map(convertToOpenAIMessage);
+
       // Handle different provider message formats
-      let processedMessages = messages;
+      let processedMessages = openAIMessages;
       if (source === 'builtin' && providerId === 'anthropic') {
         // Anthropic may require different message formatting
         // For now, we'll use the OpenAI format but this could be extended
-        processedMessages = messages;
+        processedMessages = openAIMessages;
       }
 
       const completion = await openai.chat.completions.create({

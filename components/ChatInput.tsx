@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, ChevronDown, Paperclip, ArrowUp, Check } from "./Icons";
+import { Sparkles, ChevronDown, Paperclip, ArrowUp, Check, X } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
 import { getSystemModels, getSystemModelsSync } from "../services/modelService";
 import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from "../constants/models";
+import { ImageUploadService } from "../services/imageUploadService";
+import { MessageAttachment } from "../types/chat";
+import { User } from "firebase/auth";
 
 interface ModelOption {
   label: string;
@@ -17,16 +20,19 @@ interface ChatInputProps {
     message: string,
     model: string,
     source: string,
-    providerId?: string
+    providerId?: string,
+    attachments?: MessageAttachment[]
   ) => void;
   onModelSelect?: (model: string, source: string, providerId?: string) => void;
   disabled?: boolean;
+  user?: User | null;
 }
 
 const ChatInput = ({
   onMessageSend,
   onModelSelect,
   disabled = false,
+  user = null,
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [selectedModel, setSelectedModel] =
@@ -35,7 +41,10 @@ const ChatInput = ({
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
+  const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load available models from localStorage
   const loadAvailableModels = useCallback(async () => {
@@ -222,6 +231,48 @@ const ChatInput = ({
     loadModels();
   }, [loadAvailableModels]);
 
+  // Handle image upload
+  const handleImageUpload = useCallback(async (file: File) => {
+    try {
+      setIsUploadingImage(true);
+      
+      // Validate file
+      const validation = ImageUploadService.validateImageFile(file);
+      if (!validation.isValid) {
+        alert(validation.error);
+        return;
+      }
+
+      // Upload to Firebase Storage
+      const attachment = await ImageUploadService.uploadImage(file, user?.uid || null);
+      setAttachments(prev => [...prev, attachment]);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }, [user]);
+
+  // Handle paste events for images
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData.items);
+    const imageItem = items.find(item => item.type.startsWith('image/'));
+    
+    if (imageItem) {
+      e.preventDefault();
+      const file = imageItem.getAsFile();
+      if (file) {
+        await handleImageUpload(file);
+      }
+    }
+  }, [handleImageUpload]);
+
+  // Remove attachment
+  const removeAttachment = useCallback((attachmentId: string) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
+  }, []);
+
   // Notify parent of initial model selection
   useEffect(() => {
     if (modelOptions.length > 0 && onModelSelect) {
@@ -319,16 +370,18 @@ const ChatInput = ({
   };
 
   const handleSendMessage = async () => {
-    if (!message.trim() || disabled) return;
+    if ((!message.trim() && attachments.length === 0) || disabled) return;
 
     const currentMessage = message.trim();
     const currentModel = selectedModel;
+    const currentAttachments = [...attachments];
     const selectedModelOption = modelOptions.find(
       (model) => model.value === currentModel
     );
 
-    // Clear the input immediately
+    // Clear the input and attachments immediately
     setMessage("");
+    setAttachments([]);
 
     // Call the parent callback if provided
     if (onMessageSend) {
@@ -336,7 +389,8 @@ const ChatInput = ({
         currentMessage,
         currentModel,
         selectedModelOption?.source || "system",
-        selectedModelOption?.providerId
+        selectedModelOption?.providerId,
+        currentAttachments
       );
     }
   };
@@ -358,14 +412,40 @@ const ChatInput = ({
       "
     >
       <div className="relative">
+        {/* Image attachments preview */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {attachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24"
+              >
+                <img
+                  src={attachment.url}
+                  alt={attachment.filename}
+                  className="w-16 h-16 object-cover rounded"
+                />
+                <button
+                  onClick={() => removeAttachment(attachment.id)}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        
         <textarea
+          ref={textareaRef}
           value={message}
           onChange={handleTextareaChange}
           onKeyPress={handleKeyPress}
+          onPaste={handlePaste}
           placeholder="Type your message here..."
           className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-24 overflow-y-auto thin-scrollbar"
           rows={1}
-          disabled={disabled}
+          disabled={disabled || isUploadingImage}
         />
       </div>
       <HorizontalRuleDefault />
@@ -421,23 +501,43 @@ const ChatInput = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors"
-            aria-label="Attach file"
-          >
-            <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-          </button>
+          <div className="relative">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleImageUpload(file);
+                  e.target.value = ''; // Reset input
+                }
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              disabled={isUploadingImage}
+            />
+            <button
+              className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors relative"
+              aria-label="Attach image"
+              disabled={isUploadingImage}
+            >
+              {isUploadingImage ? (
+                <LoadingIndicator size="sm" color="primary" />
+              ) : (
+                <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+              )}
+            </button>
+          </div>
           <button
             onClick={handleSendMessage}
             className={`p-1.5 rounded-full transition-colors ${
-              message.trim() && !disabled
+              (message.trim() || attachments.length > 0) && !disabled
                 ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
                 : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
             }`}
-            disabled={!message.trim() || disabled}
+            disabled={(!message.trim() && attachments.length === 0) || disabled}
             aria-label={disabled ? "Sending..." : "Send message"}
           >
-            {disabled && message ? (
+            {disabled ? (
               <LoadingIndicator size="sm" color="white" />
             ) : (
               <ArrowUp className="w-4 h-4" />

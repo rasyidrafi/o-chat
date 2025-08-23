@@ -1,5 +1,5 @@
 // Improved ChatView with better scroll handling
-import React, { useCallback, useRef } from "react";
+import React, { useCallback } from "react";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
@@ -44,7 +44,6 @@ const ChatView: React.FC<ChatViewProps> = ({
     isLoadingMessages,
     isLoadingMoreMessages,
     hasMoreMessages,
-    loadMoreMessages,
   } = chat;
 
   const [windowWidth, setWindowWidth] = React.useState(
@@ -83,9 +82,10 @@ const ChatView: React.FC<ChatViewProps> = ({
       message: string,
       model: string,
       source: string = "system",
-      providerId?: string
+      providerId?: string,
+      attachments?: any[]
     ) => {
-      sendMessage(message, model, source, providerId);
+      sendMessage(message, model, source, providerId, attachments);
       
       // Trigger scroll to bottom after a brief delay to ensure message is added
       setTimeout(() => {
@@ -322,6 +322,7 @@ const ChatView: React.FC<ChatViewProps> = ({
             onMessageSend={handleSendMessage}
             onModelSelect={handleModelSelection}
             disabled={streamingState.isStreaming || isLoading}
+            user={user}
           />
         </div>
       </div>

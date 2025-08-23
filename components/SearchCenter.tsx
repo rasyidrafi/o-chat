@@ -272,16 +272,33 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
                                         <span 
                                           dangerouslySetInnerHTML={{
                                             __html: highlightText(
-                                              conversation.messages[0].content.substring(0, 150) + 
-                                              (conversation.messages[0].content.length > 150 ? '...' : ''), 
+                                              (() => {
+                                                const content = conversation.messages[0].content;
+                                                const text = typeof content === 'string' 
+                                                  ? content 
+                                                  : content.filter(item => item.type === 'text').map(item => item.text).join(' ');
+                                                return text.substring(0, 150) + (text.length > 150 ? '...' : '');
+                                              })(),
                                               localSearchQuery
                                             )
                                           }}
                                         />
                                       ) : (
                                         <>
-                                          {conversation.messages[0].content.substring(0, 150)}
-                                          {conversation.messages[0].content.length > 150 && '...'}
+                                          {(() => {
+                                            const content = conversation.messages[0].content;
+                                            const text = typeof content === 'string' 
+                                              ? content 
+                                              : content.filter(item => item.type === 'text').map(item => item.text).join(' ');
+                                            return text.substring(0, 150);
+                                          })()}
+                                          {(() => {
+                                            const content = conversation.messages[0].content;
+                                            const text = typeof content === 'string' 
+                                              ? content 
+                                              : content.filter(item => item.type === 'text').map(item => item.text).join(' ');
+                                            return text.length > 150 && '...';
+                                          })()}
                                         </>
                                       )}
                                     </div>

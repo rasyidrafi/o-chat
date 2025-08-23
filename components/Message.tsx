@@ -1,14 +1,21 @@
 // Clean Message component with unified markdown processing
 import React, { useMemo, useEffect, useRef, useState } from "react";
-import { ChatMessage } from "../types/chat";
+import { ChatMessage, MessageContent, type TextContent, type ImageContent } from "../types/chat";
 import { motion, AnimatePresence } from "framer-motion";
 import TypingIndicator from "./TypingIndicator";
 import ReasoningDisplay from "./ReasoningDisplay";
 import HorizontalRule from "./ui/HorizontalRule";
 import * as prod from "react/jsx-runtime";
+import { ImageUploadService } from "../services/imageUploadService";
 
-// Lazy load heavy dependencies
-const mermaid = React.lazy(() => import("mermaid"));
+// Lazy load heavy dependencies only when needed
+let mermaidPromise: Promise<any> | null = null;
+const loadMermaid = () => {
+  if (!mermaidPromise) {
+    mermaidPromise = import("mermaid");
+  }
+  return mermaidPromise;
+};
 
 // highlight.js imports
 import hljs from "highlight.js/lib/core";
@@ -31,10 +38,58 @@ hljs.registerLanguage("bash", bash);
 hljs.registerLanguage("css", css);
 hljs.registerLanguage("markdown", markdown);
 
+const getImageUrlFromPath = async (gcsPath: string): Promise<string> => {
+  try {
+    return await ImageUploadService.getImageUrl(gcsPath);
+  } catch (error) {
+    console.error('Error getting image URL:', error);
+    return '';
+  }
+};
+
+// Component for rendering image content
+const ImageContentComponent: React.FC<{ 
+  url: string; 
+  alt?: string; 
+  gcsPath?: string;
+}> = ({ url, alt = "Uploaded image", gcsPath }) => {
+  const [currentUrl, setCurrentUrl] = useState(url);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // If we have a GCS path, get the current URL
+    if (gcsPath && gcsPath !== url) {
+      setIsLoading(true);
+      getImageUrlFromPath(gcsPath).then(newUrl => {
+        if (newUrl) {
+          setCurrentUrl(newUrl);
+        }
+        setIsLoading(false);
+      });
+    }
+  }, [gcsPath, url]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-md h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
+        <div className="text-zinc-500">Loading image...</div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={currentUrl}
+      alt={alt}
+      className="max-w-full h-auto rounded-lg border border-zinc-200 dark:border-zinc-700"
+      style={{ maxHeight: '400px' }}
+    />
+  );
+};
+
 interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
-  onStopStreaming?: () => void;
   onLoaded: () => void;
   animationsDisabled: boolean;
 }
@@ -355,7 +410,7 @@ const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
   const [mermaidLib, setMermaidLib] = useState<any>(null);
 
   useEffect(() => {
-    mermaid().then((module) => {
+    loadMermaid().then((module: any) => {
       module.default.initialize({
         startOnLoad: false,
         theme: "dark",
@@ -439,7 +494,6 @@ const createMarkdownProcessor = () =>
 const Message: React.FC<MessageProps> = ({
   message,
   isStreaming = false,
-  onStopStreaming,
   onLoaded,
   animationsDisabled,
 }) => {
@@ -548,25 +602,67 @@ const Message: React.FC<MessageProps> = ({
     }
 
     try {
-      const result = processor.processSync(message.content);
-      return result.result as React.ReactElement;
+      // Handle string content (assistant messages are always strings)
+      if (typeof message.content === 'string') {
+        const result = processor.processSync(message.content);
+        return result.result as React.ReactElement;
+      }
+      
+      // This shouldn't happen for assistant messages, but handle just in case
+      return null;
     } catch (error) {
       console.error("Markdown processing error:", error);
-      return (
-        <div className="text-sm leading-relaxed whitespace-pre-wrap">
-          {message.content}
-        </div>
-      );
+      if (typeof message.content === 'string') {
+        return (
+          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            {message.content}
+          </div>
+        );
+      }
+      return null;
     }
   }, [message.content, processor, isUser, isProcessorReady]);
 
   const renderContent = () => {
     if (isUser) {
-      return (
-        <div className="text-sm leading-relaxed whitespace-pre-wrap">
-          {message.content}
-        </div>
-      );
+      // Handle user messages with potentially complex content
+      if (typeof message.content === 'string') {
+        return (
+          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            {message.content}
+          </div>
+        );
+      } else {
+        // Handle complex content with text and images
+        return (
+          <div className="space-y-2">
+            {message.content.map((item, index) => {
+              if (item.type === 'text') {
+                return (
+                  <div key={index} className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {item.text}
+                  </div>
+                );
+              } else if (item.type === 'image_url') {
+                // Find matching attachment for GCS path
+                const attachment = message.attachments?.find(att => 
+                  att.url === item.image_url.url
+                );
+                
+                return (
+                  <ImageContentComponent
+                    key={index}
+                    url={item.image_url.url}
+                    gcsPath={attachment?.gcsPath}
+                    alt="User uploaded image"
+                  />
+                );
+              }
+              return null;
+            })}
+          </div>
+        );
+      }
     }
 
     return (
