@@ -268,8 +268,29 @@ export const getSystemModels = async (): Promise<Model[]> => {
             return JSON.parse(cached);
         }
         // Otherwise, return fallback models
-        throw error;
+        console.warn('Using fallback models due to fetch error');
+        return DEFAULT_SYSTEM_MODELS;
     }
+};
+
+// Add a new function to get system models synchronously (for immediate use)
+export const getSystemModelsSync = (): Model[] => {
+    // Try to get from cache first
+    const cached = localStorage.getItem('system_models_cache');
+    const cacheTimestamp = localStorage.getItem('system_models_cache_timestamp');
+    
+    // Cache for 5 minutes
+    const CACHE_DURATION = 5 * 60 * 1000;
+    
+    if (cached && cacheTimestamp) {
+        const age = Date.now() - parseInt(cacheTimestamp);
+        if (age < CACHE_DURATION) {
+            return JSON.parse(cached);
+        }
+    }
+    
+    // If no valid cache, return fallback models
+    return DEFAULT_SYSTEM_MODELS;
 };
 
 export default fetchModels;

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, ChevronDown, Paperclip, ArrowUp, Check } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
-import { getSystemModels } from "../services/modelService";
+import { getSystemModels, getSystemModelsSync } from "../services/modelService";
 import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from "../constants/models";
 
 interface ModelOption {
@@ -34,6 +34,7 @@ const ChatInput = ({
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load available models from localStorage
@@ -41,8 +42,10 @@ const ChatInput = ({
     const options: ModelOption[] = [];
 
     try {
-      // Load system models dynamically
-      const systemModels = await getSystemModels();
+      setIsLoadingSystemModels(true);
+      
+      // First, load cached/fallback models synchronously for immediate display
+      const syncSystemModels = getSystemModelsSync();
       
       // Load selected server models from localStorage
       const selectedServerModels = (() => {
@@ -55,24 +58,49 @@ const ChatInput = ({
         }
       })();
 
-      // Filter system models to only include selected ones and fallback models
-      const filteredSystemModels = systemModels.filter(model => {
-        // Always include fallback models (they cannot be deselected)
+      // Filter sync system models and add to options immediately
+      const filteredSyncSystemModels = syncSystemModels.filter(model => {
         const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(fallback => fallback.id === model.id);
         if (isFallbackModel) {
           return true;
         }
-        
-        // Include only selected non-fallback models
         return selectedServerModels.some((selected: { id: string; name: string }) => selected.id === model.id);
       });
 
+      const syncSystemModelOptions = filteredSyncSystemModels.map(model => ({
+        label: model.name,
+        value: model.id,
+        source: "system",
+      }));
+      options.push(...syncSystemModelOptions);
+
+      // Set initial options with sync models
+      setModelOptions([...options]);
+
+      // Now fetch fresh system models asynchronously
+      const systemModels = await getSystemModels();
+      
+      // Filter system models to only include selected ones and fallback models
+      const filteredSystemModels = systemModels.filter(model => {
+        const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(fallback => fallback.id === model.id);
+        if (isFallbackModel) {
+          return true;
+        }
+        return selectedServerModels.some((selected: { id: string; name: string }) => selected.id === model.id);
+      });
+
+      // Replace system models in options array
       const systemModelOptions = filteredSystemModels.map(model => ({
         label: model.name,
         value: model.id,
         source: "system",
       }));
-      options.push(...systemModelOptions);
+      
+      // Clear existing system models and add fresh ones
+      const nonSystemOptions = options.filter(opt => opt.source !== "system");
+      const updatedOptions = [...systemModelOptions, ...nonSystemOptions];
+      
+      setModelOptions(updatedOptions);
     } catch (error) {
       console.error('Error loading system models:', error);
       // Use the shared constant for fallback models
@@ -81,7 +109,12 @@ const ChatInput = ({
         value: model.id,
         source: "system",
       }));
-      options.push(...fallbackSystemModels);
+      
+      // Only add fallback if no system models are already present
+      const nonSystemOptions = options.filter(opt => opt.source !== "system");
+      setModelOptions([...fallbackSystemModels, ...nonSystemOptions]);
+    } finally {
+      setIsLoadingSystemModels(false);
     }
 
     // Load built-in provider models
@@ -89,11 +122,13 @@ const ChatInput = ({
       const builtInProviders = localStorage.getItem("builtin_api_providers");
       if (builtInProviders) {
         const providers = JSON.parse(builtInProviders);
+        const builtInOptions: ModelOption[] = [];
+        
         providers.forEach((provider: any) => {
           if (provider.value?.trim()) {
             // Add static models for built-in providers
             if (provider.id === "openai") {
-              options.push(
+              builtInOptions.push(
                 {
                   label: "GPT-4",
                   value: "gpt-4",
@@ -108,7 +143,7 @@ const ChatInput = ({
                 }
               );
             } else if (provider.id === "anthropic") {
-              options.push(
+              builtInOptions.push(
                 {
                   label: "Claude 3 Sonnet",
                   value: "claude-3-sonnet-20240229",
@@ -125,6 +160,8 @@ const ChatInput = ({
             }
           }
         });
+        
+        setModelOptions(prev => [...prev, ...builtInOptions]);
       }
     } catch (error) {
       console.error("Error loading built-in providers:", error);
@@ -135,6 +172,8 @@ const ChatInput = ({
       const customProviders = localStorage.getItem("custom_api_providers");
       if (customProviders) {
         const providers = JSON.parse(customProviders);
+        const customOptions: ModelOption[] = [];
+        
         providers.forEach((provider: any) => {
           if (
             provider.label?.trim() &&
@@ -154,7 +193,7 @@ const ChatInput = ({
                     : models;
 
                 modelArray.forEach((model: { id: string; name: string }) => {
-                  options.push({
+                  customOptions.push({
                     label: `${provider.label} - ${model.name}`,
                     value: model.id,
                     source: "custom",
@@ -167,12 +206,12 @@ const ChatInput = ({
             }
           }
         });
+        
+        setModelOptions(prev => [...prev, ...customOptions]);
       }
     } catch (error) {
       console.error("Error loading custom providers:", error);
     }
-
-    setModelOptions(options);
   }, []);
 
   // Load models on mount
@@ -341,15 +380,25 @@ const ChatInput = ({
               <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
                 {selectedModelLabel}
               </span>
-              <ChevronDown
-                className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${
-                  isModelDropdownOpen ? "rotate-180" : ""
-                }`}
-              />
+              {isLoadingSystemModels ? (
+                <LoadingIndicator size="sm" color="primary" />
+              ) : (
+                <ChevronDown
+                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${
+                    isModelDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              )}
             </button>
             {isModelDropdownOpen && (
               <div className="absolute bottom-full mb-2 left-0 w-64 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
                 <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
+                  {isLoadingSystemModels && modelOptions.filter(opt => opt.source === "system").length === 0 && (
+                    <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                      <LoadingIndicator size="sm" color="primary" />
+                      Loading models...
+                    </div>
+                  )}
                   {modelOptions.map((option) => (
                     <button
                       key={`${option.value}-${option.providerId || "system"}`}
