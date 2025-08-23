@@ -93,7 +93,14 @@ export const useChat = (settings?: AppSettings | undefined) => {
     try {
       setIsLoadingMore(true);
       const result = await ChatStorageService.loadConversationsPaginated(user, 20, conversationsLastDoc);
-      setConversations(prev => [...prev, ...result.conversations]);
+      
+      // Prevent duplicates by checking existing conversation IDs
+      setConversations(prev => {
+        const existingIds = new Set(prev.map(conv => conv.id));
+        const newConversations = result.conversations.filter(conv => !existingIds.has(conv.id));
+        return [...prev, ...newConversations];
+      });
+      
       setHasMoreConversations(result.hasMore);
       setConversationsLastDoc(result.lastDoc);
     } catch (error) {
