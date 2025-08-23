@@ -55,6 +55,7 @@ const ImageContentComponent: React.FC<{
 }> = ({ url, alt = "Uploaded image", gcsPath }) => {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [isLoading, setIsLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
 
   useEffect(() => {
     // If we have a GCS path, get the current URL
@@ -69,21 +70,47 @@ const ImageContentComponent: React.FC<{
     }
   }, [gcsPath, url]);
 
+  // Reset image loading when URL changes
+  useEffect(() => {
+    setImageLoading(true);
+  }, [currentUrl]);
+
   if (isLoading) {
     return (
-      <div className="w-full max-w-md h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
-        <div className="text-zinc-500">Loading image...</div>
+      <div className="w-32 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
+        <div className="text-zinc-500 text-xs">Loading...</div>
       </div>
     );
   }
 
   return (
-    <img
-      src={currentUrl}
-      alt={alt}
-      className="max-w-full h-auto rounded-lg border border-zinc-200 dark:border-zinc-700"
-      style={{ maxHeight: '400px' }}
-    />
+    <div className="relative inline-block">
+      {imageLoading && (
+        <div className="w-48 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
+          <div className="flex items-center space-x-2 text-zinc-500">
+            <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+        </div>
+      )}
+      <img
+        src={currentUrl}
+        alt={alt}
+        className={`max-w-48 h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity ${imageLoading ? 'opacity-0 absolute' : 'opacity-100'}`}
+        style={{ 
+          maxHeight: '150px',
+          objectFit: 'contain'
+        }}
+        onLoad={() => setImageLoading(false)}
+        onError={() => setImageLoading(false)}
+        onClick={() => {
+          // Open image in new tab for full view
+          window.open(currentUrl, '_blank');
+        }}
+        title="Click to view full size"
+      />
+    </div>
   );
 };
 
@@ -586,7 +613,7 @@ const Message: React.FC<MessageProps> = ({
 
   const getMessageStyles = () => {
     if (isUser) {
-      return "bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-2xl px-4 py-3 max-w-100";
+      return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-100 border border-zinc-300/50 dark:border-zinc-700/50";
     }
     if (message.isError) {
       return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";

@@ -445,7 +445,7 @@ const ChatInput = ({
           placeholder="Type your message here..."
           className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-24 overflow-y-auto thin-scrollbar"
           rows={1}
-          disabled={disabled || isUploadingImage}
+          disabled={disabled}
         />
       </div>
       <HorizontalRuleDefault />
@@ -512,7 +512,7 @@ const ChatInput = ({
                   e.target.value = ''; // Reset input
                 }
               }}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               disabled={isUploadingImage}
             />
             <button
@@ -530,11 +530,11 @@ const ChatInput = ({
           <button
             onClick={handleSendMessage}
             className={`p-1.5 rounded-full transition-colors ${
-              (message.trim() || attachments.length > 0) && !disabled
+              (message.trim() || attachments.length > 0) && !disabled && !isUploadingImage
                 ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
                 : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
             }`}
-            disabled={(!message.trim() && attachments.length === 0) || disabled}
+            disabled={(!message.trim() && attachments.length === 0) || disabled || isUploadingImage}
             aria-label={disabled ? "Sending..." : "Send message"}
           >
             {disabled ? (
