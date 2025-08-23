@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, User, X, LogIn, Plus, Check } from './Icons';
 import { User as FirebaseUser } from 'firebase/auth';
 import Button from './ui/Button';
@@ -14,6 +14,56 @@ interface SidebarProps {
   onSignOutClick: () => void;
   chat: ReturnType<typeof useChat>;
 }
+
+// Avatar component with fallback handling
+const UserAvatar: React.FC<{ 
+  user: FirebaseUser; 
+  className?: string; 
+  size?: number;
+}> = ({ user, className = '', size = 32 }) => {
+
+  // Generate initials from display name or email
+  const getInitials = () => {
+    if (user.displayName) {
+      return user.displayName
+        .split(' ')
+        .map(name => name.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
+  // Generate a consistent background color based on user info
+  const getBackgroundColor = () => {
+    const colors = [
+      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
+      'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
+    ];
+    const userString = user.displayName || user.email || user.uid;
+    const hash = userString.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  // Always show initials to avoid Google's rate limiting issues
+  // This provides a consistent, professional look without API dependency
+  return (
+    <div 
+      className={`${className} ${getBackgroundColor()} flex items-center justify-center text-white font-semibold rounded-full`}
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+      title={`${user.displayName || user.email}`}
+    >
+      {getInitials()}
+    </div>
+  );
+};
 
 const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
   {
@@ -36,10 +86,58 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     isLoading,
     isLoadingMore,
     hasMoreConversations,
-    loadMoreConversations
+    loadMoreConversations,
+    // Search functionality
+    setSearchQuery,
+    filteredConversations,
+    isSearching,
+    searchConversations,
+    clearSearch
   } = chat;
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced search function
+  const debouncedSearch = useCallback((query: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      setSearchQuery(query);
+      searchConversations(query);
+    }, 300); // 300ms debounce
+  }, [setSearchQuery, searchConversations]);
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setLocalSearchQuery(query);
+    debouncedSearch(query);
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setLocalSearchQuery('');
+    clearSearch();
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Determine which conversations to display
+  const displayConversations = localSearchQuery.trim() ? filteredConversations : conversations;
 
   // Handle scroll to load more conversations
   useEffect(() => {
@@ -50,6 +148,9 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
       const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
       const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100; // 100px threshold
       
+      // If searching, don't load more on scroll - search will handle loading more
+      if (localSearchQuery.trim()) return;
+      
       if (isNearBottom && hasMoreConversations && !isLoadingMore && !isLoading) {
         loadMoreConversations();
       }
@@ -57,7 +158,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
 
     scrollContainer.addEventListener('scroll', handleScroll);
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [hasMoreConversations, isLoadingMore, isLoading, loadMoreConversations]);
+  }, [hasMoreConversations, isLoadingMore, isLoading, loadMoreConversations, localSearchQuery]);
 
   const handleNewChat = () => {
     // Only redirect to welcome page by clearing current conversation
@@ -87,21 +188,23 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
   const formatDate = (date: Date) => {
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    const diffInDays = diffInHours / 24;
     
     if (diffInHours < 24) {
       return 'Today';
     } else if (diffInHours < 48) {
       return 'Yesterday';
-    } else if (diffInHours < 168) // 7 days
-    {
-      return date.toLocaleDateString([], { weekday: 'long' });
+    } else if (diffInDays < 7) {
+      return 'Last 7 days';
+    } else if (diffInDays < 30) {
+      return 'Last 30 days';
     } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return 'Older';
     }
   };
 
-  // Group conversations by date
-  const groupedConversations = conversations.reduce((groups: { [key: string]: typeof conversations }, conversation) => {
+  // Group conversations by date with proper ordering
+  const groupedConversations = displayConversations.reduce((groups: { [key: string]: typeof displayConversations }, conversation) => {
     const dateKey = formatDate(conversation.updatedAt);
     if (!groups[dateKey]) {
       groups[dateKey] = [];
@@ -109,6 +212,14 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     groups[dateKey].push(conversation);
     return groups;
   }, {});
+
+  // Define the order of groups
+  const groupOrder = ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Older'];
+  
+  // Sort the grouped conversations by the defined order
+  const orderedGroups = groupOrder
+    .filter(group => groupedConversations[group] && groupedConversations[group].length > 0)
+    .map(group => [group, groupedConversations[group]] as [string, typeof displayConversations]);
 
   return (
     <aside
@@ -139,9 +250,20 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
         <input
           type="text"
+          value={localSearchQuery}
+          onChange={handleSearchChange}
           placeholder={isCollapsed ? '' : "Search your threads..."}
-          className="w-full bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+          className="w-full bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md py-2 pl-9 pr-9 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
         />
+        {localSearchQuery && (
+          <button
+            onClick={handleClearSearch}
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            aria-label="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <div 
@@ -159,9 +281,20 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
           </div>
         ) : (
           <>
-            {Object.entries(groupedConversations).map(([dateGroup, convs]) => (
+            {/* Show search loading indicator */}
+            {isSearching && (
+              <div className="flex flex-col items-center justify-center py-4 text-zinc-500 dark:text-zinc-400">
+                <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <div className="text-xs">Searching...</div>
+              </div>
+            )}
+            
+            {/* Show search results or all conversations */}
+            {orderedGroups.map(([dateGroup, convs]) => (
               <div key={dateGroup} className="mb-4 last:mb-0">
-                <div className="text-xs font-semibold text-zinc-500 mb-2">{dateGroup}</div>
+                <div className="text-xs font-semibold text-zinc-500 mb-2">
+                  {localSearchQuery.trim() ? `${dateGroup} (${convs.length} result${convs.length !== 1 ? 's' : ''})` : dateGroup}
+                </div>
                 <ul className="space-y-1">
                   {convs.map((conversation) => (
                     <li 
@@ -173,7 +306,19 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
                           : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
                       }`}
                     >
-                      <div className="truncate pr-6">{conversation.title}</div>
+                      <div className="truncate pr-6">
+                        {localSearchQuery.trim() ? (
+                          // Highlight search terms in results
+                          <span dangerouslySetInnerHTML={{
+                            __html: conversation.title.replace(
+                              new RegExp(`(${localSearchQuery.trim()})`, 'gi'),
+                              '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
+                            )
+                          }} />
+                        ) : (
+                          conversation.title
+                        )}
+                      </div>
                       
                       {/* Delete confirmation buttons */}
                       {confirmingDelete === conversation.id ? (
@@ -214,15 +359,28 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
               </div>
             ))}
             
-            {/* Loading more indicator */}
-            {isLoadingMore && (
+            {/* Loading more indicator - only show when not searching */}
+            {!localSearchQuery.trim() && isLoadingMore && (
               <div className="flex flex-col items-center justify-center py-4 text-zinc-500 dark:text-zinc-400">
                 <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-2"></div>
                 <div className="text-xs">Loading more...</div>
               </div>
             )}
             
-            {conversations.length === 0 && (
+            {/* No results messages */}
+            {localSearchQuery.trim() && filteredConversations.length === 0 && !isSearching && (
+              <div className="text-center text-zinc-500 dark:text-zinc-400 text-sm py-8">
+                No conversations found for "<span className="font-medium">{localSearchQuery}</span>".<br />
+                <button
+                  onClick={handleClearSearch}
+                  className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 underline mt-2"
+                >
+                  Clear search
+                </button>
+              </div>
+            )}
+            
+            {!localSearchQuery.trim() && conversations.length === 0 && (
               <div className="text-center text-zinc-500 dark:text-zinc-400 text-sm py-8">
                 No conversations yet.<br />
                 Start a new chat to begin!
@@ -236,7 +394,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
         {user ? (
           <div className="flex flex-col">
             <div className="flex items-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer ayam">
-              <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email?.charAt(0).toUpperCase() || 'U'}&background=random`} alt={user.displayName || user.email || 'User avatar'} className="w-8 h-8 rounded-full" />
+              <UserAvatar user={user} size={32} />
               <div className={`ml-3 flex-grow block overflow-hidden ${isCollapsed ? 'md:hidden' : ''}`}>
                 <div className="font-semibold text-zinc-900 dark:text-white truncate">{user.displayName || user.email}</div>
                 <div className="text-sm text-zinc-500 dark:text-zinc-400">Signed In</div>

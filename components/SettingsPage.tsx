@@ -13,6 +13,55 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AppSettings } from '../App';
 import { ChatStorageService } from '../services/chatStorageService';
 
+// Avatar component with fallback handling (same as in Sidebar)
+const UserAvatar: React.FC<{ 
+  user: User; 
+  className?: string; 
+  size?: number;
+}> = ({ user, className = '', size = 96 }) => {
+
+  // Generate initials from display name or email
+  const getInitials = () => {
+    if (user.displayName) {
+      return user.displayName
+        .split(' ')
+        .map(name => name.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
+  // Generate a consistent background color based on user info
+  const getBackgroundColor = () => {
+    const colors = [
+      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
+      'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
+    ];
+    const userString = user.displayName || user.email || user.uid;
+    const hash = userString.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  // Always show initials to avoid Google's rate limiting issues
+  return (
+    <div 
+      className={`${className} ${getBackgroundColor()} flex items-center justify-center text-white font-semibold rounded-full ring-4 ring-white dark:ring-zinc-700`}
+      style={{ width: size, height: size, fontSize: size * 0.3 }}
+      title={`${user.displayName || user.email}`}
+    >
+      {getInitials()}
+    </div>
+  );
+};
+
 
 export type Tab = 'Account' | 'Customization' | 'Models' | 'API Keys' | 'Attachments' | 'Contact Us';
 
@@ -57,10 +106,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                 let byokMessageCount = 0;
 
                 // Count user messages by source from localStorage
-                conversations.forEach(conv => {
+                conversations.forEach((conv: any) => {
                     const messages = getMessagesFromLocal(conv.id);
-                    const userMessages = messages.filter(msg => msg.role === 'user');
-                    userMessages.forEach(msg => {
+                    const userMessages = messages.filter((msg: any) => msg.role === 'user');
+                    userMessages.forEach((msg: any) => {
                         if (msg.source === 'server') {
                             serverMessageCount++;
                         } else if (msg.source === 'byok') {
@@ -188,7 +237,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                         <div className="space-y-6">
                            {user ? (
                                <div className="flex flex-col items-center p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl text-center">
-                                   <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email?.charAt(0).toUpperCase() || 'U'}&background=random`} alt={user.displayName || user.email || 'User'} className="w-24 h-24 rounded-full mb-4 ring-4 ring-white dark:ring-zinc-700"/>
+                                   <UserAvatar user={user} size={96} className="mb-4" />
                                    <h2 className="font-bold text-xl text-zinc-900 dark:text-white truncate max-w-full">{user.displayName || user.email}</h2>
                                    {user.displayName && (
                                        <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-full">{user.email}</p>

@@ -28,6 +28,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
     controller: null
   });
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredConversations, setFilteredConversations] = useState<ChatConversation[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [allConversationsForSearch, setAllConversationsForSearch] = useState<ChatConversation[]>([]);
+
   const streamingMessageRef = useRef<string>('');
   const streamingReasoningRef = useRef<string>('');
 
@@ -643,6 +649,8 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
   const deleteConversation = useCallback((conversationId: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+    setFilteredConversations(prev => prev.filter(conv => conv.id !== conversationId));
+    setAllConversationsForSearch(prev => prev.filter(conv => conv.id !== conversationId));
     if (currentConversation?.id === conversationId) {
       setCurrentConversation(null);
     }
@@ -652,6 +660,57 @@ export const useChat = (settings?: AppSettings | undefined) => {
       console.error('Error deleting conversation:', error);
     });
   }, [currentConversation, user]);
+
+  // Search functionality
+  const searchConversations = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setFilteredConversations([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const normalizedQuery = query.toLowerCase().trim();
+    
+    // Filter from all loaded conversations
+    let filtered = allConversationsForSearch.filter(conv =>
+      conv.title.toLowerCase().includes(normalizedQuery)
+    );
+    
+    setFilteredConversations(filtered);
+    
+    // If we have few results and there are more conversations to load, keep loading more
+    let attempts = 0;
+    const maxAttempts = 5; // Prevent infinite loops
+    
+    while (filtered.length < 10 && hasMoreConversations && !isLoadingMore && attempts < maxAttempts) {
+      attempts++;
+      try {
+        await loadMoreConversations();
+        // Re-filter with updated conversations
+        filtered = allConversationsForSearch.filter(conv =>
+          conv.title.toLowerCase().includes(normalizedQuery)
+        );
+        setFilteredConversations(filtered);
+      } catch (error) {
+        console.error('Error loading more conversations during search:', error);
+        break;
+      }
+    }
+    
+    setIsSearching(false);
+  }, [allConversationsForSearch, hasMoreConversations, isLoadingMore, loadMoreConversations]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setFilteredConversations([]);
+    setIsSearching(false);
+  }, []);
+
+  // Update allConversationsForSearch when conversations change
+  React.useEffect(() => {
+    setAllConversationsForSearch(conversations);
+  }, [conversations]);
 
   return {
     conversations,
@@ -671,6 +730,13 @@ export const useChat = (settings?: AppSettings | undefined) => {
     deleteConversation,
     loadConversations,
     loadMoreConversations,
-    loadMoreMessages
+    loadMoreMessages,
+    // Search functionality
+    searchQuery,
+    setSearchQuery,
+    filteredConversations,
+    isSearching,
+    searchConversations,
+    clearSearch
   };
 };
