@@ -352,7 +352,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
           ...(capabilities.hasVision ? ["Vision"] : []),
         ],
         category: "server",
-        logo: "google",
         id: model.id,
       };
     });
@@ -912,8 +911,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                       onToggle={isServerModelToggleable(model.id) ? (enabled) =>
                         handleServerModelToggle(model.id, model.name, enabled)
                       : () => {}} // No-op for fallback models
-                      animationsDisabled={settings.animationsDisabled}
-                      logo={model.logo}
                       disabled={!isServerModelToggleable(model.id)} // Disable toggle for fallback models
                       hideScroll={true}
                     />
@@ -1165,9 +1162,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                         enabled
                                       )
                                     }
-                                    animationsDisabled={
-                                      settings.animationsDisabled
-                                    }
                                   />
                                 </div>
                               ))}
@@ -1215,9 +1209,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                                         model.name,
                                         enabled
                                       )
-                                    }
-                                    animationsDisabled={
-                                      settings.animationsDisabled
                                     }
                                   />
                                 </div>

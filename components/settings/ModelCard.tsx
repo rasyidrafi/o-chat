@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
 import { Google } from "../Icons";
 
 interface ModelCardProps {
@@ -8,7 +7,6 @@ interface ModelCardProps {
   features: string[];
   isEnabled: boolean;
   onToggle: (enabled: boolean) => void;
-  animationsDisabled?: boolean;
   logo?: string;
   disabled?: boolean;
   hideScroll?: boolean;
@@ -20,7 +18,6 @@ const ModelCard: React.FC<ModelCardProps> = ({
   features,
   isEnabled,
   onToggle,
-  animationsDisabled = false,
   logo,
   disabled = false,
   hideScroll = false,
@@ -72,31 +69,24 @@ const ModelCard: React.FC<ModelCardProps> = ({
               </h3>
             </div>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isEnabled}
-            onClick={() => !disabled && onToggle(!isEnabled)}
-            disabled={disabled}
-            className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 dark:ring-offset-zinc-800 ${
-              disabled
-                ? `cursor-not-allowed ${
-                    isEnabled
-                      ? "bg-purple-300 dark:bg-purple-600/50"
-                      : "bg-zinc-300 dark:bg-zinc-600"
-                  }`
-                : `cursor-pointer ${
-                    isEnabled ? "bg-pink-500" : "bg-zinc-300 dark:bg-zinc-600"
-                  }`
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                isEnabled ? "translate-x-5" : "translate-x-0"
+          {!disabled && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isEnabled}
+              onClick={() => onToggle(!isEnabled)}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 dark:ring-offset-zinc-800 cursor-pointer ${
+                isEnabled ? "bg-pink-500" : "bg-zinc-300 dark:bg-zinc-600"
               }`}
-            />
-          </button>
+            >
+              <span
+                aria-hidden="true"
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  isEnabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          )}
         </div>
 
         <div className="flex-1 flex flex-col gap-3 min-h-0">
