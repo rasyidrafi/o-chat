@@ -6,7 +6,7 @@ import { Model } from '../types/providers';
  */
 export const DEFAULT_SYSTEM_MODELS: Model[] = [
     {
-        id: 'gemini-1.5-flash',
+        id: 'Gemini 1.5 Flash',
         name: 'Gemini 1.5 Flash',
         description: "Google's fast and efficient model optimized for high-frequency tasks with multimodal capabilities.",
         supported_parameters: ['tools', 'vision']
