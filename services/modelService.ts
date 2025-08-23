@@ -13,7 +13,9 @@ export const getModelCapabilities = (supportedParameters: string[]) => {
     const capabilities = {
         hasTools: params.some(p => p.includes('tools') || p.includes('tool_choice')),
         hasReasoning: params.some(p => p.includes('reasoning') || p.includes('include_reasoning')),
-        hasVision: params.some(p => p.includes('vision') || p.includes('image'))
+        hasVision: params.some(p => p.includes('vision') || p.includes('image')),
+        hasImageGeneration: params.some(p => p.includes('image_generation')),
+        hasImageEditing: params.some(p => p.includes('image_editing'))
     };
     
     return capabilities;

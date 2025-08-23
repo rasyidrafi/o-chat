@@ -651,6 +651,59 @@ const Message: React.FC<MessageProps> = ({
   }, [message.content, processor, isUser, isProcessorReady]);
 
   const renderContent = () => {
+    // Handle image generation messages
+    if (message.messageType === 'image_generation') {
+      if (isUser) {
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="font-medium">Image Generation Request:</span>
+            </div>
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+              {typeof message.content === 'string' ? message.content : 
+                message.content.find(item => item.type === 'text')?.text || ''}
+            </div>
+            {message.imageGenerationParams && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-500 space-y-1">
+                <div>Size: {message.imageGenerationParams.size}</div>
+                {message.imageGenerationParams.seed !== undefined && message.imageGenerationParams.seed !== -1 && (
+                  <div>Seed: {message.imageGenerationParams.seed}</div>
+                )}
+                {message.imageGenerationParams.guidance_scale && (
+                  <div>Guidance Scale: {message.imageGenerationParams.guidance_scale}</div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="space-y-3">
+            <div className="text-sm leading-relaxed">
+              {typeof message.content === 'string' ? message.content : 
+                message.content.find(item => item.type === 'text')?.text || 'Generated image'}
+            </div>
+            {message.generatedImageUrl && (
+              <div className="max-w-md">
+                <img
+                  src={message.generatedImageUrl}
+                  alt="Generated image"
+                  className="w-full h-auto rounded-lg shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(message.generatedImageUrl, '_blank')}
+                  title="Click to view full size"
+                />
+              </div>
+            )}
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-500">
+                Image saved to your library
+              </div>
+            )}
+          </div>
+        );
+      }
+    }
+
     if (isUser) {
       // Handle user messages with potentially complex content
       if (typeof message.content === 'string') {

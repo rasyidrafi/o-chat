@@ -755,6 +755,83 @@ export const useChat = (settings?: AppSettings | undefined) => {
     }
   }, [currentConversation, createNewConversation, updateMessage, updateMessageReasoning, user, settings]);
 
+  const generateImage = useCallback(async (
+    prompt: string,
+    imageUrl: string,
+    model: string,
+    params?: any
+  ) => {
+    if (!prompt.trim()) return;
+
+    const messageId = generateId();
+    const timestamp = new Date();
+
+    // Create user message
+    const userMessage: ChatMessage = {
+      id: messageId + '_user',
+      role: 'user',
+      content: prompt,
+      timestamp,
+      source: getModelSource(model),
+      messageType: 'image_generation',
+      imageGenerationParams: {
+        prompt,
+        size: params?.size || '1024x1024',
+        seed: params?.seed,
+        guidance_scale: params?.guidance_scale,
+        watermark: false,
+      }
+    };
+
+    // Create AI response message with the generated image
+    const aiMessage: ChatMessage = {
+      id: messageId + '_ai',
+      role: 'assistant',
+      content: `Generated image for: "${prompt}"`,
+      timestamp: new Date(timestamp.getTime() + 1),
+      model,
+      modelName: model,
+      source: getModelSource(model),
+      messageType: 'image_generation',
+      generatedImageUrl: imageUrl,
+      attachments: params?.attachment ? [params.attachment] : undefined,
+    };
+
+    let conversation = currentConversation;
+    let isNewConversation = false;
+
+    // Create new conversation if none exists
+    if (!conversation) {
+      conversation = createNewConversation(createSmartTitle(prompt), model);
+      isNewConversation = true;
+    }
+
+    // Add both messages to the conversation
+    const updatedConversation = {
+      ...conversation,
+      messages: [...conversation.messages, userMessage, aiMessage],
+      updatedAt: timestamp,
+    };
+
+    // Update state
+    if (isNewConversation) {
+      setConversations(prev => [updatedConversation, ...prev.filter(c => c.id !== updatedConversation.id)]);
+    } else {
+      setConversations(prev => prev.map(conv =>
+        conv.id === conversation!.id ? updatedConversation : conv
+      ));
+    }
+
+    setCurrentConversation(updatedConversation);
+
+    // Save to storage
+    try {
+      await ChatStorageService.saveConversation(updatedConversation, user);
+    } catch (error) {
+      console.error('Error saving image generation conversation:', error);
+    }
+  }, [currentConversation, createNewConversation, user, getModelSource]);
+
   const stopStreaming = useCallback(() => {
     if (streamingState.controller) {
       streamingState.controller.abort();
@@ -863,6 +940,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     hasMoreMessages,
     isCreatingNewChat,
     sendMessage,
+    generateImage,
     stopStreaming,
     createNewConversation,
     selectConversation,

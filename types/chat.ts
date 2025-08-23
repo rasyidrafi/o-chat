@@ -29,6 +29,16 @@ export interface ChatMessage {
   reasoning?: string;
   isReasoningComplete?: boolean;
   attachments?: MessageAttachment[];
+  messageType?: 'chat' | 'image_generation';
+  generatedImageUrl?: string;
+  imageGenerationParams?: {
+    prompt: string;
+    size: string;
+    response_format: 'url' | 'b64_json';
+    seed?: number;
+    guidance_scale?: number;
+    watermark?: boolean;
+  };
 }
 
 export interface MessageAttachment {

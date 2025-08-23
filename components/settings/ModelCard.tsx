@@ -32,6 +32,10 @@ const ModelCard: React.FC<ModelCardProps> = ({
         return "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400";
       case "search url":
         return "bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-400";
+      case "image generation":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400";
+      case "image editing":
+        return "bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-400";
       default:
         return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
     }

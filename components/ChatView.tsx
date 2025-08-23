@@ -39,6 +39,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     currentConversation,
     streamingState,
     sendMessage,
+    generateImage,
     stopStreaming,
     isLoading,
     isLoadingMessages,
@@ -93,6 +94,25 @@ const ChatView: React.FC<ChatViewProps> = ({
       }, 50);
     },
     [sendMessage, handleScrollToBottom]
+  );
+
+  const handleImageGenerate = useCallback(
+    (
+      prompt: string,
+      imageUrl: string,
+      model: string,
+      source: string = "system",
+      providerId?: string,
+      params?: any
+    ) => {
+      generateImage(prompt, imageUrl, model, source, providerId, params);
+      
+      // Trigger scroll to bottom after a brief delay to ensure message is added
+      setTimeout(() => {
+        handleScrollToBottom();
+      }, 50);
+    },
+    [generateImage, handleScrollToBottom]
   );
 
   const handlePromptSelect = useCallback(
@@ -320,6 +340,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         >
           <ChatInput
             onMessageSend={handleSendMessage}
+            onImageGenerate={handleImageGenerate}
             onModelSelect={handleModelSelection}
             disabled={streamingState.isStreaming || isLoading}
             user={user}

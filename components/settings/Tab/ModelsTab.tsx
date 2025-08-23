@@ -22,7 +22,7 @@ const getProviderModelsKey = (providerId: string): string => {
 
 const loadSelectedModelsFromStorage = (
   providerId: string
-): Array<{ id: string; name: string }> => {
+): Array<{ id: string; name: string; supported_parameters?: string[] }> => {
   if (!providerId) return [];
 
   try {
@@ -40,7 +40,7 @@ const loadSelectedModelsFromStorage = (
 
 const saveSelectedModelsToStorage = (
   providerId: string,
-  selectedModels: Array<{ id: string; name: string }>
+  selectedModels: Array<{ id: string; name: string; supported_parameters?: string[] }>
 ) => {
   if (!providerId) return;
 
@@ -64,7 +64,7 @@ const getServerModelsKey = (): string => {
   return 'selected_server_models';
 };
 
-const loadSelectedServerModelsFromStorage = (): Array<{ id: string; name: string }> => {
+const loadSelectedServerModelsFromStorage = (): Array<{ id: string; name: string; supported_parameters?: string[] }> => {
   try {
     const key = getServerModelsKey();
     const stored = localStorage.getItem(key);
@@ -79,7 +79,7 @@ const loadSelectedServerModelsFromStorage = (): Array<{ id: string; name: string
 };
 
 const saveSelectedServerModelsToStorage = (
-  selectedModels: Array<{ id: string; name: string }>
+  selectedModels: Array<{ id: string; name: string; supported_parameters?: string[] }>
 ) => {
   try {
     const key = getServerModelsKey();
@@ -126,12 +126,12 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
   // Selected server models (all models except fallback ones can be toggled)
   const [selectedServerModels, setSelectedServerModels] = useState<
-    Array<{ id: string; name: string }>
+    Array<{ id: string; name: string; supported_parameters?: string[] }>
   >([]);
 
   // All selected models for current provider stored in localStorage
   const [selectedModels, setSelectedModels] = useState<
-    Array<{ id: string; name: string }>
+    Array<{ id: string; name: string; supported_parameters?: string[] }>
   >([]);
 
   // Load selected models from localStorage when provider changes
@@ -342,6 +342,32 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       
     return modelsToUse.map(model => {
       const capabilities = getModelCapabilities(model.supported_parameters);
+      
+      // If model supports image generation, only show Image Generation chip
+      if (capabilities.hasImageGeneration) {
+        return {
+          name: model.name,
+          description: model.description,
+          features: ["Image Generation"],
+          category: "server",
+          id: model.id,
+          supported_parameters: model.supported_parameters,
+        };
+      }
+      
+      // If model supports image editing, only show Image Editing chip
+      if (capabilities.hasImageEditing) {
+        return {
+          name: model.name,
+          description: model.description,
+          features: ["Image Editing"],
+          category: "server",
+          id: model.id,
+          supported_parameters: model.supported_parameters,
+        };
+      }
+      
+      // For other models, show the regular capabilities
       return {
         name: model.name,
         description: model.description,
@@ -353,6 +379,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         ],
         category: "server",
         id: model.id,
+        supported_parameters: model.supported_parameters,
       };
     });
   }, [systemModels, systemModelsError]);
@@ -400,7 +427,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     };
   }, [availableModels, serverSelectedFeatures, serverSearchQuery, serverCurrentPage, itemsPerPage]);
 
-  const featureOptions = ["Tool Calling", "Reasoning", "Vision"];
+  const featureOptions = ["Tool Calling", "Reasoning", "Vision", "Image Generation", "Image Editing"];
 
   // Filter and paginate models
   const filteredAndPaginatedModels = useMemo(() => {
@@ -418,6 +445,34 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         // Use fetched models for custom providers
         byokModels = fetchedModels.map((model) => {
           const capabilities = getModelCapabilities(model.supported_parameters);
+          
+          // If model supports image generation, only show Image Generation chip
+          if (capabilities.hasImageGeneration) {
+            return {
+              name: model.name,
+              description: model.description,
+              features: ["Image Generation"],
+              category: "byok",
+              id: model.id,
+              providerId: selectedProvider,
+              supported_parameters: model.supported_parameters,
+            };
+          }
+          
+          // If model supports image editing, only show Image Editing chip
+          if (capabilities.hasImageEditing) {
+            return {
+              name: model.name,
+              description: model.description,
+              features: ["Image Editing"],
+              category: "byok",
+              id: model.id,
+              providerId: selectedProvider,
+              supported_parameters: model.supported_parameters,
+            };
+          }
+          
+          // For other models, show the regular capabilities
           return {
             name: model.name,
             description: model.description,
@@ -430,6 +485,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             category: "byok",
             id: model.id,
             providerId: selectedProvider,
+            supported_parameters: model.supported_parameters,
           };
         });
       } else {
@@ -499,6 +555,32 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       // Use fetched models for custom providers
       allByokModels = fetchedModels.map((model) => {
         const capabilities = getModelCapabilities(model.supported_parameters);
+        
+        // If model supports image generation, only show Image Generation chip
+        if (capabilities.hasImageGeneration) {
+          return {
+            name: model.name,
+            description: model.description,
+            features: ["Image Generation"],
+            category: "byok",
+            id: model.id,
+            providerId: selectedProvider,
+          };
+        }
+        
+        // If model supports image editing, only show Image Editing chip
+        if (capabilities.hasImageEditing) {
+          return {
+            name: model.name,
+            description: model.description,
+            features: ["Image Editing"],
+            category: "byok",
+            id: model.id,
+            providerId: selectedProvider,
+          };
+        }
+        
+        // For other models, show the regular capabilities
         return {
           name: model.name,
           description: model.description,
@@ -550,7 +632,27 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     enabled: boolean
   ) => {
     if (enabled) {
-      setSelectedModels((prev) => [...prev, { id: modelId, name: modelName }]);
+      // Find the model in the current filtered results to get its supported_parameters
+      let supported_parameters: string[] = [];
+      
+      if (selectedProvider) {
+        const isCustomProvider = selectedProvider.includes("-");
+        if (isCustomProvider) {
+          // For custom providers, find in fetchedModels
+          const model = fetchedModels.find(m => m.id === modelId);
+          supported_parameters = model?.supported_parameters || [];
+        } else {
+          // For built-in providers, find in availableModels
+          const model = availableModels.find(m => m.id === modelId);
+          supported_parameters = model?.supported_parameters || [];
+        }
+      }
+      
+      setSelectedModels((prev) => [...prev, { 
+        id: modelId, 
+        name: modelName, 
+        supported_parameters 
+      }]);
     } else {
       setSelectedModels((prev) => prev.filter((model) => model.id !== modelId));
     }
@@ -597,7 +699,15 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     }
 
     if (enabled) {
-      setSelectedServerModels((prev) => [...prev, { id: modelId, name: modelName }]);
+      // Find the model in availableModels to get its supported_parameters
+      const model = availableModels.find(m => m.id === modelId);
+      const supported_parameters = model?.supported_parameters || [];
+      
+      setSelectedServerModels((prev) => [...prev, { 
+        id: modelId, 
+        name: modelName, 
+        supported_parameters 
+      }]);
     } else {
       setSelectedServerModels((prev) => prev.filter((model) => model.id !== modelId));
     }
@@ -630,7 +740,11 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     // Select all available non-fallback server models
     const allToggleableModels = availableModels
       .filter(model => model.category === "server" && isServerModelToggleable(model.id))
-      .map(model => ({ id: model.id, name: model.name }));
+      .map(model => ({ 
+        id: model.id, 
+        name: model.name, 
+        supported_parameters: model.supported_parameters || [] 
+      }));
     setSelectedServerModels(allToggleableModels);
   };
 
