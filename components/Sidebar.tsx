@@ -127,7 +127,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     }
   };
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -306,7 +306,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
                           : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
                       }`}
                     >
-                      <div className="truncate pr-6">
+                      <div className="truncate">
                         {localSearchQuery.trim() ? (
                           // Highlight search terms in results
                           <span dangerouslySetInnerHTML={{
@@ -347,7 +347,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
                       ) : (
                         <button
                           onClick={(e) => handleDeleteClick(e, conversation)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded transition-all"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded transition-all shadow-sm"
                           aria-label="Delete conversation"
                         >
                           <X className="w-3 h-3" />

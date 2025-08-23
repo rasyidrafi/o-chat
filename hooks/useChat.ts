@@ -169,6 +169,48 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
   const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
+  // Smart title truncation that cuts at word boundaries
+  const createSmartTitle = (text: string, maxLength: number = 50): string => {
+    // Clean the text first (remove extra whitespace)
+    const cleanText = text.trim().replace(/\s+/g, ' ');
+    
+    if (cleanText.length <= maxLength) {
+      return cleanText;
+    }
+    
+    // Find the last space before the character limit
+    const truncated = cleanText.substring(0, maxLength);
+    const lastSpaceIndex = truncated.lastIndexOf(' ');
+    
+    // If there's a space within reasonable distance (not too short), cut there
+    if (lastSpaceIndex > maxLength * 0.6) { // Don't cut if it makes title too short (less than 60% of limit)
+      return truncated.substring(0, lastSpaceIndex) + '...';
+    }
+    
+    // If no good word boundary found, try to extend to complete the current word
+    const nextSpaceIndex = cleanText.indexOf(' ', maxLength);
+    if (nextSpaceIndex !== -1 && nextSpaceIndex - maxLength < 10) { // Allow up to 10 extra chars to complete word
+      return cleanText.substring(0, nextSpaceIndex) + '...';
+    }
+    
+    // If extending would make it too long, try to find a better breaking point
+    // Look for punctuation marks near the limit
+    const punctuationPattern = /[.!?;:,]/;
+    for (let i = maxLength - 1; i >= maxLength * 0.7; i--) {
+      if (punctuationPattern.test(truncated[i])) {
+        return truncated.substring(0, i + 1) + '..';
+      }
+    }
+    
+    // Last resort: cut at character limit but avoid breaking mid-word
+    if (lastSpaceIndex > maxLength * 0.4) { // Accept shorter title if it's not too short
+      return truncated.substring(0, lastSpaceIndex) + '...';
+    }
+    
+    // Very last resort: cut at character limit
+    return truncated + '...';
+  };
+
   const createNewConversation = useCallback((title: string = 'New Chat', model: string = 'gemini-1.5-flash'): ChatConversation => {
     // Prevent creating new conversation if already creating one
     if (isCreatingNewChat) return currentConversation!;
@@ -334,7 +376,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     let conversation = currentConversation;
     if (!conversation) {
       // Create new conversation with message content as title
-      const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+      const title = createSmartTitle(content);
       conversation = {
         id: generateId(),
         title,
@@ -347,7 +389,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       setCurrentConversation(conversation);
     } else if (conversation.messages.length === 0 && conversation.title === 'New Chat') {
       // Update existing empty conversation title with the message content
-      const messageTitle = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+      const messageTitle = createSmartTitle(content);
       conversation = {
         ...conversation,
         title: messageTitle,
