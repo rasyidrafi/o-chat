@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import SettingsTextarea from '../SettingsTextarea';
 import SettingsToggle from '../SettingsToggle';
 import CustomDropdown from '../../ui/CustomDropdown';
-import Slider from '../../ui/Slider';
+import FontSizeSelector from '../FontSizeSelector';
 import FontPreview from '../FontPreview';
 import Button from '../../ui/Button';
 import { AppSettings } from '../../../App';
@@ -71,14 +71,14 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Slider
+                            <FontSizeSelector
                                 options={[
                                     { value: 1, label: 'Default' },
                                     { value: 1.15, label: 'Big' },
                                     { value: 1.3, label: 'Large' }
                                 ]}
                                 value={settings.fontSize}
-                                onChange={(fontSize) => updateSettings({ fontSize })}
+                                onChange={(fontSize: number) => updateSettings({ fontSize })}
                                 animationsDisabled={settings.animationsDisabled}
                             />
                         </div>
