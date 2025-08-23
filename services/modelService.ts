@@ -10,11 +10,13 @@ import { auth } from '../firebase';
 export const getModelCapabilities = (supportedParameters: string[]) => {
     const params = supportedParameters.map(p => p.toLowerCase());
     
-    return {
+    const capabilities = {
         hasTools: params.some(p => p.includes('tools') || p.includes('tool_choice')),
         hasReasoning: params.some(p => p.includes('reasoning') || p.includes('include_reasoning')),
         hasVision: params.some(p => p.includes('vision') || p.includes('image'))
     };
+    
+    return capabilities;
 }
 
 /**
@@ -149,7 +151,7 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
                 id: modelId,
                 name: descriptionInfo?.name || model.name || model.id || model.model || '',
                 description: descriptionInfo?.description || model.description || '',
-                supported_parameters: modelSupportedParameters || descriptionInfo?.supported_parameters || []
+                supported_parameters: descriptionInfo?.supported_parameters || modelSupportedParameters || []
             };
         }) as Model[];
         
