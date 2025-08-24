@@ -68,6 +68,20 @@ const ChatInput = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Listen for image generation trigger event
+  useEffect(() => {
+    const handleImageGenerationTrigger = () => {
+      if (inputMode === 'image_generation') {
+        handleImageGenerateClick();
+      }
+    };
+
+    window.addEventListener('triggerImageGeneration', handleImageGenerationTrigger);
+    return () => {
+      window.removeEventListener('triggerImageGeneration', handleImageGenerationTrigger);
+    };
+  }, [inputMode, handleImageGenerateClick]);
+
   // Check if current model supports image generation
   const checkCurrentModelCapabilities = useCallback(
     (options: ModelOption[]) => {

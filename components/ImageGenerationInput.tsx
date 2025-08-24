@@ -26,7 +26,9 @@ const ImageGenerationInput = ({
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      // Call parent's onGenerate through the parent component
+      // Trigger the parent's generate function by dispatching a custom event
+      const generateEvent = new CustomEvent('triggerImageGeneration');
+      window.dispatchEvent(generateEvent);
     }
   };
 
