@@ -1,12 +1,14 @@
 // Clean Message component with unified markdown processing
 import React, { useMemo, useEffect, useRef, useState } from "react";
-import { ChatMessage, MessageContent, type TextContent, type ImageContent } from "../types/chat";
+import { ChatMessage, MessageAttachment } from "../types/chat";
 import { motion, AnimatePresence } from "framer-motion";
 import TypingIndicator from "./TypingIndicator";
 import ReasoningDisplay from "./ReasoningDisplay";
 import HorizontalRule from "./ui/HorizontalRule";
 import * as prod from "react/jsx-runtime";
 import { ImageUploadService } from "../services/imageUploadService";
+import { ImageGenerationService } from "../services/imageGenerationService";
+import LoadingIndicator from "./ui/LoadingIndicator";
 
 // Lazy load heavy dependencies only when needed
 let mermaidPromise: Promise<any> | null = null;
@@ -42,26 +44,51 @@ const getImageUrlFromPath = async (gcsPath: string): Promise<string> => {
   try {
     return await ImageUploadService.getImageUrl(gcsPath);
   } catch (error) {
-    console.error('Error getting image URL:', error);
-    return '';
+    console.error("Error getting image URL:", error);
+    return "";
   }
 };
 
-// Component for rendering image content
-const ImageContentComponent: React.FC<{ 
-  url: string; 
-  alt?: string; 
+const ImageContentComponent: React.FC<{
+  url: string;
+  alt?: string;
   gcsPath?: string;
-}> = ({ url, alt = "Uploaded image", gcsPath }) => {
+  attachment?: MessageAttachment;
+  imageSize?: string;
+  isUserUpload?: boolean; // Add this prop
+}> = ({
+  url,
+  alt = "Uploaded image",
+  gcsPath,
+  attachment,
+  imageSize,
+  isUserUpload = false,
+}) => {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [isLoading, setIsLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
+
+  // Calculate dimensions based on whether it's a user upload or generated image
+  const dimensions = useMemo(() => {
+    if (isUserUpload) {
+      // For user uploads, use flexible sizing with max constraints
+      return null; // We'll handle this with CSS classes
+    } else {
+      // For generated images, use calculated dimensions
+      const sizeToUse = imageSize || "1024x1024";
+      return ImageGenerationService.calculatePlaceholderDimensions(
+        sizeToUse,
+        320
+      );
+    }
+  }, [imageSize, isUserUpload]);
 
   useEffect(() => {
-    // If we have a GCS path, get the current URL
     if (gcsPath && gcsPath !== url) {
       setIsLoading(true);
-      getImageUrlFromPath(gcsPath).then(newUrl => {
+      getImageUrlFromPath(gcsPath).then((newUrl) => {
         if (newUrl) {
           setCurrentUrl(newUrl);
         }
@@ -70,46 +97,148 @@ const ImageContentComponent: React.FC<{
     }
   }, [gcsPath, url]);
 
-  // Reset image loading when URL changes
   useEffect(() => {
     setImageLoading(true);
+    setImageError(false);
+    setShowExpiredPlaceholder(false);
   }, [currentUrl]);
 
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoading(false);
+
+    if (attachment?.isDirectUrl) {
+      setShowExpiredPlaceholder(true);
+    }
+  };
+
+  // Loading state
   if (isLoading) {
+    if (isUserUpload) {
+      return (
+        <div className="w-48 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
+          <div className="text-zinc-500 text-xs">Loading...</div>
+        </div>
+      );
+    } else {
+      return (
+        <div
+          className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center"
+          style={{
+            width: `${dimensions!.width}px`,
+            height: `${dimensions!.height}px`,
+          }}
+        >
+          <div className="text-zinc-500 text-xs">Loading...</div>
+        </div>
+      );
+    }
+  }
+
+  // Expired placeholder
+  if (showExpiredPlaceholder) {
+    const placeholderDimensions = dimensions || { width: 320, height: 240 };
     return (
-      <div className="w-32 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
-        <div className="text-zinc-500 text-xs">Loading...</div>
+      <div
+        className="bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700 rounded-lg flex flex-col items-center justify-center border-2 border-dashed border-zinc-300 dark:border-zinc-600 relative overflow-hidden"
+        style={{
+          width: `${placeholderDimensions.width}px`,
+          height: `${placeholderDimensions.height}px`,
+        }}
+      >
+        <div className="text-zinc-400 dark:text-zinc-500 text-center p-4">
+          <div className="text-lg mb-2">🖼️</div>
+          <div className="text-xs font-medium">Image Expired</div>
+          <div className="text-xs opacity-70 mt-1">
+            Generated image is no longer available
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative inline-block">
-      {imageLoading && (
-        <div className="w-48 h-24 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
+    <div className="relative flex justify-center rounded-lg bg-zinc-200 dark:bg-black">
+      {/* Loading placeholder */}
+      {imageLoading && !imageError && !showExpiredPlaceholder && (
+        <div
+          className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center ${
+            isUserUpload ? "w-48 h-32" : ""
+          }`}
+          style={
+            !isUserUpload
+              ? {
+                  width: `${dimensions!.width}px`,
+                  height: `${dimensions!.height}px`,
+                }
+              : {}
+          }
+        >
           <div className="flex items-center space-x-2 text-zinc-500">
             <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
-            <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div
+              className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
+              style={{ animationDelay: "0.1s" }}
+            ></div>
+            <div
+              className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
+              style={{ animationDelay: "0.2s" }}
+            ></div>
           </div>
         </div>
       )}
-      <img
-        src={currentUrl}
-        alt={alt}
-        className={`max-w-48 h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity ${imageLoading ? 'opacity-0 absolute' : 'opacity-100'}`}
-        style={{ 
-          maxHeight: '150px',
-          objectFit: 'contain'
-        }}
-        onLoad={() => setImageLoading(false)}
-        onError={() => setImageLoading(false)}
-        onClick={() => {
-          // Open image in new tab for full view
-          window.open(currentUrl, '_blank');
-        }}
-        title="Click to view full size"
-      />
+
+      {/* Actual image */}
+      {!imageError && !showExpiredPlaceholder ? (
+        <img
+          src={currentUrl}
+          alt={alt}
+          className={`cursor-pointer hover:opacity-90 transition-opacity ${
+            imageLoading ? "opacity-0 absolute" : "opacity-100"
+          }`}
+          style={
+            isUserUpload
+              ? {
+                  // For user uploads: maintain aspect ratio with max constraints
+                  maxWidth: "320px",
+                  maxHeight: "240px",
+                  width: "auto",
+                  height: "auto",
+                  objectFit: "contain",
+                }
+              : {
+                  // For generated images: use exact calculated dimensions
+                  width: `${dimensions!.width}px`,
+                  height: `${dimensions!.height}px`,
+                  objectFit: "cover",
+                }
+          }
+          onLoad={() => setImageLoading(false)}
+          onError={handleImageError}
+          onClick={() => {
+            window.open(currentUrl, "_blank");
+          }}
+          title="Click to view full size"
+        />
+      ) : imageError && !showExpiredPlaceholder ? (
+        <div
+          className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center ${
+            isUserUpload ? "w-48 h-32" : ""
+          }`}
+          style={
+            !isUserUpload
+              ? {
+                  width: `${dimensions!.width}px`,
+                  height: `${dimensions!.height}px`,
+                }
+              : {}
+          }
+        >
+          <div className="text-zinc-500 text-xs text-center px-2">
+            {gcsPath ? "Error loading image" : "Failed to load image"}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -548,7 +677,7 @@ const Message: React.FC<MessageProps> = ({
       const timer = setTimeout(() => {
         setIsContentReady(true);
       }, 50);
-      
+
       const timer2 = setTimeout(() => {
         onLoaded();
       }, 300);
@@ -630,16 +759,16 @@ const Message: React.FC<MessageProps> = ({
 
     try {
       // Handle string content (assistant messages are always strings)
-      if (typeof message.content === 'string') {
+      if (typeof message.content === "string") {
         const result = processor.processSync(message.content);
         return result.result as React.ReactElement;
       }
-      
+
       // This shouldn't happen for assistant messages, but handle just in case
       return null;
     } catch (error) {
       console.error("Markdown processing error:", error);
-      if (typeof message.content === 'string') {
+      if (typeof message.content === "string") {
         return (
           <div className="text-sm leading-relaxed whitespace-pre-wrap">
             {message.content}
@@ -652,7 +781,7 @@ const Message: React.FC<MessageProps> = ({
 
   const renderContent = () => {
     // Handle image generation messages
-    if (message.messageType === 'image_generation') {
+    if (message.messageType === "image_generation") {
       if (isUser) {
         return (
           <div className="space-y-2">
@@ -660,17 +789,23 @@ const Message: React.FC<MessageProps> = ({
               <span className="font-medium">Image Generation Request:</span>
             </div>
             <div className="text-sm leading-relaxed whitespace-pre-wrap">
-              {typeof message.content === 'string' ? message.content : 
-                message.content.find(item => item.type === 'text')?.text || ''}
+              {typeof message.content === "string"
+                ? message.content
+                : message.content.find((item) => item.type === "text")?.text ||
+                  ""}
             </div>
             {message.imageGenerationParams && (
               <div className="text-xs text-zinc-500 dark:text-zinc-500 space-y-1">
                 <div>Size: {message.imageGenerationParams.size}</div>
-                {message.imageGenerationParams.seed !== undefined && message.imageGenerationParams.seed !== -1 && (
-                  <div>Seed: {message.imageGenerationParams.seed}</div>
-                )}
+                {message.imageGenerationParams.seed !== undefined &&
+                  message.imageGenerationParams.seed !== -1 && (
+                    <div>Seed: {message.imageGenerationParams.seed}</div>
+                  )}
                 {message.imageGenerationParams.guidance_scale && (
-                  <div>Guidance Scale: {message.imageGenerationParams.guidance_scale}</div>
+                  <div>
+                    Guidance Scale:{" "}
+                    {message.imageGenerationParams.guidance_scale}
+                  </div>
                 )}
               </div>
             )}
@@ -680,20 +815,55 @@ const Message: React.FC<MessageProps> = ({
         return (
           <div className="space-y-3">
             <div className="text-sm leading-relaxed">
-              {typeof message.content === 'string' ? message.content : 
-                message.content.find(item => item.type === 'text')?.text || 'Generated image'}
+              {typeof message.content === "string"
+                ? message.content
+                : message.content.find((item) => item.type === "text")?.text ||
+                  "Generated image"}
             </div>
-            {message.generatedImageUrl && (
+            {message.isGeneratingImage && message.imageGenerationParams ? (
               <div className="max-w-md">
-                <img
-                  src={message.generatedImageUrl}
+                {(() => {
+                  const dimensions =
+                    ImageGenerationService.calculatePlaceholderDimensions(
+                      message.imageGenerationParams.size || "1024x1024",
+                      320
+                    );
+
+                  return (
+                    <div
+                      className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center relative overflow-hidden"
+                      style={{
+                        width: dimensions.width,
+                        height: dimensions.height,
+                        aspectRatio: dimensions.aspectRatio,
+                      }}
+                    >
+                      {/* Shimmer effect background */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer bg-[length:200%_100%]"></div>
+
+                      {/* Loading content */}
+                      <div className="flex flex-col items-center space-y-3 text-zinc-500 dark:text-zinc-400 z-10">
+                        <LoadingIndicator size="md" color="primary" />
+                        <div className="text-xs text-center px-4">
+                          <div>Generating image...</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : message.generatedImageUrl ? (
+              <div className="max-w-md">
+                <ImageContentComponent
+                  url={message.generatedImageUrl}
                   alt="Generated image"
-                  className="w-full h-auto rounded-lg shadow-md cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => window.open(message.generatedImageUrl, '_blank')}
-                  title="Click to view full size"
+                  gcsPath={message.attachments?.[0]?.gcsPath}
+                  attachment={message.attachments?.[0]}
+                  imageSize={message.imageGenerationParams?.size}
+                  isUserUpload={false} // Add this (or omit since it's default)
                 />
               </div>
-            )}
+            ) : null}
             {message.attachments && message.attachments.length > 0 && (
               <div className="text-xs text-zinc-500 dark:text-zinc-500">
                 Image saved to your library
@@ -706,7 +876,7 @@ const Message: React.FC<MessageProps> = ({
 
     if (isUser) {
       // Handle user messages with potentially complex content
-      if (typeof message.content === 'string') {
+      if (typeof message.content === "string") {
         return (
           <div className="text-sm leading-relaxed whitespace-pre-wrap">
             {message.content}
@@ -715,26 +885,31 @@ const Message: React.FC<MessageProps> = ({
       } else {
         // Handle complex content with text and images
         return (
-          <div className="space-y-2">
+          <div className="space-y-2 flex flex-col">
             {message.content.map((item, index) => {
-              if (item.type === 'text') {
+              if (item.type === "text") {
                 return (
-                  <div key={index} className="text-sm leading-relaxed whitespace-pre-wrap">
+                  <div
+                    key={index}
+                    className="text-sm leading-relaxed whitespace-pre-wrap"
+                  >
                     {item.text}
                   </div>
                 );
-              } else if (item.type === 'image_url') {
+              } else if (item.type === "image_url") {
                 // Find matching attachment for GCS path
-                const attachment = message.attachments?.find(att => 
-                  att.url === item.image_url.url
+                const attachment = message.attachments?.find(
+                  (att) => att.url === item.image_url.url
                 );
-                
+
                 return (
                   <ImageContentComponent
                     key={index}
                     url={item.image_url.url}
                     gcsPath={attachment?.gcsPath}
+                    attachment={attachment}
                     alt="User uploaded image"
+                    isUserUpload={true} // Add this
                   />
                 );
               }
@@ -752,7 +927,7 @@ const Message: React.FC<MessageProps> = ({
           isReasoningComplete={message.isReasoningComplete || false}
           isStreaming={isStreaming}
         />
-        
+
         <AnimatePresence mode="wait">
           {!isContentReady ? (
             <motion.div
@@ -801,7 +976,7 @@ const Message: React.FC<MessageProps> = ({
       >
         <div className={getMessageStyles()}>
           {renderContent()}
-          
+
           {isStreaming && !isUser && (
             <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
           )}

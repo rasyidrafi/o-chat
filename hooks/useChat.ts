@@ -108,18 +108,18 @@ export const useChat = (settings?: AppSettings | undefined) => {
   // Load more conversations
   const loadMoreConversations = useCallback(async () => {
     if (!hasMoreConversations || isLoadingMore) return;
-    
+
     try {
       setIsLoadingMore(true);
       const result = await ChatStorageService.loadConversationsPaginated(user, 20, conversationsLastDoc);
-      
+
       // Prevent duplicates by checking existing conversation IDs
       setConversations(prev => {
         const existingIds = new Set(prev.map(conv => conv.id));
         const newConversations = result.conversations.filter(conv => !existingIds.has(conv.id));
         return [...prev, ...newConversations];
       });
-      
+
       setHasMoreConversations(result.hasMore);
       setConversationsLastDoc(result.lastDoc);
     } catch (error) {
@@ -134,17 +134,17 @@ export const useChat = (settings?: AppSettings | undefined) => {
     try {
       setIsLoadingMessages(true);
       const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 100);
-      
+
       // Update conversations array
       setConversations(prev => {
-        const updated = prev.map(conv => 
-          conv.id === conversationId 
+        const updated = prev.map(conv =>
+          conv.id === conversationId
             ? { ...conv, messages: result.messages }
             : conv
         );
         return updated;
       });
-      
+
       setCurrentConversation(prev => {
         if (prev && prev.id === conversationId) {
           const updatedCurrent = { ...prev, messages: result.messages };
@@ -152,7 +152,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
         }
         return prev;
       });
-      
+
       setHasMoreMessages(result.hasMore);
       setMessagesLastDoc(result.lastDoc);
     } catch (error) {
@@ -165,23 +165,23 @@ export const useChat = (settings?: AppSettings | undefined) => {
   // Load more messages for current conversation
   const loadMoreMessages = useCallback(async () => {
     if (!currentConversation || !hasMoreMessages || isLoadingMoreMessages) return;
-    
+
     try {
       setIsLoadingMoreMessages(true);
       const result = await ChatStorageService.loadMessagesPaginated(currentConversation.id, user, 100, messagesLastDoc);
-      
+
       // Prepend older messages to the beginning
-      setConversations(prev => prev.map(conv => 
-        conv.id === currentConversation.id 
+      setConversations(prev => prev.map(conv =>
+        conv.id === currentConversation.id
           ? { ...conv, messages: [...result.messages, ...conv.messages] }
           : conv
       ));
-      
+
       setCurrentConversation(prev => prev ? {
         ...prev,
         messages: [...result.messages, ...prev.messages]
       } : null);
-      
+
       setHasMoreMessages(result.hasMore);
       setMessagesLastDoc(result.lastDoc);
     } catch (error) {
@@ -197,26 +197,26 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const createSmartTitle = (text: string, maxLength: number = 50): string => {
     // Clean the text first (remove extra whitespace)
     const cleanText = text.trim().replace(/\s+/g, ' ');
-    
+
     if (cleanText.length <= maxLength) {
       return cleanText;
     }
-    
+
     // Find the last space before the character limit
     const truncated = cleanText.substring(0, maxLength);
     const lastSpaceIndex = truncated.lastIndexOf(' ');
-    
+
     // If there's a space within reasonable distance (not too short), cut there
     if (lastSpaceIndex > maxLength * 0.6) { // Don't cut if it makes title too short (less than 60% of limit)
       return truncated.substring(0, lastSpaceIndex) + '...';
     }
-    
+
     // If no good word boundary found, try to extend to complete the current word
     const nextSpaceIndex = cleanText.indexOf(' ', maxLength);
     if (nextSpaceIndex !== -1 && nextSpaceIndex - maxLength < 10) { // Allow up to 10 extra chars to complete word
       return cleanText.substring(0, nextSpaceIndex) + '...';
     }
-    
+
     // If extending would make it too long, try to find a better breaking point
     // Look for punctuation marks near the limit
     const punctuationPattern = /[.!?;:,]/;
@@ -225,12 +225,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
         return truncated.substring(0, i + 1) + '..';
       }
     }
-    
+
     // Last resort: cut at character limit but avoid breaking mid-word
     if (lastSpaceIndex > maxLength * 0.4) { // Accept shorter title if it's not too short
       return truncated.substring(0, lastSpaceIndex) + '...';
     }
-    
+
     // Very last resort: cut at character limit
     return truncated + '...';
   };
@@ -238,10 +238,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const createNewConversation = useCallback((title: string = 'New Chat', model?: string): ChatConversation => {
     // Prevent creating new conversation if already creating one
     if (isCreatingNewChat) return currentConversation!;
-    
+
     // Use the first available system model if no model is provided
     const defaultModel = model || systemModelIds[0] || DEFAULT_MODEL_ID;
-    
+
     // Check if we're already on the welcome page (no current conversation or empty conversation)
     if (!currentConversation || currentConversation.messages.length === 0) {
       const newOrExisting = currentConversation || {
@@ -253,18 +253,18 @@ export const useChat = (settings?: AppSettings | undefined) => {
         model: defaultModel,
         source: getModelSource(defaultModel)
       };
-      
+
       // For new conversations, set hasMoreMessages to false
       if (!currentConversation) {
         setHasMoreMessages(false);
         setMessagesLastDoc(null);
       }
-      
+
       return newOrExisting;
     }
-    
+
     setIsCreatingNewChat(true);
-    
+
     const newConversation: ChatConversation = {
       id: generateId(),
       title,
@@ -287,44 +287,44 @@ export const useChat = (settings?: AppSettings | undefined) => {
       return [newConversation, ...prev];
     });
     setCurrentConversation(newConversation);
-    
+
     // Save to storage
     ChatStorageService.saveConversation(newConversation, user).catch(error => {
       console.error('Error saving new conversation:', error);
     }).finally(() => {
       setIsCreatingNewChat(false);
     });
-    
+
     return newConversation;
   }, [user, isCreatingNewChat, currentConversation, systemModelIds, getModelSource]);
 
   const updateMessage = useCallback((conversationId: string, messageId: string, content: string) => {
     let updatedConversation: ChatConversation | null = null;
-    
+
     setConversations(prev => prev.map(conv =>
       conv.id === conversationId
         ? (updatedConversation = {
-            ...conv,
-            messages: conv.messages.map(msg =>
-              msg.id === messageId ? { ...msg, content } : msg
-            ),
-            updatedAt: new Date()
-          })
+          ...conv,
+          messages: conv.messages.map(msg =>
+            msg.id === messageId ? { ...msg, content } : msg
+          ),
+          updatedAt: new Date()
+        })
         : conv
     ));
 
-    setCurrentConversation(prev => 
-      prev && prev.id === conversationId 
+    setCurrentConversation(prev =>
+      prev && prev.id === conversationId
         ? (updatedConversation = {
-            ...prev,
-            messages: prev.messages.map(msg =>
-              msg.id === messageId ? { ...msg, content } : msg
-            ),
-            updatedAt: new Date()
-          })
+          ...prev,
+          messages: prev.messages.map(msg =>
+            msg.id === messageId ? { ...msg, content } : msg
+          ),
+          updatedAt: new Date()
+        })
         : prev
     );
-    
+
     // Save updated conversation to storage
     if (updatedConversation) {
       ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
@@ -335,28 +335,28 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
   const updateMessageReasoning = useCallback((conversationId: string, messageId: string, reasoning: string) => {
     let updatedConversation: ChatConversation | null = null;
-    
+
     setConversations(prev => prev.map(conv =>
       conv.id === conversationId
         ? (updatedConversation = {
-            ...conv,
-            messages: conv.messages.map(msg =>
-              msg.id === messageId ? { ...msg, reasoning } : msg
-            ),
-            updatedAt: new Date()
-          })
+          ...conv,
+          messages: conv.messages.map(msg =>
+            msg.id === messageId ? { ...msg, reasoning } : msg
+          ),
+          updatedAt: new Date()
+        })
         : conv
     ));
 
-    setCurrentConversation(prev => 
-      prev && prev.id === conversationId 
+    setCurrentConversation(prev =>
+      prev && prev.id === conversationId
         ? (updatedConversation = {
-            ...prev,
-            messages: prev.messages.map(msg =>
-              msg.id === messageId ? { ...msg, reasoning } : msg
-            ),
-            updatedAt: new Date()
-          })
+          ...prev,
+          messages: prev.messages.map(msg =>
+            msg.id === messageId ? { ...msg, reasoning } : msg
+          ),
+          updatedAt: new Date()
+        })
         : prev
     );
 
@@ -373,12 +373,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
     if (typeof content === 'string') {
       return content;
     }
-    
+
     const textParts = content
       .filter(item => item.type === 'text')
       .map(item => item.text)
       .join(' ');
-    
+
     return textParts || 'Message with attachments';
   };
 
@@ -387,27 +387,27 @@ export const useChat = (settings?: AppSettings | undefined) => {
     if (typeof content === 'string') {
       return !content.trim();
     }
-    
-    return content.length === 0 || content.every(item => 
+
+    return content.length === 0 || content.every(item =>
       item.type === 'text' ? !item.text.trim() : false
     );
   };
 
   const sendMessage = useCallback(async (
-    content: string | MessageContent, 
-    model: string, 
-    source: string = 'system', 
+    content: string | MessageContent,
+    model: string,
+    source: string = 'system',
     providerId?: string,
     attachments?: MessageAttachment[]
   ) => {
     // Build the message content
     let messageContent: MessageContent;
-    
+
     if (typeof content === 'string') {
       // If we have attachments, build complex content
       if (attachments && attachments.length > 0) {
         const contentParts: Array<TextContent | ImageContent> = [];
-        
+
         // Add text content if present
         if (content.trim()) {
           contentParts.push({
@@ -415,7 +415,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
             text: content.trim()
           });
         }
-        
+
         // Add image content
         attachments.forEach(attachment => {
           if (attachment.type === 'image') {
@@ -429,7 +429,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
             });
           }
         });
-        
+
         messageContent = contentParts;
       } else {
         messageContent = content;
@@ -453,10 +453,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
             const selectedModels = localStorage.getItem(providerModelsKey);
             if (selectedModels) {
               const models = JSON.parse(selectedModels);
-              const modelArray = models.length > 0 && typeof models[0] === 'string' 
+              const modelArray = models.length > 0 && typeof models[0] === 'string'
                 ? models.map((id: string) => ({ id, name: id }))
                 : models;
-              const foundModel = modelArray.find((m: {id: string, name: string}) => m.id === model);
+              const foundModel = modelArray.find((m: { id: string, name: string }) => m.id === model);
               if (foundModel) {
                 modelName = foundModel.name;
               }
@@ -491,10 +491,10 @@ export const useChat = (settings?: AppSettings | undefined) => {
         title: messageTitle,
         updatedAt: new Date()
       };
-      
+
       // Update the conversation in state immediately
       setCurrentConversation(conversation);
-      setConversations(prev => prev.map(conv => 
+      setConversations(prev => prev.map(conv =>
         conv.id === conversation!.id ? conversation! : conv
       ));
     }
@@ -578,7 +578,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
       // Add custom instruction as system message if it exists
       let messagesToSend: ServiceChatMessage[] = historyMessages;
-      
+
       if (settings && settings.customInstruction && settings.customInstruction.trim()) {
         messagesToSend = [
           { role: 'system', content: settings.customInstruction.trim() },
@@ -602,30 +602,30 @@ export const useChat = (settings?: AppSettings | undefined) => {
         setConversations(prev => prev.map(conv =>
           conv.id === updatedConversation.id
             ? {
-                ...conv,
-                messages: conv.messages.map(msg =>
-                  msg.id === aiMessage.id ? { 
-                    ...msg, 
-                    isStreaming: false, 
-                    isReasoningComplete: true 
-                  } : msg
-                )
-              }
+              ...conv,
+              messages: conv.messages.map(msg =>
+                msg.id === aiMessage.id ? {
+                  ...msg,
+                  isStreaming: false,
+                  isReasoningComplete: true
+                } : msg
+              )
+            }
             : conv
         ));
 
-        setCurrentConversation(prev => 
+        setCurrentConversation(prev =>
           prev && prev.id === updatedConversation.id
             ? {
-                ...prev,
-                messages: prev.messages.map(msg =>
-                  msg.id === aiMessage.id ? { 
-                    ...msg, 
-                    isStreaming: false, 
-                    isReasoningComplete: true 
-                  } : msg
-                )
-              }
+              ...prev,
+              messages: prev.messages.map(msg =>
+                msg.id === aiMessage.id ? {
+                  ...msg,
+                  isStreaming: false,
+                  isReasoningComplete: true
+                } : msg
+              )
+            }
             : prev
         );
 
@@ -657,22 +657,22 @@ export const useChat = (settings?: AppSettings | undefined) => {
         setConversations(prev => prev.map(conv =>
           conv.id === updatedConversation.id
             ? {
-                ...conv,
-                messages: conv.messages.map(msg =>
-                  msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                )
-              }
+              ...conv,
+              messages: conv.messages.map(msg =>
+                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+              )
+            }
             : conv
         ));
 
-        setCurrentConversation(prev => 
+        setCurrentConversation(prev =>
           prev && prev.id === updatedConversation.id
             ? {
-                ...prev,
-                messages: prev.messages.map(msg =>
-                  msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                )
-              }
+              ...prev,
+              messages: prev.messages.map(msg =>
+                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+              )
+            }
             : prev
         );
 
@@ -715,22 +715,22 @@ export const useChat = (settings?: AppSettings | undefined) => {
       setConversations(prev => prev.map(conv =>
         conv.id === updatedConversation.id
           ? {
-              ...conv,
-              messages: conv.messages.map(msg =>
-                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-              )
-            }
+            ...conv,
+            messages: conv.messages.map(msg =>
+              msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+            )
+          }
           : conv
       ));
 
-      setCurrentConversation(prev => 
+      setCurrentConversation(prev =>
         prev && prev.id === updatedConversation.id
           ? {
-              ...prev,
-              messages: prev.messages.map(msg =>
-                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-              )
-            }
+            ...prev,
+            messages: prev.messages.map(msg =>
+              msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+            )
+          }
           : prev
       );
 
@@ -759,77 +759,206 @@ export const useChat = (settings?: AppSettings | undefined) => {
     prompt: string,
     imageUrl: string,
     model: string,
+    source: string = 'system',
+    providerId?: string,
     params?: any
   ) => {
     if (!prompt.trim()) return;
 
-    const messageId = generateId();
     const timestamp = new Date();
+    const isLoadingCall = params?.isLoading === true;
+    const isFinalizingCall = params?.isLoading === false && imageUrl;
+    const isErrorCall = params?.error;
 
-    // Create user message
-    const userMessage: ChatMessage = {
-      id: messageId + '_user',
-      role: 'user',
-      content: prompt,
-      timestamp,
-      source: getModelSource(model),
-      messageType: 'image_generation',
-      imageGenerationParams: {
-        prompt,
-        size: params?.size || '1024x1024',
-        seed: params?.seed,
-        guidance_scale: params?.guidance_scale,
-        watermark: false,
+    if (isLoadingCall) {
+      // LOADING PHASE: Create new messages
+      const messageId = generateId();
+
+      const userMessage: ChatMessage = {
+        id: messageId + '_user',
+        role: 'user',
+        content: prompt,
+        timestamp,
+        source: getModelSource(model),
+        messageType: 'image_generation',
+        imageGenerationParams: {
+          prompt,
+          size: params?.size || '1024x1024',
+          seed: params?.seed,
+          response_format: "url",
+          guidance_scale: params?.guidance_scale,
+          watermark: false,
+        }
+      };
+
+      const loadingAiMessage: ChatMessage = {
+        id: messageId + '_ai',
+        role: 'assistant',
+        content: 'Generating your image...',
+        timestamp: new Date(timestamp.getTime() + 1),
+        model,
+        modelName: model,
+        source: getModelSource(model),
+        messageType: 'image_generation',
+        isGeneratingImage: true,
+        imageGenerationParams: {
+          prompt,
+          size: params?.size || '1024x1024',
+          response_format: "url",
+          seed: params?.seed,
+          guidance_scale: params?.guidance_scale,
+          watermark: false,
+        }
+      };
+
+      // Get or create conversation
+      let conversation = currentConversation;
+      if (!conversation) {
+        conversation = createNewConversation(createSmartTitle(prompt), model);
       }
-    };
 
-    // Create AI response message with the generated image
-    const aiMessage: ChatMessage = {
-      id: messageId + '_ai',
-      role: 'assistant',
-      content: `Generated image for: "${prompt}"`,
-      timestamp: new Date(timestamp.getTime() + 1),
-      model,
-      modelName: model,
-      source: getModelSource(model),
-      messageType: 'image_generation',
-      generatedImageUrl: imageUrl,
-      attachments: params?.attachment ? [params.attachment] : undefined,
-    };
+      const conversationWithLoading = {
+        ...conversation,
+        messages: [...conversation.messages, userMessage, loadingAiMessage],
+        updatedAt: timestamp,
+      };
 
-    let conversation = currentConversation;
-    let isNewConversation = false;
+      // Update state
+      setConversations(prev => {
+        const existingIndex = prev.findIndex(c => c.id === conversation!.id);
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = conversationWithLoading;
+          return updated;
+        } else {
+          return [conversationWithLoading, ...prev];
+        }
+      });
 
-    // Create new conversation if none exists
-    if (!conversation) {
-      conversation = createNewConversation(createSmartTitle(prompt), model);
-      isNewConversation = true;
+      setCurrentConversation(conversationWithLoading);
+
+      // Save to storage
+      try {
+        await ChatStorageService.saveConversation(conversationWithLoading, user);
+      } catch (error) {
+        console.error('Error saving loading conversation:', error);
+      }
+
+      return;
     }
 
-    // Add both messages to the conversation
-    const updatedConversation = {
-      ...conversation,
-      messages: [...conversation.messages, userMessage, aiMessage],
-      updatedAt: timestamp,
-    };
+    // COMPLETION/ERROR PHASE: Update existing message
+    if (isFinalizingCall || isErrorCall) {
+      // Find the conversation and message to update using the conversations state
+      let targetConversation: ChatConversation | null = null;
+      let loadingMessageId: string | null = null;
 
-    // Update state
-    if (isNewConversation) {
-      setConversations(prev => [updatedConversation, ...prev.filter(c => c.id !== updatedConversation.id)]);
-    } else {
-      setConversations(prev => prev.map(conv =>
-        conv.id === conversation!.id ? updatedConversation : conv
-      ));
+      // Search through all conversations to find the loading message
+      setConversations(prevConversations => {
+        for (const conv of prevConversations) {
+          const loadingMessage = conv.messages
+            .slice()
+            .reverse()
+            .find(msg =>
+              msg.messageType === 'image_generation' &&
+              msg.isGeneratingImage === true &&
+              msg.role === 'assistant' &&
+              msg.imageGenerationParams?.prompt === prompt
+            );
+
+          if (loadingMessage) {
+            targetConversation = conv;
+            loadingMessageId = loadingMessage.id;
+            break;
+          }
+        }
+
+        // If we found the loading message, update it
+        if (targetConversation && loadingMessageId) {
+          let updatedMessage: ChatMessage;
+
+          if (isErrorCall) {
+            updatedMessage = {
+              id: loadingMessageId,
+              role: 'assistant',
+              content: `❌ Image generation failed: ${params.error}`,
+              timestamp: new Date(),
+              model,
+              modelName: model,
+              source: getModelSource(model),
+              messageType: 'image_generation',
+              isGeneratingImage: false,
+              isError: true,
+              imageGenerationParams: {
+                prompt,
+                size: params?.size || '1024x1024',
+                response_format: "url",
+                seed: params?.seed,
+                guidance_scale: params?.guidance_scale,
+                watermark: false,
+              }
+            };
+          } else {
+            updatedMessage = {
+              id: loadingMessageId,
+              role: 'assistant',
+              content: `Generated image for: "${prompt}"`,
+              timestamp: new Date(),
+              model,
+              modelName: model,
+              source: getModelSource(model),
+              messageType: 'image_generation',
+              isGeneratingImage: false,
+              generatedImageUrl: imageUrl,
+              attachments: params?.attachment ? [params.attachment] : undefined,
+              imageGenerationParams: {
+                prompt,
+                size: params?.size || '1024x1024',
+                response_format: "url",
+                seed: params?.seed,
+                guidance_scale: params?.guidance_scale,
+                watermark: false,
+              }
+            };
+          }
+
+          // Update the conversation with the finalized message
+          const updatedConversation = {
+            ...targetConversation,
+            messages: targetConversation.messages.map(msg =>
+              msg.id === loadingMessageId ? updatedMessage : msg
+            ),
+            updatedAt: new Date(),
+          };
+
+          // Update current conversation if it's the same one
+          setCurrentConversation(prevCurrent =>
+            prevCurrent && prevCurrent.id === targetConversation!.id
+              ? updatedConversation
+              : prevCurrent
+          );
+
+          // Save to storage
+          ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
+            console.error('Error saving finalized conversation:', error);
+          });
+
+          // Return updated conversations array
+          return prevConversations.map(conv =>
+            conv.id === targetConversation!.id ? updatedConversation : conv
+          );
+        }
+
+        // If no loading message found, don't update anything
+        console.warn('No loading message found for completion/error');
+        return prevConversations;
+      });
+
+      return;
     }
 
-    setCurrentConversation(updatedConversation);
-
-    // Save to storage
-    try {
-      await ChatStorageService.saveConversation(updatedConversation, user);
-    } catch (error) {
-      console.error('Error saving image generation conversation:', error);
-    }
+    // This shouldn't happen with the new flow, but keep as fallback
+    console.warn('Unexpected generateImage call - neither loading nor completion');
   }, [currentConversation, createNewConversation, user, getModelSource]);
 
   const stopStreaming = useCallback(() => {
@@ -846,18 +975,18 @@ export const useChat = (settings?: AppSettings | undefined) => {
   }, [streamingState]);
 
   const selectConversation = useCallback((conversation: ChatConversation | null) => {
-    
+
     // Always set the current conversation first so UI updates immediately
     setCurrentConversation(conversation);
-    
+
     // Reset message pagination state when selecting a new conversation
     setHasMoreMessages(true);
     setMessagesLastDoc(null);
-    
+
     if (conversation) {
       // Set loading state immediately when selecting a conversation
       setIsLoadingMessages(true);
-      
+
       // Load messages for this conversation
       loadConversationMessages(conversation.id);
     }
@@ -870,7 +999,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
     if (currentConversation?.id === conversationId) {
       setCurrentConversation(null);
     }
-    
+
     // Delete from storage
     ChatStorageService.deleteConversation(conversationId, user).catch(error => {
       console.error('Error deleting conversation:', error);
@@ -887,18 +1016,18 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
     setIsSearching(true);
     const normalizedQuery = query.toLowerCase().trim();
-    
+
     // Filter from all loaded conversations
     let filtered = allConversationsForSearch.filter(conv =>
       conv.title.toLowerCase().includes(normalizedQuery)
     );
-    
+
     setFilteredConversations(filtered);
-    
+
     // If we have few results and there are more conversations to load, keep loading more
     let attempts = 0;
     const maxAttempts = 5; // Prevent infinite loops
-    
+
     while (filtered.length < 10 && hasMoreConversations && !isLoadingMore && attempts < maxAttempts) {
       attempts++;
       try {
@@ -913,7 +1042,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
         break;
       }
     }
-    
+
     setIsSearching(false);
   }, [allConversationsForSearch, hasMoreConversations, isLoadingMore, loadMoreConversations]);
 

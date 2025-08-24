@@ -3,7 +3,11 @@ import { Sparkles, ChevronDown, Paperclip, ArrowUp, Check, X } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
 import ImageGenerationInput from "./ImageGenerationInput";
-import { getSystemModels, getSystemModelsSync, getModelCapabilities } from "../services/modelService";
+import {
+  getSystemModels,
+  getSystemModelsSync,
+  getModelCapabilities,
+} from "../services/modelService";
 import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from "../constants/models";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
@@ -47,15 +51,16 @@ const ChatInput = ({
   user = null,
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
-  const [selectedModel, setSelectedModel] =
-    useState<string>(DEFAULT_MODEL_ID);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [inputMode, setInputMode] = useState<'chat' | 'image_generation'>('chat');
+  const [inputMode, setInputMode] = useState<"chat" | "image_generation">(
+    "chat"
+  );
   const [imagePrompt, setImagePrompt] = useState("");
   const [selectedImageSize, setSelectedImageSize] = useState("1024x1024");
   const [isSizeDropdownOpen, setIsSizeDropdownOpen] = useState(false);
@@ -64,33 +69,44 @@ const ChatInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Check if current model supports image generation
-  const checkCurrentModelCapabilities = useCallback((options: ModelOption[]) => {
-    const currentOption = options.find(
-      (model) => model.value === selectedModel && 
-      (model.providerId || "") === selectedProviderId
-    );
-    
-    if (currentOption && currentOption.supportedParameters) {
-      const capabilities = getModelCapabilities(currentOption.supportedParameters);
-      
-      // Always switch to image generation mode if model supports it
-      if (capabilities.hasImageGeneration) {
-        setInputMode('image_generation');
+  const checkCurrentModelCapabilities = useCallback(
+    (options: ModelOption[]) => {
+      const currentOption = options.find(
+        (model) =>
+          model.value === selectedModel &&
+          (model.providerId || "") === selectedProviderId
+      );
+
+      if (currentOption && currentOption.supportedParameters) {
+        const capabilities = getModelCapabilities(
+          currentOption.supportedParameters
+        );
+
+        // Always switch to image generation mode if model supports it
+        if (capabilities.hasImageGeneration) {
+          setInputMode("image_generation");
+        } else {
+          // If model doesn't support image generation, switch back to chat mode
+          setInputMode("chat");
+        }
       } else {
-        // If model doesn't support image generation, switch back to chat mode
-        setInputMode('chat');
+        setInputMode("chat");
       }
-    } else {
-      setInputMode('chat');
-    }
-  }, [selectedModel, selectedProviderId]);
+    },
+    [selectedModel, selectedProviderId]
+  );
 
   // Check capabilities when selected model changes
   useEffect(() => {
     if (modelOptions.length > 0) {
       checkCurrentModelCapabilities(modelOptions);
     }
-  }, [selectedModel, selectedProviderId, modelOptions, checkCurrentModelCapabilities]);
+  }, [
+    selectedModel,
+    selectedProviderId,
+    modelOptions,
+    checkCurrentModelCapabilities,
+  ]);
 
   // Load available models from localStorage
   const loadAvailableModels = useCallback(async () => {
@@ -98,14 +114,11 @@ const ChatInput = ({
 
     try {
       setIsLoadingSystemModels(true);
-      
-      // First, load cached/fallback models synchronously for immediate display
-      const syncSystemModels = getSystemModelsSync();
-      
+
       // Load selected server models from localStorage
       const selectedServerModels = (() => {
         try {
-          const stored = localStorage.getItem('selected_server_models');
+          const stored = localStorage.getItem("selected_server_models");
           return stored ? JSON.parse(stored) : [];
         } catch (error) {
           console.error("Error loading selected server models:", error);
@@ -113,20 +126,45 @@ const ChatInput = ({
         }
       })();
 
+      // First, load cached/fallback models synchronously for immediate display
+      const syncSystemModels = getSystemModelsSync();
+
       // Filter sync system models and add to options immediately
-      const filteredSyncSystemModels = syncSystemModels.filter(model => {
-        const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(fallback => fallback.id === model.id);
+      const filteredSyncSystemModels = syncSystemModels.filter((model) => {
+        const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(
+          (fallback) => fallback.id === model.id
+        );
         if (isFallbackModel) {
           return true;
         }
-        return selectedServerModels.some((selected: { id: string; name: string; supported_parameters?: string[] }) => selected.id === model.id);
+        // More flexible matching - check both id and name
+        return selectedServerModels.some(
+          (selected: {
+            id: string;
+            name: string;
+            supported_parameters?: string[];
+          }) =>
+            selected.id === model.id ||
+            selected.name === model.name ||
+            selected.id === model.name
+        );
       });
 
-      const syncSystemModelOptions = filteredSyncSystemModels.map(model => {
+      const syncSystemModelOptions = filteredSyncSystemModels.map((model) => {
         // Use stored supported_parameters if available, otherwise fallback to model's parameters
-        const storedModel = selectedServerModels.find((selected: { id: string; name: string; supported_parameters?: string[] }) => selected.id === model.id);
-        const supportedParameters = storedModel?.supported_parameters || model.supported_parameters || [];
-        
+        const storedModel = selectedServerModels.find(
+          (selected: {
+            id: string;
+            name: string;
+            supported_parameters?: string[];
+          }) =>
+            selected.id === model.id ||
+            selected.name === model.name ||
+            selected.id === model.name
+        );
+        const supportedParameters =
+          storedModel?.supported_parameters || model.supported_parameters || [];
+
         return {
           label: model.name,
           value: model.id,
@@ -136,30 +174,77 @@ const ChatInput = ({
       });
       options.push(...syncSystemModelOptions);
 
+      // Add selected models directly from localStorage if they're not found in system models
+      selectedServerModels.forEach(
+        (selectedModel: {
+          id: string;
+          name: string;
+          supported_parameters?: string[];
+        }) => {
+          // Check if this model is already in options
+          const existsInOptions = options.some(
+            (opt) =>
+              opt.value === selectedModel.id || opt.label === selectedModel.name
+          );
+
+          if (!existsInOptions) {
+            // Add the model directly from localStorage
+            options.push({
+              label: selectedModel.name,
+              value: selectedModel.id,
+              source: "system",
+              supportedParameters: selectedModel.supported_parameters || [],
+            });
+          }
+        }
+      );
+
       // Set initial options with sync models
       setModelOptions([...options]);
-      
+
       // Check capabilities for initial load
       checkCurrentModelCapabilities([...options]);
 
       // Now fetch fresh system models asynchronously
       const systemModels = await getSystemModels();
-      
+
       // Filter system models to only include selected ones and fallback models
-      const filteredSystemModels = systemModels.filter(model => {
-        const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(fallback => fallback.id === model.id);
+      const filteredSystemModels = systemModels.filter((model) => {
+        const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(
+          (fallback) => fallback.id === model.id
+        );
         if (isFallbackModel) {
           return true;
         }
-        return selectedServerModels.some((selected: { id: string; name: string; supported_parameters?: string[] }) => selected.id === model.id);
+        // More flexible matching
+        return selectedServerModels.some(
+          (selected: {
+            id: string;
+            name: string;
+            supported_parameters?: string[];
+          }) =>
+            selected.id === model.id ||
+            selected.name === model.name ||
+            selected.id === model.name
+        );
       });
 
       // Replace system models in options array
-      const systemModelOptions = filteredSystemModels.map(model => {
+      const systemModelOptions = filteredSystemModels.map((model) => {
         // Use stored supported_parameters if available, otherwise use fresh model's parameters
-        const storedModel = selectedServerModels.find((selected: { id: string; name: string; supported_parameters?: string[] }) => selected.id === model.id);
-        const supportedParameters = storedModel?.supported_parameters || model.supported_parameters || [];
-        
+        const storedModel = selectedServerModels.find(
+          (selected: {
+            id: string;
+            name: string;
+            supported_parameters?: string[];
+          }) =>
+            selected.id === model.id ||
+            selected.name === model.name ||
+            selected.id === model.name
+        );
+        const supportedParameters =
+          storedModel?.supported_parameters || model.supported_parameters || [];
+
         return {
           label: model.name,
           value: model.id,
@@ -167,27 +252,54 @@ const ChatInput = ({
           supportedParameters,
         };
       });
-      
+
       // Clear existing system models and add fresh ones
-      const nonSystemOptions = options.filter(opt => opt.source !== "system");
-      const updatedOptions = [...systemModelOptions, ...nonSystemOptions];
-      
+      const nonSystemOptions = options.filter((opt) => opt.source !== "system");
+
+      // Add fresh system models
+      const updatedSystemOptions = [...systemModelOptions];
+
+      // Add any selected models that weren't found in fresh system models
+      selectedServerModels.forEach(
+        (selectedModel: {
+          id: string;
+          name: string;
+          supported_parameters?: string[];
+        }) => {
+          const existsInSystemOptions = updatedSystemOptions.some(
+            (opt) =>
+              opt.value === selectedModel.id || opt.label === selectedModel.name
+          );
+
+          if (!existsInSystemOptions) {
+            updatedSystemOptions.push({
+              label: selectedModel.name,
+              value: selectedModel.id,
+              source: "system",
+              supportedParameters: selectedModel.supported_parameters || [],
+            });
+          }
+        }
+      );
+
+      const updatedOptions = [...updatedSystemOptions, ...nonSystemOptions];
+
       setModelOptions(updatedOptions);
-      
+
       // Check if current model supports image generation
       checkCurrentModelCapabilities(updatedOptions);
     } catch (error) {
-      console.error('Error loading system models:', error);
+      console.error("Error loading system models:", error);
       // Use the shared constant for fallback models
-      const fallbackSystemModels = DEFAULT_SYSTEM_MODELS.map(model => ({
+      const fallbackSystemModels = DEFAULT_SYSTEM_MODELS.map((model) => ({
         label: model.name,
         value: model.id,
         source: "system",
         supportedParameters: model.supported_parameters || [],
       }));
-      
+
       // Only add fallback if no system models are already present
-      const nonSystemOptions = options.filter(opt => opt.source !== "system");
+      const nonSystemOptions = options.filter((opt) => opt.source !== "system");
       const fallbackOptions = [...fallbackSystemModels, ...nonSystemOptions];
       setModelOptions(fallbackOptions);
       checkCurrentModelCapabilities(fallbackOptions);
@@ -201,7 +313,7 @@ const ChatInput = ({
       if (builtInProviders) {
         const providers = JSON.parse(builtInProviders);
         const builtInOptions: ModelOption[] = [];
-        
+
         providers.forEach((provider: any) => {
           if (provider.value?.trim()) {
             // Add static models for built-in providers
@@ -238,8 +350,8 @@ const ChatInput = ({
             }
           }
         });
-        
-        setModelOptions(prev => [...prev, ...builtInOptions]);
+
+        setModelOptions((prev) => [...prev, ...builtInOptions]);
       }
     } catch (error) {
       console.error("Error loading built-in providers:", error);
@@ -251,7 +363,7 @@ const ChatInput = ({
       if (customProviders) {
         const providers = JSON.parse(customProviders);
         const customOptions: ModelOption[] = [];
-        
+
         providers.forEach((provider: any) => {
           if (
             provider.label?.trim() &&
@@ -267,31 +379,41 @@ const ChatInput = ({
                 // Handle both legacy format (array of strings) and new format (array of objects)
                 const modelArray =
                   models.length > 0 && typeof models[0] === "string"
-                    ? models.map((id: string) => ({ id, name: id, supported_parameters: [] }))
+                    ? models.map((id: string) => ({
+                        id,
+                        name: id,
+                        supported_parameters: [],
+                      }))
                     : models;
 
-                modelArray.forEach((model: { id: string; name: string; supported_parameters?: string[] }) => {
-                  customOptions.push({
-                    label: `${provider.label} - ${model.name}`,
-                    value: model.id,
-                    source: "custom",
-                    providerId: provider.id,
-                    supportedParameters: model.supported_parameters || [],
-                  });
-                });
+                modelArray.forEach(
+                  (model: {
+                    id: string;
+                    name: string;
+                    supported_parameters?: string[];
+                  }) => {
+                    customOptions.push({
+                      label: `${provider.label} - ${model.name}`,
+                      value: model.id,
+                      source: "custom",
+                      providerId: provider.id,
+                      supportedParameters: model.supported_parameters || [],
+                    });
+                  }
+                );
               } catch (error) {
                 console.error("Error parsing selected models:", error);
               }
             }
           }
         });
-        
-        setModelOptions(prev => [...prev, ...customOptions]);
+
+        setModelOptions((prev) => [...prev, ...customOptions]);
       }
     } catch (error) {
       console.error("Error loading custom providers:", error);
     }
-  }, []);
+  }, [checkCurrentModelCapabilities]);
 
   // Load models on mount
   useEffect(() => {
@@ -302,75 +424,50 @@ const ChatInput = ({
   }, [loadAvailableModels]);
 
   // Handle image upload
-  const handleImageUpload = useCallback(async (file: File) => {
-    try {
-      setIsUploadingImage(true);
-      
-      // Validate file
-      const validation = ImageUploadService.validateImageFile(file);
-      if (!validation.isValid) {
-        alert(validation.error);
-        return;
-      }
+  const handleImageUpload = useCallback(
+    async (file: File) => {
+      try {
+        setIsUploadingImage(true);
 
-      // Upload to Firebase Storage
-      const attachment = await ImageUploadService.uploadImage(file, user?.uid || null);
-      setAttachments(prev => [...prev, attachment]);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
-    } finally {
-      setIsUploadingImage(false);
-    }
-  }, [user]);
+        // Validate file
+        const validation = ImageUploadService.validateImageFile(file);
+        if (!validation.isValid) {
+          alert(validation.error);
+          return;
+        }
+
+        // Upload to Firebase Storage
+        const attachment = await ImageUploadService.uploadImage(
+          file,
+          user?.uid || null
+        );
+        setAttachments((prev) => [...prev, attachment]);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        alert("Failed to upload image. Please try again.");
+      } finally {
+        setIsUploadingImage(false);
+      }
+    },
+    [user]
+  );
 
   // Handle paste events for images
-  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-    const items = Array.from(e.clipboardData.items);
-    const imageItem = items.find(item => item.type.startsWith('image/'));
-    
-    if (imageItem) {
-      e.preventDefault();
-      const file = imageItem.getAsFile();
-      if (file) {
-        await handleImageUpload(file);
-      }
-    }
-  }, [handleImageUpload]);
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      const items = Array.from(e.clipboardData.items);
+      const imageItem = items.find((item) => item.type.startsWith("image/"));
 
-  // Handle image generation
-  const handleImageGenerate = useCallback(async (prompt: string, imageUrl: string, params: any) => {
-    try {
-      // Download and upload the image to Firebase Storage
-      const attachment = await ImageGenerationService.downloadAndUploadImage(
-        imageUrl,
-        prompt,
-        user?.uid || null
-      );
-
-      // Call the parent callback if provided
-      if (onImageGenerate) {
-        const selectedModelOption = modelOptions.find(
-          (model) => model.value === selectedModel
-        );
-        
-        onImageGenerate(
-          prompt,
-          attachment.url,
-          selectedModel,
-          selectedModelOption?.source || "system",
-          selectedModelOption?.providerId,
-          {
-            ...params,
-            attachment
-          }
-        );
+      if (imageItem) {
+        e.preventDefault();
+        const file = imageItem.getAsFile();
+        if (file) {
+          await handleImageUpload(file);
+        }
       }
-    } catch (error) {
-      console.error('Error handling generated image:', error);
-      alert('Failed to save generated image. Please try again.');
-    }
-  }, [onImageGenerate, selectedModel, modelOptions, user]);
+    },
+    [handleImageUpload]
+  );
 
   // Handle image generation click
   const handleImageGenerateClick = useCallback(async () => {
@@ -386,28 +483,105 @@ const ChatInput = ({
         watermark: false,
       };
 
-      const selectedModelOption = modelOptions.find(m => m.value === selectedModel);
-      const imageUrl = await ImageGenerationService.generateImage(
-        params,
-        selectedModelOption?.source || 'system',
-        selectedProviderId
+      const selectedModelOption = modelOptions.find(
+        (m) => m.value === selectedModel
       );
 
-      await handleImageGenerate(imagePrompt.trim(), imageUrl, params);
+      // First, call the parent callback to add loading message
+      if (onImageGenerate) {
+        onImageGenerate(
+          imagePrompt.trim(),
+          "", // Empty URL to indicate loading
+          selectedModel,
+          selectedModelOption?.source || "system",
+          selectedModelOption?.providerId,
+          {
+            ...params,
+            isLoading: true,
+          }
+        );
+      }
 
-      // Clear the prompt after successful generation
-      setImagePrompt("");
-    } catch (error) {
-      console.error("Error generating image:", error);
-      alert("Failed to generate image. Please try again.");
+      try {
+        // Generate the image in the background
+        const imageUrl = await ImageGenerationService.generateImage(
+          params,
+          selectedModelOption?.source || "system",
+          selectedProviderId,
+          user
+        );
+
+        // Download and upload the image to Firebase Storage
+        const attachment = await ImageGenerationService.downloadAndUploadImage(
+          imageUrl,
+          imagePrompt.trim(),
+          user?.uid || null
+        );
+
+        // Call the parent callback again with the final image
+        if (onImageGenerate) {
+          onImageGenerate(
+            imagePrompt.trim(),
+            attachment.url,
+            selectedModel,
+            selectedModelOption?.source || "system",
+            selectedModelOption?.providerId,
+            {
+              ...params,
+              attachment,
+              isLoading: false,
+            }
+          );
+        }
+
+        // Clear the prompt after successful generation
+        setImagePrompt("");
+      } catch (generationError: any) {
+        console.error("Image generation failed:", generationError);
+
+        // Call the parent callback with error state
+        if (onImageGenerate) {
+          onImageGenerate(
+            imagePrompt.trim(),
+            "",
+            selectedModel,
+            selectedModelOption?.source || "system",
+            selectedModelOption?.providerId,
+            {
+              ...params,
+              isLoading: false,
+              error: generationError.message || "Image generation failed",
+            }
+          );
+        }
+
+        // Show user-friendly error message
+        alert(
+          generationError.message ||
+            "Failed to generate image. Please try again."
+        );
+      }
+    } catch (error: any) {
+      console.error("Error in image generation process:", error);
+      alert("An unexpected error occurred. Please try again.");
     } finally {
       setIsImageGenerating(false);
     }
-  }, [imagePrompt, disabled, isImageGenerating, selectedModel, selectedImageSize, modelOptions, selectedProviderId, handleImageGenerate]);
+  }, [
+    imagePrompt,
+    disabled,
+    isImageGenerating,
+    selectedModel,
+    selectedImageSize,
+    modelOptions,
+    selectedProviderId,
+    onImageGenerate,
+    user,
+  ]);
 
   // Remove attachment
   const removeAttachment = useCallback((attachmentId: string) => {
-    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
+    setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
   }, []);
 
   // Notify parent of initial model selection
@@ -551,7 +725,7 @@ const ChatInput = ({
         dark:shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.3),0_-4px_16px_-2px_rgba(0,0,0,0.2)]
       "
     >
-      {inputMode === 'image_generation' ? (
+      {inputMode === "image_generation" ? (
         <>
           <ImageGenerationInput
             isGenerating={isImageGenerating}
@@ -559,7 +733,7 @@ const ChatInput = ({
             onPromptChange={setImagePrompt}
             disabled={disabled}
           />
-          
+
           {/* Model selector row - exactly like chat mode layout */}
           <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
             <div className="flex items-center flex-wrap gap-2">
@@ -585,15 +759,19 @@ const ChatInput = ({
                 {isModelDropdownOpen && (
                   <div className="absolute bottom-full mb-2 left-0 w-64 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
                     <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
-                      {isLoadingSystemModels && modelOptions.filter(opt => opt.source === "system").length === 0 && (
-                        <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                          <LoadingIndicator size="sm" color="primary" />
-                          Loading models...
-                        </div>
-                      )}
+                      {isLoadingSystemModels &&
+                        modelOptions.filter((opt) => opt.source === "system")
+                          .length === 0 && (
+                          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                            <LoadingIndicator size="sm" color="primary" />
+                            Loading models...
+                          </div>
+                        )}
                       {modelOptions.map((option) => (
                         <button
-                          key={`${option.value}-${option.providerId || "system"}`}
+                          key={`${option.value}-${
+                            option.providerId || "system"
+                          }`}
                           onClick={() => handleModelSelect(option)}
                           className="w-full text-left flex items-center justify-between px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
                           title={option.label}
@@ -602,7 +780,8 @@ const ChatInput = ({
                             {option.label}
                           </span>
                           {selectedModel === option.value &&
-                            selectedProviderId === (option.providerId || "") && (
+                            selectedProviderId ===
+                              (option.providerId || "") && (
                               <Check className="w-4 h-4 text-pink-500 flex-shrink-0" />
                             )}
                         </button>
@@ -614,7 +793,7 @@ const ChatInput = ({
             </div>
             <div className="flex items-center gap-2">
               {/* Size Selector */}
-              <div className="relative">
+              {/* <div className="relative">
                 <button
                   onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
                   className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[120px]"
@@ -632,23 +811,25 @@ const ChatInput = ({
                 {isSizeDropdownOpen && (
                   <div className="absolute bottom-full mb-2 left-0 w-48 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
                     <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
-                      {ImageGenerationService.getImageSizeOptions().map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => {
-                            setSelectedImageSize(option.value);
-                            setIsSizeDropdownOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
+                      {ImageGenerationService.getImageSizeOptions().map(
+                        (option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => {
+                              setSelectedImageSize(option.value);
+                              setIsSizeDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
+                          >
+                            {option.label}
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                 )}
-              </div>
-              
+              </div> */}
+
               {/* Generate Button - No loading indicator, just disabled state */}
               <button
                 onClick={handleImageGenerateClick}
@@ -658,7 +839,9 @@ const ChatInput = ({
                     : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
                 }`}
                 disabled={!imagePrompt.trim() || disabled || isImageGenerating}
-                aria-label={isImageGenerating ? "Generating..." : "Generate image"}
+                aria-label={
+                  isImageGenerating ? "Generating..." : "Generate image"
+                }
               >
                 <ArrowUp className="w-4 h-4" />
               </button>
@@ -691,7 +874,7 @@ const ChatInput = ({
                 ))}
               </div>
             )}
-            
+
             <textarea
               ref={textareaRef}
               value={message}
@@ -729,15 +912,19 @@ const ChatInput = ({
                 {isModelDropdownOpen && (
                   <div className="absolute bottom-full mb-2 left-0 w-64 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
                     <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
-                      {isLoadingSystemModels && modelOptions.filter(opt => opt.source === "system").length === 0 && (
-                        <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                          <LoadingIndicator size="sm" color="primary" />
-                          Loading models...
-                        </div>
-                      )}
+                      {isLoadingSystemModels &&
+                        modelOptions.filter((opt) => opt.source === "system")
+                          .length === 0 && (
+                          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                            <LoadingIndicator size="sm" color="primary" />
+                            Loading models...
+                          </div>
+                        )}
                       {modelOptions.map((option) => (
                         <button
-                          key={`${option.value}-${option.providerId || "system"}`}
+                          key={`${option.value}-${
+                            option.providerId || "system"
+                          }`}
                           onClick={() => handleModelSelect(option)}
                           className="w-full text-left flex items-center justify-between px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
                           title={option.label}
@@ -746,7 +933,8 @@ const ChatInput = ({
                             {option.label}
                           </span>
                           {selectedModel === option.value &&
-                            selectedProviderId === (option.providerId || "") && (
+                            selectedProviderId ===
+                              (option.providerId || "") && (
                               <Check className="w-4 h-4 text-pink-500 flex-shrink-0" />
                             )}
                         </button>
@@ -765,7 +953,7 @@ const ChatInput = ({
                     const file = e.target.files?.[0];
                     if (file) {
                       handleImageUpload(file);
-                      e.target.value = ''; // Reset input
+                      e.target.value = ""; // Reset input
                     }
                   }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -786,18 +974,20 @@ const ChatInput = ({
               <button
                 onClick={handleSendMessage}
                 className={`p-1.5 rounded-full transition-colors ${
-                  (message.trim() || attachments.length > 0) && !disabled && !isUploadingImage
+                  (message.trim() || attachments.length > 0) &&
+                  !disabled &&
+                  !isUploadingImage
                     ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
                     : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
                 }`}
-                disabled={(!message.trim() && attachments.length === 0) || disabled || isUploadingImage}
+                disabled={
+                  (!message.trim() && attachments.length === 0) ||
+                  disabled ||
+                  isUploadingImage
+                }
                 aria-label={disabled ? "Sending..." : "Send message"}
               >
-                {disabled ? (
-                  <LoadingIndicator size="sm" color="white" />
-                ) : (
-                  <ArrowUp className="w-4 h-4" />
-                )}
+                <ArrowUp className="w-4 h-4" />
               </button>
             </div>
           </div>

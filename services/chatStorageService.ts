@@ -1,11 +1,11 @@
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  onSnapshot, 
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  query,
+  orderBy,
+  onSnapshot,
   getCountFromServer,
   collectionGroup,
   where,
@@ -28,18 +28,18 @@ export class ChatStorageService {
     try {
       const conversations = this.getConversationsFromLocal();
       const existingIndex = conversations.findIndex(c => c.id === conversation.id);
-      
+
       if (existingIndex >= 0) {
         conversations[existingIndex] = conversation;
       } else {
         conversations.unshift(conversation);
       }
-      
+
       localStorage.setItem(this.CONVERSATIONS_KEY, JSON.stringify(conversations));
-      
+
       // Save messages separately
       localStorage.setItem(
-        `${this.MESSAGES_KEY_PREFIX}${conversation.id}`, 
+        `${this.MESSAGES_KEY_PREFIX}${conversation.id}`,
         JSON.stringify(conversation.messages)
       );
     } catch (error) {
@@ -52,7 +52,7 @@ export class ChatStorageService {
     try {
       const stored = localStorage.getItem(this.CONVERSATIONS_KEY);
       if (!stored) return [];
-      
+
       const conversations = JSON.parse(stored);
       return conversations.map((conv: any) => ({
         ...conv,
@@ -71,15 +71,15 @@ export class ChatStorageService {
     try {
       const stored = localStorage.getItem(`${this.MESSAGES_KEY_PREFIX}${conversationId}`);
       if (!stored) return [];
-      
+
       const messages = JSON.parse(stored);
       const parsedMessages = messages.map((msg: any) => ({
         ...msg,
         timestamp: new Date(msg.timestamp)
       }));
-      
+
       // Ensure consistent sorting by timestamp to prevent duplicate keys
-      return parsedMessages.sort((a: ChatMessage, b: ChatMessage) => 
+      return parsedMessages.sort((a: ChatMessage, b: ChatMessage) =>
         a.timestamp.getTime() - b.timestamp.getTime()
       );
     } catch (error) {
@@ -105,13 +105,13 @@ export class ChatStorageService {
     try {
       const chatRef = doc(db, 'chats', userId);
       const conversationRef = doc(collection(chatRef, 'conversations'), conversation.id);
-      
+
       // Save conversation metadata
       await setDoc(conversationRef, {
         id: conversation.id,
         title: conversation.title,
         model: conversation.model,
-        source: conversation.source || 'server', // Default to server for existing conversations
+        source: conversation.source || 'server',
         createdAt: Timestamp.fromDate(conversation.createdAt),
         updatedAt: Timestamp.fromDate(conversation.updatedAt),
         messageCount: conversation.messages.length
@@ -120,21 +120,62 @@ export class ChatStorageService {
       // Save messages in batch
       const batch = writeBatch(db);
       const messagesRef = collection(conversationRef, 'messages');
-      
+
       conversation.messages.forEach(message => {
         const messageRef = doc(messagesRef, message.id);
-        batch.set(messageRef, {
+
+        // Clean the message data to remove undefined values
+        const messageData: any = {
           id: message.id,
           role: message.role,
           content: message.content,
           timestamp: Timestamp.fromDate(message.timestamp),
-          model: message.model || null,
-          modelName: message.modelName || null,
-          isError: message.isError || false,
           source: message.source || 'server',
           userId: userId,
-          reasoning: message.reasoning || null,
-        });
+        };
+
+        // Only add fields if they have defined values
+        if (message.model !== undefined) messageData.model = message.model;
+        if (message.modelName !== undefined) messageData.modelName = message.modelName;
+        if (message.isError !== undefined) messageData.isError = message.isError;
+        if (message.reasoning !== undefined) messageData.reasoning = message.reasoning;
+        if (message.messageType !== undefined) messageData.messageType = message.messageType;
+        if (message.generatedImageUrl !== undefined) messageData.generatedImageUrl = message.generatedImageUrl;
+        if (message.isGeneratingImage !== undefined) messageData.isGeneratingImage = message.isGeneratingImage;
+        if (message.isReasoningComplete !== undefined) messageData.isReasoningComplete = message.isReasoningComplete;
+
+        // Handle attachments
+        if (message.attachments && message.attachments.length > 0) {
+          messageData.attachments = message.attachments.map(att => ({
+            id: att.id,
+            type: att.type,
+            url: att.url,
+            filename: att.filename,
+            size: att.size,
+            mimeType: att.mimeType,
+            ...(att.gcsPath !== undefined && { gcsPath: att.gcsPath }),
+            ...(att.isDirectUrl !== undefined && { isDirectUrl: att.isDirectUrl }),
+          }));
+        }
+
+        // Handle imageGenerationParams - clean undefined values
+        if (message.imageGenerationParams) {
+          const cleanParams: any = {};
+          const params = message.imageGenerationParams;
+
+          if (params.prompt !== undefined) cleanParams.prompt = params.prompt;
+          if (params.size !== undefined) cleanParams.size = params.size;
+          if (params.response_format !== undefined) cleanParams.response_format = params.response_format;
+          if (params.watermark !== undefined) cleanParams.watermark = params.watermark;
+          if (params.seed !== undefined && params.seed !== -1) cleanParams.seed = params.seed;
+          if (params.guidance_scale !== undefined) cleanParams.guidance_scale = params.guidance_scale;
+
+          if (Object.keys(cleanParams).length > 0) {
+            messageData.imageGenerationParams = cleanParams;
+          }
+        }
+
+        batch.set(messageRef, messageData);
       });
 
       await batch.commit();
@@ -150,14 +191,14 @@ export class ChatStorageService {
       const chatRef = doc(db, 'chats', userId);
       const conversationsRef = collection(chatRef, 'conversations');
       const q = query(conversationsRef, orderBy('updatedAt', 'desc'));
-      
+
       const snapshot = await getDocs(q);
       const conversations: ChatConversation[] = [];
-      
+
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
         const messages = await this.getMessagesFromFirestore(userId, data.id);
-        
+
         // @ts-ignore
         conversations.push({
           id: data.id,
@@ -168,7 +209,7 @@ export class ChatStorageService {
           messages
         });
       }
-      
+
       return conversations;
     } catch (error) {
       console.error('Error loading conversations from Firestore:', error);
@@ -183,7 +224,7 @@ export class ChatStorageService {
       const conversationRef = doc(collection(chatRef, 'conversations'), conversationId);
       const messagesRef = collection(conversationRef, 'messages');
       const q = query(messagesRef, orderBy('timestamp', 'asc'));
-      
+
       const snapshot = await getDocs(q);
       const messages = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -196,19 +237,33 @@ export class ChatStorageService {
           modelName: data.modelName,
           isError: data.isError || false,
           source: data.source || 'server',
-          reasoning: data.reasoning
+          reasoning: data.reasoning,
+          messageType: data.messageType || 'chat',
+          generatedImageUrl: data.generatedImageUrl,
+          imageGenerationParams: data.imageGenerationParams,
+          isGeneratingImage: data.isGeneratingImage,
+          isReasoningComplete: data.isReasoningComplete,
+          // Properly load attachments
+          attachments: data.attachments ? data.attachments.map((att: any) => ({
+            id: att.id,
+            type: att.type,
+            url: att.url,
+            filename: att.filename,
+            size: att.size,
+            mimeType: att.mimeType,
+            gcsPath: att.gcsPath,
+            isDirectUrl: att.isDirectUrl,
+          })) : undefined,
         };
       });
-      
-      // Additional sort to ensure proper ordering, especially for messages with similar timestamps
+
       return messages.sort((a, b) => {
         const timeDiff = a.timestamp.getTime() - b.timestamp.getTime();
         if (timeDiff !== 0) return timeDiff;
-        
-        // If timestamps are identical, ensure user messages come before assistant messages
+
         if (a.role === 'user' && b.role === 'assistant') return -1;
         if (a.role === 'assistant' && b.role === 'user') return 1;
-        
+
         return 0;
       });
     } catch (error) {
@@ -222,19 +277,19 @@ export class ChatStorageService {
     try {
       const chatRef = doc(db, 'chats', userId);
       const conversationRef = doc(collection(chatRef, 'conversations'), conversationId);
-      
+
       // Delete all messages first
       const messagesRef = collection(conversationRef, 'messages');
       const messagesSnapshot = await getDocs(messagesRef);
-      
+
       const batch = writeBatch(db);
       messagesSnapshot.docs.forEach(doc => {
         batch.delete(doc.ref);
       });
-      
+
       // Delete the conversation document
       batch.delete(conversationRef);
-      
+
       await batch.commit();
     } catch (error) {
       console.error('Error deleting conversation from Firestore:', error);
@@ -246,14 +301,14 @@ export class ChatStorageService {
   private static async migrateLocalDataToFirestore(userId: string): Promise<void> {
     try {
       const localConversations = this.getConversationsFromLocal();
-      
+
       for (const conversation of localConversations) {
         // Load messages for this conversation
         const messages = this.getMessagesFromLocal(conversation.id);
         const fullConversation = { ...conversation, messages };
         await this.saveConversationToFirestore(fullConversation, userId);
       }
-      
+
       // Clear localStorage after successful migration
       this.clearLocalStorage();
     } catch (error) {
@@ -297,7 +352,7 @@ export class ChatStorageService {
       const startIndex = lastDoc ? lastDoc.index + 1 : 0;
       const endIndex = startIndex + limit;
       const paginatedConversations = conversations.slice(startIndex, endIndex);
-      
+
       return {
         conversations: paginatedConversations.map(conv => ({
           ...conv,
@@ -314,16 +369,16 @@ export class ChatStorageService {
     try {
       const chatRef = doc(db, 'chats', userId);
       const conversationsRef = collection(chatRef, 'conversations');
-      
+
       let q = query(conversationsRef, orderBy('updatedAt', 'desc'), firestoreLimit(limit));
-      
+
       if (lastDoc) {
         q = query(conversationsRef, orderBy('updatedAt', 'desc'), firestoreStartAfter(lastDoc), firestoreLimit(limit));
       }
-      
+
       const snapshot = await getDocs(q);
       const conversations: ChatConversation[] = [];
-      
+
       snapshot.docs.forEach(docSnap => {
         const data = docSnap.data();
         conversations.push({
@@ -336,7 +391,7 @@ export class ChatStorageService {
           messages: [] // Don't load messages initially
         });
       });
-      
+
       return {
         conversations,
         hasMore: snapshot.docs.length === limit,
@@ -354,14 +409,14 @@ export class ChatStorageService {
       return await this.getMessagesFromFirestorePaginated(user.uid, conversationId, limit, lastDoc);
     } else {
       const allMessages = this.getMessagesFromLocal(conversationId);
-      
+
       if (!lastDoc) {
         // First load: get the latest messages
         const latestMessages = allMessages.slice(-limit);
         return {
           messages: latestMessages,
           hasMore: allMessages.length > limit,
-          lastDoc: latestMessages.length > 0 ? { 
+          lastDoc: latestMessages.length > 0 ? {
             timestamp: latestMessages[0].timestamp.getTime(),
             index: allMessages.length - latestMessages.length
           } : null
@@ -369,13 +424,13 @@ export class ChatStorageService {
       } else {
         // Load older messages before the lastDoc timestamp
         const lastTimestamp = lastDoc.timestamp;
-        const olderMessages = allMessages.filter(msg => 
+        const olderMessages = allMessages.filter(msg =>
           msg.timestamp.getTime() < lastTimestamp
         );
-        
+
         // Get the latest 'limit' number of older messages
         const paginatedMessages = olderMessages.slice(-limit);
-        
+
         return {
           messages: paginatedMessages,
           hasMore: olderMessages.length > limit,
@@ -394,13 +449,13 @@ export class ChatStorageService {
       const chatRef = doc(db, 'chats', userId);
       const conversationRef = doc(collection(chatRef, 'conversations'), conversationId);
       const messagesRef = collection(conversationRef, 'messages');
-      
+
       let q = query(messagesRef, orderBy('timestamp', 'desc'), firestoreLimit(limit));
-      
+
       if (lastDoc) {
         q = query(messagesRef, orderBy('timestamp', 'desc'), firestoreStartAfter(lastDoc), firestoreLimit(limit));
       }
-      
+
       const snapshot = await getDocs(q);
       const messages = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -413,13 +468,16 @@ export class ChatStorageService {
           modelName: data.modelName,
           isError: data.isError || false,
           source: data.source || 'server',
-          reasoning: data.reasoning
+          reasoning: data.reasoning || null,
+          messageType: data.messageType || 'chat',
+          generatedImageUrl: data.generatedImageUrl || null,
+          imageGenerationParams: data.imageGenerationParams || null
         };
       });
-      
+
       // Reverse to show oldest first in UI
       messages.reverse();
-      
+
       return {
         messages,
         hasMore: snapshot.docs.length === limit,
@@ -459,11 +517,11 @@ export class ChatStorageService {
     try {
       // Check if user has local data to migrate
       const localConversations = this.getConversationsFromLocal();
-      
+
       if (localConversations.length > 0) {
         // Check if user already has data in Firestore
         const firestoreConversations = await this.getConversationsFromFirestore(user.uid);
-        
+
         if (firestoreConversations.length === 0) {
           // Migrate local data to Firestore
           await this.migrateLocalDataToFirestore(user.uid);
@@ -492,14 +550,14 @@ export class ChatStorageService {
     const chatRef = doc(db, 'chats', user.uid);
     const conversationsRef = collection(chatRef, 'conversations');
     const q = query(conversationsRef, orderBy('updatedAt', 'desc'));
-    
+
     return onSnapshot(q, async (snapshot) => {
       const conversations: ChatConversation[] = [];
-      
+
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
         const messages = await this.getMessagesFromFirestore(user.uid, data.id);
-        
+
         conversations.push({
           id: data.id,
           title: data.title,
@@ -510,7 +568,7 @@ export class ChatStorageService {
           messages
         });
       }
-      
+
       callback(conversations);
     });
   }
@@ -520,21 +578,21 @@ export class ChatStorageService {
     try {
       const chatRef = doc(db, 'chats', userId);
       const conversationsRef = collection(chatRef, 'conversations');
-      
+
       // Get total count
       const totalSnapshot = await getCountFromServer(conversationsRef);
       const total = totalSnapshot.data().count;
-      
+
       // Get server conversations count
       const serverQuery = query(conversationsRef, where('source', '==', 'server'));
       const serverSnapshot = await getCountFromServer(serverQuery);
       const server = serverSnapshot.data().count;
-      
+
       // Get byok conversations count
       const byokQuery = query(conversationsRef, where('source', '==', 'byok'));
       const byokSnapshot = await getCountFromServer(byokQuery);
       const byok = byokSnapshot.data().count;
-      
+
       return { server, byok, total };
     } catch (error) {
       console.error('Error getting conversation counts:', error);
@@ -547,18 +605,18 @@ export class ChatStorageService {
     try {
       const chatRef = doc(db, 'chats', userId);
       const conversationsRef = collection(chatRef, 'conversations');
-      
+
       // Get server conversations
       const serverQuery = query(conversationsRef, where('source', '==', 'server'));
       const serverConversations = await getDocs(serverQuery);
-      
+
       // Get byok conversations  
       const byokQuery = query(conversationsRef, where('source', '==', 'byok'));
       const byokConversations = await getDocs(byokQuery);
-      
+
       let serverMessageCount = 0;
       let byokMessageCount = 0;
-      
+
       // Count messages in server conversations
       for (const conversationDoc of serverConversations.docs) {
         const messagesRef = collection(conversationDoc.ref, 'messages');
@@ -566,7 +624,7 @@ export class ChatStorageService {
         const userMessagesSnapshot = await getCountFromServer(userMessagesQuery);
         serverMessageCount += userMessagesSnapshot.data().count;
       }
-      
+
       // Count messages in byok conversations
       for (const conversationDoc of byokConversations.docs) {
         const messagesRef = collection(conversationDoc.ref, 'messages');
@@ -574,7 +632,7 @@ export class ChatStorageService {
         const userMessagesSnapshot = await getCountFromServer(userMessagesQuery);
         byokMessageCount += userMessagesSnapshot.data().count;
       }
-      
+
       return { server: serverMessageCount, byok: byokMessageCount };
     } catch (error) {
       console.error('Error getting message counts:', error);
@@ -585,20 +643,20 @@ export class ChatStorageService {
   // Get user chat statistics using collection group queries
   static async getUserChatStats(userId: string): Promise<{ totalConversations: number; totalMessages: number; serverMessages: number; byokMessages: number }> {
     try {
-      const [conversationsCount, allMessagesCount, serverMessagesCount, byokMessagesCount] = 
+      const [conversationsCount, allMessagesCount, serverMessagesCount, byokMessagesCount] =
         await Promise.all([
           getCountFromServer(collection(db, `chats/${userId}/conversations`)),
           getCountFromServer(query(
-            collectionGroup(db, 'messages'), 
+            collectionGroup(db, 'messages'),
             where('userId', '==', userId)
           )),
           getCountFromServer(query(
-            collectionGroup(db, 'messages'), 
+            collectionGroup(db, 'messages'),
             where('userId', '==', userId),
             where('source', '==', 'server')
           )),
           getCountFromServer(query(
-            collectionGroup(db, 'messages'), 
+            collectionGroup(db, 'messages'),
             where('userId', '==', userId),
             where('source', '==', 'byok')
           ))
@@ -610,7 +668,7 @@ export class ChatStorageService {
         serverMessages: serverMessagesCount.data().count,
         byokMessages: byokMessagesCount.data().count
       };
-      
+
     } catch (error) {
       console.error('Error getting user chat stats:', error);
       throw error;

@@ -1,8 +1,7 @@
 import OpenAI from 'openai';
 import { User } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
 import { MessageAttachment } from '../types/chat';
+import { ImageUploadService } from './imageUploadService';
 
 export interface ImageGenerationParams {
   prompt: string;
@@ -22,7 +21,9 @@ export interface ImageGenerationConfig {
 
 export class ImageGenerationService {
   private static createOpenAIInstance(idToken?: string, baseURL?: string, apiKey?: string) {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
 
     // Add Firebase ID token as Authorization header if available
     if (idToken) {
@@ -147,7 +148,7 @@ export class ImageGenerationService {
       } else {
         throw new Error('No image data received');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating image:', error);
       throw error;
     }
@@ -166,7 +167,7 @@ export class ImageGenerationService {
       }
 
       const blob = await response.blob();
-      
+
       // Create a filename based on prompt and timestamp
       const sanitizedPrompt = prompt.slice(0, 50).replace(/[^a-zA-Z0-9]/g, '_');
       const timestamp = Date.now();
@@ -175,41 +176,26 @@ export class ImageGenerationService {
       // Convert blob to File
       const file = new File([blob], filename, { type: 'image/jpeg' });
 
-      // Generate storage path
-      const imageId = this.generateImageId();
-      const storagePath = this.generateStoragePath(userId, imageId, filename);
-      const storageRef = ref(storage, storagePath);
-
       // Upload to Firebase Storage
-      const uploadResult = await uploadBytes(storageRef, file);
-      const downloadUrl = await getDownloadURL(uploadResult.ref);
-
-      const attachment: MessageAttachment = {
-        id: imageId,
-        type: 'image',
-        url: downloadUrl,
-        gcsPath: storagePath,
-        filename: filename,
-        size: file.size,
-        mimeType: 'image/jpeg'
-      };
+      const attachment = await ImageUploadService.uploadImage(file, userId);
 
       return attachment;
     } catch (error) {
-      console.error('Error downloading and uploading image:', error);
-      throw error;
+      console.warn('Failed to download and upload image, falling back to direct URL storage:', error);
+
+      // Fallback: create attachment with direct URL
+      return {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        type: 'image',
+        url: imageUrl,
+        filename: `generated_image_${Date.now()}.jpeg`,
+        size: 0, // Unknown size for direct URLs
+        mimeType: 'image/jpeg',
+        isDirectUrl: true // Mark as direct URL
+      };
     }
   }
 
-  private static generateImageId(): string {
-    return `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  private static generateStoragePath(userId: string | null, imageId: string, filename: string): string {
-    const userFolder = userId || 'anonymous';
-    const datePath = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    return `generated_images/${userFolder}/${datePath}/${imageId}_${filename}`;
-  }
 
   static getImageSizeOptions(): { label: string; value: string }[] {
     return [
@@ -222,5 +208,38 @@ export class ImageGenerationService {
       { label: "1248x832 (3:2)", value: "1248x832" },
       { label: "1512x648 (21:9)", value: "1512x648" },
     ];
+  }
+
+  static calculatePlaceholderDimensions(size: string, maxWidth: number = 320): { width: number; height: number; aspectRatio: number } {
+    const [widthStr, heightStr] = size.split('x');
+    const originalWidth = parseInt(widthStr);
+    const originalHeight = parseInt(heightStr);
+
+    if (isNaN(originalWidth) || isNaN(originalHeight)) {
+      // Default to square if invalid size
+      return { width: maxWidth, height: maxWidth, aspectRatio: 1 };
+    }
+
+    const aspectRatio = originalWidth / originalHeight;
+
+    // Calculate dimensions that fit within maxWidth while maintaining aspect ratio
+    let width, height;
+
+    if (aspectRatio >= 1) {
+      // Landscape or square - constrain by width
+      width = Math.min(maxWidth, originalWidth);
+      height = width / aspectRatio;
+    } else {
+      // Portrait - constrain by height to prevent very tall images
+      const maxHeight = maxWidth * 1.5; // Allow up to 1.5x maxWidth in height
+      height = Math.min(maxHeight, (maxWidth / aspectRatio));
+      width = height * aspectRatio;
+    }
+
+    return {
+      width: Math.round(width),
+      height: Math.round(height),
+      aspectRatio
+    };
   }
 }

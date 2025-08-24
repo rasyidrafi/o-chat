@@ -24,6 +24,7 @@ export interface ChatMessage {
   modelName?: string;
   isStreaming?: boolean;
   isError?: boolean;
+  isGeneratingImage?: boolean;
   timestamp: Date;
   source: 'server' | 'byok';
   reasoning?: string;
@@ -49,6 +50,7 @@ export interface MessageAttachment {
   filename: string;
   size: number;
   mimeType: string;
+  isDirectUrl?: boolean; // Flag to indicate this is a direct URL (not uploaded to Firebase)
 }
 
 export interface ChatConversation {
