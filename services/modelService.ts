@@ -27,7 +27,6 @@ export const getModelCapabilities = (supportedParameters: string[]) => {
  */
 export const fetchSystemModels = async (): Promise<Model[]> => {
     const baseURL = import.meta.env.VITE_FIREBASE_FUNC_BASE_API;
-    const descriptionURL = import.meta.env.VITE_FIREBASE_FUNC_BASE_DESCRIPTION_API;
     
     // Use the shared constant for fallback models
     const fallbackModels = DEFAULT_SYSTEM_MODELS;
@@ -71,17 +70,6 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
             })
         ];
 
-        // Add description API fetch if URL is configured
-        if (descriptionURL) {
-            const descriptionUrl = `${descriptionURL.replace(/\/$/, '')}/models`;
-            fetchPromises.push(
-                fetch(descriptionUrl, {
-                    method: 'GET',
-                    headers,
-                })
-            );
-        }
-
         // Fetch both APIs in parallel
         const responses = await Promise.all(fetchPromises);
         
@@ -92,16 +80,6 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
         
         // Parse models response
         const modelsData = await responses[0].json();
-        
-        // Parse descriptions response if available
-        let descriptionsData: any = null;
-        if (responses[1] && responses[1].ok) {
-            try {
-                descriptionsData = await responses[1].json();
-            } catch (error) {
-                console.warn('Failed to parse descriptions response:', error);
-            }
-        }
         
         // Extract models from response
         let fetchedModels: any[] = [];
@@ -117,43 +95,17 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
             return fallbackModels;
         }
         
-        // Extract descriptions from response
-        let descriptionsMap: Map<string, { name: string; description: string, supported_parameters: string[] }> = new Map();
-
-        if (descriptionsData) {
-            let descriptionsArray: any[] = [];
-            
-            // Handle array response directly
-            if (Array.isArray(descriptionsData)) {
-                descriptionsArray = descriptionsData;
-            } else if (descriptionsData.data && Array.isArray(descriptionsData.data)) {
-                // The API might return descriptions in a 'data' array
-                descriptionsArray = descriptionsData.data;
-            }
-            
-            // Create map for easy lookup
-            descriptionsArray.forEach((desc: any) => {
-                if (desc.id) {
-                    descriptionsMap.set(desc.id, {
-                        name: desc.name || desc.id,
-                        description: desc.description || '',
-                        supported_parameters: desc.supported_parameters || []
-                    });
-                }
-            });
-        }
-        
         // Merge models with descriptions
         const processedModels = fetchedModels.map((model: any) => {
             const modelId = model.id || model.model || '';
-            const descriptionInfo = descriptionsMap.get(modelId);
+            const description = model?.description || "";
             const modelSupportedParameters = model.supported_parameters || [];
 
             return {
                 id: modelId,
-                name: descriptionInfo?.name || model.name || model.id || model.model || '',
-                description: descriptionInfo?.description || model.description || '',
-                supported_parameters: descriptionInfo?.supported_parameters || modelSupportedParameters || []
+                name: model.name || modelId,
+                description,
+                supported_parameters: modelSupportedParameters || []
             };
         }) as Model[];
         

@@ -11,6 +11,7 @@ export interface ImageGenerationParams {
   seed?: number;
   guidance_scale?: number;
   watermark?: boolean;
+  image?: string;
 }
 
 export interface ImageGenerationConfig {
@@ -131,6 +132,9 @@ export class ImageGenerationService {
       }
       if (params.watermark !== undefined) {
         imageParams.watermark = params.watermark;
+      }
+      if (params.image) {
+        imageParams.image = params.image;
       }
 
       const response = await openai.images.generate(imageParams);

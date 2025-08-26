@@ -68,20 +68,6 @@ const ChatInput = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Listen for image generation trigger event
-  useEffect(() => {
-    const handleImageGenerationTrigger = () => {
-      if (inputMode === 'image_generation') {
-        handleImageGenerateClick();
-      }
-    };
-
-    window.addEventListener('triggerImageGeneration', handleImageGenerationTrigger);
-    return () => {
-      window.removeEventListener('triggerImageGeneration', handleImageGenerationTrigger);
-    };
-  }, [inputMode, handleImageGenerateClick]);
-
   // Check if current model supports image generation
   const checkCurrentModelCapabilities = useCallback(
     (options: ModelOption[]) => {
@@ -657,6 +643,26 @@ const ChatInput = ({
     };
   }, [loadAvailableModels]);
 
+  // Listen for image generation trigger event
+  useEffect(() => {
+    const handleImageGenerationTrigger = () => {
+      if (inputMode === "image_generation") {
+        handleImageGenerateClick();
+      }
+    };
+
+    window.addEventListener(
+      "triggerImageGeneration",
+      handleImageGenerationTrigger
+    );
+    return () => {
+      window.removeEventListener(
+        "triggerImageGeneration",
+        handleImageGenerationTrigger
+      );
+    };
+  }, [inputMode, handleImageGenerateClick]);
+
   const selectedModelLabel =
     modelOptions.find((model) => model.value === selectedModel)?.label ||
     "Gemini 1.5 Flash";
@@ -807,7 +813,7 @@ const ChatInput = ({
             </div>
             <div className="flex items-center gap-2">
               {/* Size Selector */}
-              {/* <div className="relative">
+              <div className="relative">
                 <button
                   onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
                   className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[120px]"
@@ -842,7 +848,7 @@ const ChatInput = ({
                     </div>
                   </div>
                 )}
-              </div> */}
+              </div>
 
               {/* Generate Button - No loading indicator, just disabled state */}
               <button
