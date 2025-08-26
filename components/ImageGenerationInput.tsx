@@ -6,6 +6,7 @@ interface ImageGenerationInputProps {
   prompt: string;
   onPromptChange: (prompt: string) => void;
   disabled?: boolean;
+  onImagePaste?: (file: File) => void; // Add paste handler prop
 }
 
 const ImageGenerationInput = ({
@@ -13,6 +14,7 @@ const ImageGenerationInput = ({
   prompt,
   onPromptChange,
   disabled = false,
+  onImagePaste, // Add to props
 }: ImageGenerationInputProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -32,6 +34,20 @@ const ImageGenerationInput = ({
     }
   };
 
+  // Add paste event handler for images
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData.items);
+    const imageItem = items.find((item) => item.type.startsWith("image/"));
+
+    if (imageItem && onImagePaste) {
+      e.preventDefault();
+      const file = imageItem.getAsFile();
+      if (file) {
+        onImagePaste(file);
+      }
+    }
+  };
+
   return (
     <>
       {/* Prompt Input */}
@@ -41,6 +57,7 @@ const ImageGenerationInput = ({
           value={prompt}
           onChange={handleTextareaChange}
           onKeyPress={handleKeyPress}
+          onPaste={handlePaste} // Add paste handler
           placeholder="Describe the image you want to generate..."
           className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-32 overflow-y-auto thin-scrollbar"
           rows={1}

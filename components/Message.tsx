@@ -54,36 +54,68 @@ const ImageContentComponent: React.FC<{
   alt?: string;
   gcsPath?: string;
   attachment?: MessageAttachment;
-  imageSize?: string;
-  isUserUpload?: boolean; // Add this prop
 }> = ({
   url,
   alt = "Uploaded image",
   gcsPath,
   attachment,
-  imageSize,
-  isUserUpload = false,
 }) => {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [isLoading, setIsLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
+  const [naturalDimensions, setNaturalDimensions] = useState<{width: number, height: number} | null>(null);
 
-  // Calculate dimensions based on whether it's a user upload or generated image
-  const dimensions = useMemo(() => {
-    if (isUserUpload) {
-      // For user uploads, use flexible sizing with max constraints
-      return null; // We'll handle this with CSS classes
-    } else {
-      // For generated images, use calculated dimensions
-      const sizeToUse = imageSize || "1024x1024";
-      return ImageGenerationService.calculatePlaceholderDimensions(
-        sizeToUse,
-        320
-      );
+  // Max dimensions for container
+  const maxWidth = 320;
+  const maxHeight = 240;
+
+  // Calculate display dimensions based on natural image dimensions
+  const displayDimensions = useMemo(() => {
+    if (!naturalDimensions) {
+      // Fallback dimensions while loading - use full container size
+      return { 
+        width: maxWidth, 
+        height: maxHeight, 
+        containerWidth: maxWidth, 
+        containerHeight: maxHeight,
+        fillsContainer: true
+      };
     }
-  }, [imageSize, isUserUpload]);
+
+    const { width: naturalWidth, height: naturalHeight } = naturalDimensions;
+    const aspectRatio = naturalWidth / naturalHeight;
+
+    // Calculate dimensions that fit within max constraints while maintaining aspect ratio
+    let displayWidth = naturalWidth;
+    let displayHeight = naturalHeight;
+
+    // Scale down if image is too large
+    if (displayWidth > maxWidth) {
+      displayWidth = maxWidth;
+      displayHeight = displayWidth / aspectRatio;
+    }
+
+    if (displayHeight > maxHeight) {
+      displayHeight = maxHeight;
+      displayWidth = displayHeight * aspectRatio;
+    }
+
+    const finalWidth = Math.round(displayWidth);
+    const finalHeight = Math.round(displayHeight);
+
+    // Check if image fills the entire container (no black borders)
+    const fillsContainer = (finalWidth === maxWidth && finalHeight === maxHeight);
+
+    return {
+      width: finalWidth,
+      height: finalHeight,
+      containerWidth: maxWidth,
+      containerHeight: maxHeight,
+      fillsContainer
+    };
+  }, [naturalDimensions, maxWidth, maxHeight]);
 
   useEffect(() => {
     if (gcsPath && gcsPath !== url) {
@@ -103,6 +135,12 @@ const ImageContentComponent: React.FC<{
     setShowExpiredPlaceholder(false);
   }, [currentUrl]);
 
+  const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = event.currentTarget;
+    setNaturalDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    setImageLoading(false);
+  };
+
   const handleImageError = () => {
     setImageError(true);
     setImageLoading(false);
@@ -114,37 +152,22 @@ const ImageContentComponent: React.FC<{
 
   // Loading state
   if (isLoading) {
-    if (isUserUpload) {
-      return (
-        <div className="w-48 h-32 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center">
-          <div className="text-zinc-500 text-xs">Loading...</div>
-        </div>
-      );
-    } else {
-      return (
-        <div
-          className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center"
-          style={{
-            width: `${dimensions!.width}px`,
-            height: `${dimensions!.height}px`,
-          }}
-        >
-          <div className="text-zinc-500 text-xs">Loading...</div>
-        </div>
-      );
-    }
+    return (
+      <div 
+        className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center"
+        style={{ width: `${maxWidth}px`, height: `${maxHeight}px` }}
+      >
+        <div className="text-zinc-500 text-xs">Loading...</div>
+      </div>
+    );
   }
 
   // Expired placeholder
   if (showExpiredPlaceholder) {
-    const placeholderDimensions = dimensions || { width: 320, height: 240 };
     return (
       <div
         className="bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700 rounded-lg flex flex-col items-center justify-center border-2 border-dashed border-zinc-300 dark:border-zinc-600 relative overflow-hidden"
-        style={{
-          width: `${placeholderDimensions.width}px`,
-          height: `${placeholderDimensions.height}px`,
-        }}
+        style={{ width: `${maxWidth}px`, height: `${maxHeight}px` }}
       >
         <div className="text-zinc-400 dark:text-zinc-500 text-center p-4">
           <div className="text-lg mb-2">🖼️</div>
@@ -158,21 +181,21 @@ const ImageContentComponent: React.FC<{
   }
 
   return (
-    <div className="relative flex justify-center rounded-lg bg-zinc-200 dark:bg-black">
+    <div className="relative flex justify-center rounded-lg bg-zinc-200 dark:bg-black"
+         style={{ 
+           width: `${displayDimensions.containerWidth}px`, 
+           height: `${displayDimensions.containerHeight}px`,
+           minWidth: `${displayDimensions.containerWidth}px`,
+           minHeight: `${displayDimensions.containerHeight}px`
+         }}>
       {/* Loading placeholder */}
       {imageLoading && !imageError && !showExpiredPlaceholder && (
         <div
-          className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center ${
-            isUserUpload ? "w-48 h-32" : ""
-          }`}
-          style={
-            !isUserUpload
-              ? {
-                  width: `${dimensions!.width}px`,
-                  height: `${dimensions!.height}px`,
-                }
-              : {}
-          }
+          className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
+          style={{
+            minWidth: `${displayDimensions.containerWidth}px`,
+            minHeight: `${displayDimensions.containerHeight}px`
+          }}
         >
           <div className="flex items-center space-x-2 text-zinc-500">
             <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
@@ -193,27 +216,19 @@ const ImageContentComponent: React.FC<{
         <img
           src={currentUrl}
           alt={alt}
-          className={`cursor-pointer hover:opacity-90 transition-opacity ${
-            imageLoading ? "opacity-0 absolute" : "opacity-100"
+          className={`cursor-pointer hover:opacity-90 transition-opacity object-contain ${
+            displayDimensions.fillsContainer ? 'rounded-lg' : ''
+          } ${
+            imageLoading ? "opacity-0" : "opacity-100"
           }`}
-          style={
-            isUserUpload
-              ? {
-                  // For user uploads: maintain aspect ratio with max constraints
-                  maxWidth: "320px",
-                  maxHeight: "240px",
-                  width: "auto",
-                  height: "auto",
-                  objectFit: "contain",
-                }
-              : {
-                  // For generated images: use exact calculated dimensions
-                  width: `${dimensions!.width}px`,
-                  height: `${dimensions!.height}px`,
-                  objectFit: "cover",
-                }
-          }
-          onLoad={() => setImageLoading(false)}
+          style={{
+            width: `${displayDimensions.width}px`,
+            height: `${displayDimensions.height}px`,
+            maxWidth: `${displayDimensions.containerWidth}px`,
+            maxHeight: `${displayDimensions.containerHeight}px`,
+            position: imageLoading ? "absolute" : "relative"
+          }}
+          onLoad={handleImageLoad}
           onError={handleImageError}
           onClick={() => {
             window.open(currentUrl, "_blank");
@@ -222,17 +237,13 @@ const ImageContentComponent: React.FC<{
         />
       ) : imageError && !showExpiredPlaceholder ? (
         <div
-          className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center ${
-            isUserUpload ? "w-48 h-32" : ""
-          }`}
-          style={
-            !isUserUpload
-              ? {
-                  width: `${dimensions!.width}px`,
-                  height: `${dimensions!.height}px`,
-                }
-              : {}
-          }
+          className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
+          style={{ 
+            width: `${displayDimensions.containerWidth}px`, 
+            height: `${displayDimensions.containerHeight}px`,
+            minWidth: `${displayDimensions.containerWidth}px`,
+            minHeight: `${displayDimensions.containerHeight}px`
+          }}
         >
           <div className="text-zinc-500 text-xs text-center px-2">
             {gcsPath ? "Error loading image" : "Failed to load image"}
@@ -794,9 +805,28 @@ const Message: React.FC<MessageProps> = ({
                 : message.content.find((item) => item.type === "text")?.text ||
                   ""}
             </div>
+            
+            {/* Display input image for editing if attachments exist */}
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs text-zinc-500 dark:text-zinc-500">
+                  Input image for editing:
+                </div>
+                {message.attachments.map((attachment, index) => (
+                  <ImageContentComponent
+                    key={index}
+                    url={attachment.url}
+                    gcsPath={attachment.gcsPath}
+                    attachment={attachment}
+                    alt="Input image for editing"
+                  />
+                ))}
+              </div>
+            )}
+            
             {message.imageGenerationParams && (
               <div className="text-xs text-zinc-500 dark:text-zinc-500 space-y-1">
-                <div>Size: {message.imageGenerationParams.size}</div>
+                {/* Hide size for user messages since it's generation size, not original image size */}
                 {message.imageGenerationParams.seed !== undefined &&
                   message.imageGenerationParams.seed !== -1 && (
                     <div>Seed: {message.imageGenerationParams.seed}</div>
@@ -852,19 +882,17 @@ const Message: React.FC<MessageProps> = ({
                   );
                 })()}
               </div>
-            ) : message.generatedImageUrl ? (
+            ) : message.generatedImageUrl || (message.attachments && message.attachments.length > 0) ? (
               <div className="max-w-md">
                 <ImageContentComponent
-                  url={message.generatedImageUrl}
+                  url={message.generatedImageUrl || message.attachments?.[0]?.url || ''}
                   alt="Generated image"
                   gcsPath={message.attachments?.[0]?.gcsPath}
                   attachment={message.attachments?.[0]}
-                  imageSize={message.imageGenerationParams?.size}
-                  isUserUpload={false} // Add this (or omit since it's default)
                 />
               </div>
             ) : null}
-            {message.generatedImageUrl && (
+            {(message.generatedImageUrl || (message.attachments && message.attachments.length > 0)) && (
               <div className="text-xs text-zinc-500 dark:text-zinc-500">
                 Image will be expired after 1 day.
               </div>
@@ -909,7 +937,6 @@ const Message: React.FC<MessageProps> = ({
                     gcsPath={attachment?.gcsPath}
                     attachment={attachment}
                     alt="User uploaded image"
-                    isUserUpload={true} // Add this
                   />
                 );
               }

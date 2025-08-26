@@ -51,6 +51,7 @@ export interface MessageAttachment {
   size: number;
   mimeType: string;
   isDirectUrl?: boolean; // Flag to indicate this is a direct URL (not uploaded to Firebase)
+  isForEditing?: boolean; // Flag to indicate this image is for editing (not vision attachment)
 }
 
 export interface ChatConversation {

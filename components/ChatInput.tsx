@@ -65,41 +65,131 @@ const ChatInput = ({
   const [selectedImageSize, setSelectedImageSize] = useState("1024x1024");
   const [isSizeDropdownOpen, setIsSizeDropdownOpen] = useState(false);
   const [isImageGenerating, setIsImageGenerating] = useState(false);
+  const [uploadedImageForEditing, setUploadedImageForEditing] = useState<string>("");
+  const [persistentUploadedImage, setPersistentUploadedImage] = useState<string>(""); // Persists across model switches
   const dropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const currentAttachmentsRef = useRef<MessageAttachment[]>(attachments);
+  const isCheckingCapabilitiesRef = useRef(false);
+
+  // Update ref when attachments change
+  useEffect(() => {
+    currentAttachmentsRef.current = attachments;
+  }, [attachments]);
+
+  // Helper function to manually clear all image data
+  const clearAllImages = useCallback(() => {
+    setPersistentUploadedImage("");
+    setUploadedImageForEditing("");
+    setAttachments([]);
+  }, []);
+
+  // Get current model capabilities
+  const getCurrentModelCapabilities = useCallback(() => {
+    const currentOption = modelOptions.find(
+      (model) =>
+        model.value === selectedModel &&
+        (model.providerId || "") === selectedProviderId
+    );
+
+    if (currentOption && currentOption.supportedParameters) {
+      return getModelCapabilities(currentOption.supportedParameters);
+    }
+    return null;
+  }, [modelOptions, selectedModel, selectedProviderId]);
 
   // Check if current model supports image generation
   const checkCurrentModelCapabilities = useCallback(
     (options: ModelOption[]) => {
-      const currentOption = options.find(
-        (model) =>
-          model.value === selectedModel &&
-          (model.providerId || "") === selectedProviderId
-      );
+      // Prevent concurrent calls
+      if (isCheckingCapabilitiesRef.current) return;
+      isCheckingCapabilitiesRef.current = true;
 
-      if (currentOption && currentOption.supportedParameters) {
-        const capabilities = getModelCapabilities(
-          currentOption.supportedParameters
+      try {
+        const currentOption = options.find(
+          (model) =>
+            model.value === selectedModel &&
+            (model.providerId || "") === selectedProviderId
         );
 
-        // Always switch to image generation mode if model supports it
-        if (capabilities.hasImageGeneration) {
-          setInputMode("image_generation");
+        if (currentOption && currentOption.supportedParameters) {
+          const capabilities = getModelCapabilities(
+            currentOption.supportedParameters
+          );
+
+          // Priority 1: If model has image editing, switch to image_generation mode
+          if (capabilities.hasImageEditing) {
+            setInputMode("image_generation");
+            // Convert attachments to persistent image for image editing models
+            if (currentAttachmentsRef.current.length > 0 && !persistentUploadedImage) {
+              const firstAttachment = currentAttachmentsRef.current[0];
+              setPersistentUploadedImage(firstAttachment.url);
+              setUploadedImageForEditing(firstAttachment.url);
+              // Clear attachments since we're switching to image editing mode
+              setAttachments([]);
+            }
+            // If we already have a persistent image, make sure it's active for editing
+            else if (persistentUploadedImage && !uploadedImageForEditing) {
+              setUploadedImageForEditing(persistentUploadedImage);
+            }
+          }
+          // Priority 2: If model has image generation only (no editing), switch to image_generation mode
+          else if (capabilities.hasImageGeneration && !capabilities.hasImageEditing) {
+            setInputMode("image_generation");
+            // Hide any uploaded images for generation-only models (they don't support image input)
+            setUploadedImageForEditing("");
+            // Clear attachments for generation mode but don't trigger dependency loop
+            if (currentAttachmentsRef.current.length > 0) {
+              setAttachments([]);
+            }
+          }
+          // Priority 3: If model has vision, stay in chat mode
+          else if (capabilities.hasVision) {
+            setInputMode("chat");
+            // Convert persistent image to attachments for vision models
+            if (persistentUploadedImage && currentAttachmentsRef.current.length === 0) {
+              const visionAttachment: MessageAttachment = {
+                id: Date.now().toString(),
+                url: persistentUploadedImage,
+                filename: "uploaded_image",
+                type: "image" as const,
+                size: 0,
+                mimeType: "image/png",
+              };
+              setAttachments([visionAttachment]);
+              // Clear editing state since we're using vision mode
+              setUploadedImageForEditing("");
+            }
+          }
+          // Priority 4: For models without any image capabilities, stay in chat mode
+          else {
+            setInputMode("chat");
+            // Clear all image data for non-image models
+            setUploadedImageForEditing("");
+            if (currentAttachmentsRef.current.length > 0) {
+              setAttachments([]);
+            }
+            // Keep persistent image for when user switches back to capable model
+          }
         } else {
-          // If model doesn't support image generation, switch back to chat mode
           setInputMode("chat");
         }
-      } else {
-        setInputMode("chat");
+      } finally {
+        // Always reset the flag
+        isCheckingCapabilitiesRef.current = false;
       }
     },
-    [selectedModel, selectedProviderId]
+    [selectedModel, selectedProviderId, persistentUploadedImage, uploadedImageForEditing]
   );
 
-  // Check capabilities when selected model changes
+  // Check capabilities when selected model changes - but debounce to avoid loops
   useEffect(() => {
     if (modelOptions.length > 0) {
-      checkCurrentModelCapabilities(modelOptions);
+      const timeoutId = setTimeout(() => {
+        checkCurrentModelCapabilities(modelOptions);
+      }, 0); // Use setTimeout to break potential synchronous loops
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [
     selectedModel,
@@ -436,13 +526,61 @@ const ChatInput = ({
           return;
         }
 
-        // Upload to Firebase Storage
-        const attachment = await ImageUploadService.uploadImage(
-          file,
-          user?.uid || null,
-          file.name
+        // Check current model capabilities
+        const selectedModelOption = modelOptions.find(
+          (model) =>
+            model.value === selectedModel &&
+            (model.providerId || "") === selectedProviderId
         );
-        setAttachments((prev) => [...prev, attachment]);
+
+        if (selectedModelOption && selectedModelOption.supportedParameters) {
+          const capabilities = getModelCapabilities(
+            selectedModelOption.supportedParameters
+          );
+
+          // Only allow image upload if model supports image input (vision or image editing)
+          // Image generation only models don't support image input
+          if (!capabilities.hasVision && !capabilities.hasImageEditing) {
+            alert("Selected model doesn't support image input. Please choose a model with vision or image editing capabilities.");
+            return;
+          }
+
+          // Upload to Firebase Storage
+          const attachment = await ImageUploadService.uploadImage(
+            file,
+            user?.uid || null,
+            file.name
+          );
+
+          // Always save to persistent storage first
+          setPersistentUploadedImage(attachment.url);
+
+          // Then route based on current model capabilities
+          // Priority 1: If model has image editing, store for editing (will be in image_generation mode)
+          if (capabilities.hasImageEditing) {
+            setUploadedImageForEditing(attachment.url);
+            // Clear any existing attachments since we're using image editing mode
+            setAttachments([]);
+          } 
+          // Priority 2: If model has vision (but not image editing), add to attachments (chat mode)
+          else if (capabilities.hasVision) {
+            setAttachments((prev) => [...prev, attachment]);
+            // Clear editing state since we're using vision mode
+            setUploadedImageForEditing("");
+          }
+          // Note: Image generation only models are blocked above, so no need to handle them
+        } else {
+          // Fallback: add to attachments if no capability info available
+          const attachment = await ImageUploadService.uploadImage(
+            file,
+            user?.uid || null,
+            file.name
+          );
+          setAttachments((prev) => [...prev, attachment]);
+          
+          // Also store in persistent image in case user switches to image editing model later
+          setPersistentUploadedImage(attachment.url);
+        }
       } catch (error) {
         console.error("Error uploading image:", error);
         alert("Failed to upload image. Please try again.");
@@ -450,7 +588,7 @@ const ChatInput = ({
         setIsUploadingImage(false);
       }
     },
-    [user]
+    [user, modelOptions, selectedModel, selectedProviderId, inputMode, persistentUploadedImage]
   );
 
   // Handle paste events for images
@@ -460,6 +598,15 @@ const ChatInput = ({
       const imageItem = items.find((item) => item.type.startsWith("image/"));
 
       if (imageItem) {
+        // Check current model capabilities before allowing paste
+        const capabilities = getCurrentModelCapabilities();
+        
+        // Only allow paste for models that support image input (vision or image editing, NOT generation only)
+        if (!capabilities || (!capabilities.hasVision && !capabilities.hasImageEditing)) {
+          // Don't show alert, just silently ignore paste for non-supported models
+          return;
+        }
+
         e.preventDefault();
         const file = imageItem.getAsFile();
         if (file) {
@@ -467,7 +614,24 @@ const ChatInput = ({
         }
       }
     },
-    [handleImageUpload]
+    [handleImageUpload, getCurrentModelCapabilities]
+  );
+
+  // Handle paste events for images in image generation mode
+  const handleImagePasteInGeneration = useCallback(
+    async (file: File) => {
+      // Check current model capabilities before allowing paste
+      const capabilities = getCurrentModelCapabilities();
+      
+      // Only allow paste for image editing models (generation-only models don't support image input)
+      if (!capabilities || !capabilities.hasImageEditing) {
+        // Don't show alert, just silently ignore paste for non-supported models
+        return;
+      }
+
+      await handleImageUpload(file);
+    },
+    [handleImageUpload, getCurrentModelCapabilities]
   );
 
   // Handle image generation click
@@ -479,11 +643,16 @@ const ChatInput = ({
     try {
       setIsImageGenerating(true);
 
+      // Clear persistent image immediately when user starts generation
+      setPersistentUploadedImage("");
+      setUploadedImageForEditing("");
+
       const params = {
         prompt: localImagePrompt,
         model: selectedModel,
         size: selectedImageSize,
         watermark: false,
+        ...(uploadedImageForEditing && { image: uploadedImageForEditing }), // Include uploaded image if available
       };
 
       const selectedModelOption = modelOptions.find(
@@ -583,12 +752,24 @@ const ChatInput = ({
     selectedProviderId,
     onImageGenerate,
     user,
+    uploadedImageForEditing,
   ]);
 
   // Remove attachment
   const removeAttachment = useCallback((attachmentId: string) => {
-    setAttachments((prev) => prev.filter((att) => att.id !== attachmentId));
-  }, []);
+    setAttachments((prev) => {
+      const newAttachments = prev.filter((att) => att.id !== attachmentId);
+      
+      // If this was the last attachment and it matches our persistent image, clear everything
+      const removedAttachment = prev.find((att) => att.id === attachmentId);
+      if (removedAttachment && removedAttachment.url === persistentUploadedImage && newAttachments.length === 0) {
+        setPersistentUploadedImage("");
+        setUploadedImageForEditing("");
+      }
+      
+      return newAttachments;
+    });
+  }, [persistentUploadedImage]);
 
   // Notify parent of initial model selection
   useEffect(() => {
@@ -710,28 +891,84 @@ const ChatInput = ({
   };
 
   const handleSendMessage = async () => {
-    if ((!message.trim() && attachments.length === 0) || disabled) return;
+    const capabilities = getCurrentModelCapabilities();
+    
+    // Different send conditions based on mode and capabilities
+    if (inputMode === "image_generation") {
+      // For image generation mode
+      if (capabilities?.hasImageEditing) {
+        // Image editing models: need both prompt AND image
+        if (!imagePrompt.trim() || !persistentUploadedImage) return;
+      } else {
+        // Pure image generation models: only need prompt (no image support)
+        if (!imagePrompt.trim()) return;
+      }
+    } else {
+      // For chat mode (vision models or regular chat)
+      if (capabilities?.hasVision) {
+        // Vision models: need prompt or attachments
+        if (!message.trim() && attachments.length === 0) return;
+      } else {
+        // Regular chat: just need prompt
+        if (!message.trim()) return;
+      }
+    }
 
+    if (disabled) return;
+
+    // Handle image generation mode
+    if (inputMode === "image_generation") {
+      await handleImageGenerateClick();
+      return;
+    }
+
+    // Handle chat mode
     const currentMessage = message.trim();
     const currentModel = selectedModel;
     const currentAttachments = [...attachments];
+    const currentImageForEditing = persistentUploadedImage;
     const selectedModelOption = modelOptions.find(
       (model) => model.value === currentModel
     );
 
-    // Clear the input and attachments immediately
+    // Clear the input, attachments, and all image data immediately when sending
     setMessage("");
     setAttachments([]);
+    setPersistentUploadedImage(""); // Clear persistent storage when sending
+    setUploadedImageForEditing(""); // Clear active editing image
 
     // Call the parent callback if provided
     if (onMessageSend) {
-      onMessageSend(
-        currentMessage,
-        currentModel,
-        selectedModelOption?.source || "system",
-        selectedModelOption?.providerId,
-        currentAttachments
-      );
+      // For image editing models in chat mode, pass the image URL as a special parameter
+      if (capabilities?.hasImageEditing && currentImageForEditing) {
+        // Create a special attachment-like object but with image editing flag
+        const imageEditingData: MessageAttachment = {
+          id: Date.now().toString(),
+          url: currentImageForEditing,
+          filename: "image_for_editing",
+          type: "image" as const,
+          size: 0,
+          mimeType: "image/png", // Default mime type for uploaded images
+          isForEditing: true, // Special flag to distinguish from regular attachments
+        };
+        
+        onMessageSend(
+          currentMessage,
+          currentModel,
+          selectedModelOption?.source || "system",
+          selectedModelOption?.providerId,
+          [imageEditingData] // Pass as single-item array with special flag
+        );
+      } else {
+        // For vision models or models without image capabilities, use regular attachments
+        onMessageSend(
+          currentMessage,
+          currentModel,
+          selectedModelOption?.source || "system",
+          selectedModelOption?.providerId,
+          currentAttachments
+        );
+      }
     }
   };
 
@@ -753,11 +990,34 @@ const ChatInput = ({
     >
       {inputMode === "image_generation" ? (
         <>
+          {/* Show uploaded image preview if available */}
+          {uploadedImageForEditing && (
+            <div className="mb-3">
+              <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+                <span>Image ready for editing:</span>
+              </div>
+              <div className="relative group inline-block">
+                <img
+                  src={uploadedImageForEditing}
+                  alt="Image for editing"
+                  className="w-20 h-20 object-cover rounded-lg border border-zinc-200 dark:border-zinc-700"
+                />
+                <button
+                  onClick={clearAllImages}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          )}
+
           <ImageGenerationInput
             isGenerating={isImageGenerating}
             prompt={imagePrompt}
             onPromptChange={setImagePrompt}
             disabled={disabled}
+            onImagePaste={handleImagePasteInGeneration} // Pass the paste handler
           />
 
           {/* Model selector row - exactly like chat mode layout */}
@@ -818,6 +1078,39 @@ const ChatInput = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Upload button for image editing models only (generation-only models don't support image input) */}
+              {(() => {
+                const capabilities = getCurrentModelCapabilities();
+                return capabilities && capabilities.hasImageEditing;
+              })() && (
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageUpload(file);
+                        e.target.value = ""; // Reset input
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    disabled={isUploadingImage || isImageGenerating}
+                  />
+                  <button
+                    className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors relative"
+                    aria-label="Upload image for editing"
+                    disabled={isUploadingImage || isImageGenerating}
+                  >
+                    {isUploadingImage ? (
+                      <LoadingIndicator size="sm" color="primary" />
+                    ) : (
+                      <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                    )}
+                  </button>
+                </div>
+              )}
+
               {/* Size Selector */}
               <div className="relative">
                 <button
@@ -856,15 +1149,35 @@ const ChatInput = ({
                 )}
               </div>
 
-              {/* Generate Button - No loading indicator, just disabled state */}
+              {/* Generate Button - Different conditions based on model capabilities */}
               <button
                 onClick={handleImageGenerateClick}
                 className={`p-1.5 rounded-full transition-colors ${
-                  imagePrompt.trim() && !disabled && !isImageGenerating
+                  (() => {
+                    const capabilities = getCurrentModelCapabilities();
+                    if (capabilities?.hasImageEditing) {
+                      // Image editing models: need both prompt and image
+                      return imagePrompt.trim() && uploadedImageForEditing && !disabled && !isImageGenerating;
+                    } else {
+                      // Pure image generation models: only need prompt
+                      return imagePrompt.trim() && !disabled && !isImageGenerating;
+                    }
+                  })()
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
                     : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
                 }`}
-                disabled={!imagePrompt.trim() || disabled || isImageGenerating}
+                disabled={
+                  (() => {
+                    const capabilities = getCurrentModelCapabilities();
+                    if (capabilities?.hasImageEditing) {
+                      // Image editing models: need both prompt and image
+                      return !imagePrompt.trim() || !uploadedImageForEditing || disabled || isImageGenerating;
+                    } else {
+                      // Pure image generation models: only need prompt
+                      return !imagePrompt.trim() || disabled || isImageGenerating;
+                    }
+                  })()
+                }
                 aria-label={
                   isImageGenerating ? "Generating..." : "Generate image"
                 }
@@ -898,6 +1211,34 @@ const ChatInput = ({
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Show persistent image preview for vision models when no attachments but persistent image exists */}
+            {inputMode === "chat" && persistentUploadedImage && attachments.length === 0 && (() => {
+              const capabilities = getCurrentModelCapabilities();
+              return capabilities?.hasVision && !capabilities?.hasImageEditing;
+            })() && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1 w-full">
+                  <span>Image ready for vision analysis:</span>
+                </div>
+                <div className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24">
+                  <img
+                    src={persistentUploadedImage}
+                    alt="Image for vision"
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
+                    <span className="text-[8px]">👁️</span>
+                  </div>
+                  <button
+                    onClick={clearAllImages}
+                    className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -971,45 +1312,85 @@ const ChatInput = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handleImageUpload(file);
-                      e.target.value = ""; // Reset input
-                    }
-                  }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  disabled={isUploadingImage}
-                />
-                <button
-                  className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors relative"
-                  aria-label="Attach image"
-                  disabled={isUploadingImage}
-                >
-                  {isUploadingImage ? (
-                    <LoadingIndicator size="sm" color="primary" />
-                  ) : (
-                    <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                  )}
-                </button>
-              </div>
+              {/* Conditionally show upload button only when model supports vision (in chat mode) */}
+              {(() => {
+                const capabilities = getCurrentModelCapabilities();
+                return capabilities && capabilities.hasVision && !capabilities.hasImageEditing;
+              })() && (
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Check model capabilities before processing
+                        const selectedModelOption = modelOptions.find(
+                          (model) =>
+                            model.value === selectedModel &&
+                            (model.providerId || "") === selectedProviderId
+                        );
+
+                        if (selectedModelOption && selectedModelOption.supportedParameters) {
+                          const capabilities = getModelCapabilities(
+                            selectedModelOption.supportedParameters
+                          );
+
+                          // Only allow file upload in chat mode if model supports vision (not image editing, those are in generation mode)
+                          if (!capabilities.hasVision || capabilities.hasImageEditing) {
+                            alert("Selected model doesn't support image input in chat mode. Please choose a model with vision capabilities only.");
+                            e.target.value = ""; // Reset input
+                            return;
+                          }
+                        }
+
+                        handleImageUpload(file);
+                        e.target.value = ""; // Reset input
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    disabled={isUploadingImage}
+                  />
+                  <button
+                    className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors relative"
+                    aria-label="Attach image"
+                    disabled={isUploadingImage}
+                  >
+                    {isUploadingImage ? (
+                      <LoadingIndicator size="sm" color="primary" />
+                    ) : (
+                      <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                    )}
+                  </button>
+                </div>
+              )}
               <button
                 onClick={handleSendMessage}
                 className={`p-1.5 rounded-full transition-colors ${
-                  (message.trim() || attachments.length > 0) &&
-                  !disabled &&
-                  !isUploadingImage
+                  (() => {
+                    const capabilities = getCurrentModelCapabilities();
+                    if (capabilities?.hasVision) {
+                      // Vision models: need message or attachments
+                      return (message.trim() || attachments.length > 0) && !disabled && !isUploadingImage;
+                    } else {
+                      // Regular chat: just need message
+                      return message.trim() && !disabled && !isUploadingImage;
+                    }
+                  })()
                     ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
                     : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
                 }`}
                 disabled={
-                  (!message.trim() && attachments.length === 0) ||
-                  disabled ||
-                  isUploadingImage
+                  (() => {
+                    const capabilities = getCurrentModelCapabilities();
+                    if (capabilities?.hasVision) {
+                      // Vision models: need message or attachments
+                      return (!message.trim() && attachments.length === 0) || disabled || isUploadingImage;
+                    } else {
+                      // Regular chat: just need message
+                      return !message.trim() || disabled || isUploadingImage;
+                    }
+                  })()
                 }
                 aria-label={disabled ? "Sending..." : "Send message"}
               >

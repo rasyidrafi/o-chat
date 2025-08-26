@@ -4,6 +4,7 @@ import { ChatMessage, ChatConversation, StreamingState, MessageContent, MessageA
 import { ChatService } from '../services/chatService';
 import { ChatMessage as ServiceChatMessage } from '../services/chatService';
 import { ChatStorageService } from '../services/chatStorageService';
+import { ImageGenerationService } from '../services/imageGenerationService';
 import { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -774,6 +775,23 @@ export const useChat = (settings?: AppSettings | undefined) => {
       // LOADING PHASE: Create new messages
       const messageId = generateId();
 
+      // Build user message content - for image editing, include the image attachment
+      let userAttachments: MessageAttachment[] | undefined = undefined;
+
+      // Check if this is image editing (has input image)
+      if (params?.image) {
+        // For image editing, create an attachment for the input image
+        userAttachments = [{
+          id: Date.now().toString(),
+          type: 'image',
+          url: params.image,
+          filename: 'input_image_for_editing.png',
+          size: 0,
+          mimeType: 'image/png',
+          isForEditing: true
+        }];
+      }
+
       const userMessage: ChatMessage = {
         id: messageId + '_user',
         role: 'user',
@@ -781,6 +799,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
         timestamp,
         source: getModelSource(model),
         messageType: 'image_generation',
+        attachments: userAttachments,
         imageGenerationParams: {
           prompt,
           size: params?.size || '1024x1024',
@@ -849,109 +868,142 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
     // COMPLETION/ERROR PHASE: Update existing message
     if (isFinalizingCall || isErrorCall) {
-      // Find the conversation and message to update using the conversations state
-      let targetConversation: ChatConversation | null = null;
-      let loadingMessageId: string | null = null;
+      // For successful completion, download and save the generated image as attachment first
+      const handleCompletion = async () => {
+        let generatedImageAttachment: MessageAttachment | undefined = undefined;
+        if (isFinalizingCall && imageUrl) {
+          try {
+            // Download and upload the generated image to Firebase Storage
+            generatedImageAttachment = await ImageGenerationService.downloadAndUploadImage(
+              imageUrl,
+              prompt,
+              user?.uid || null,
+              params?.response_format
+            );
+          } catch (error) {
+            console.error('Error saving generated image:', error);
+            // Create fallback attachment with direct URL
+            generatedImageAttachment = {
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              type: 'image',
+              url: imageUrl,
+              filename: `generated_image_${Date.now()}.jpeg`,
+              size: 0,
+              mimeType: 'image/jpeg',
+              isDirectUrl: true
+            };
+          }
+        }
 
-      // Search through all conversations to find the loading message
-      setConversations(prevConversations => {
-        for (const conv of prevConversations) {
-          const loadingMessage = conv.messages
-            .slice()
-            .reverse()
-            .find(msg =>
-              msg.messageType === 'image_generation' &&
-              msg.isGeneratingImage === true &&
-              msg.role === 'assistant' &&
-              msg.imageGenerationParams?.prompt === prompt
+        // Find the conversation and message to update using the conversations state
+        let targetConversation: ChatConversation | null = null;
+        let loadingMessageId: string | null = null;
+
+        // Search through all conversations to find the loading message
+        setConversations(prevConversations => {
+          for (const conv of prevConversations) {
+            const loadingMessage = conv.messages
+              .slice()
+              .reverse()
+              .find(msg =>
+                msg.messageType === 'image_generation' &&
+                msg.isGeneratingImage === true &&
+                msg.role === 'assistant' &&
+                msg.imageGenerationParams?.prompt === prompt
+              );
+
+            if (loadingMessage) {
+              targetConversation = conv;
+              loadingMessageId = loadingMessage.id;
+              break;
+            }
+          }
+
+          // If we found the loading message, update it
+          if (targetConversation && loadingMessageId) {
+            let updatedMessage: ChatMessage;
+
+            if (isErrorCall) {
+              updatedMessage = {
+                id: loadingMessageId,
+                role: 'assistant',
+                content: `❌ Image generation failed: ${params.error}`,
+                timestamp: new Date(),
+                model,
+                modelName: model,
+                source: getModelSource(model),
+                messageType: 'image_generation',
+                isGeneratingImage: false,
+                isError: true,
+                imageGenerationParams: {
+                  prompt,
+                  size: params?.size || '1024x1024',
+                  response_format: "url",
+                  seed: params?.seed,
+                  guidance_scale: params?.guidance_scale,
+                  watermark: false,
+                }
+              };
+            } else {
+              updatedMessage = {
+                id: loadingMessageId,
+                role: 'assistant',
+                content: `Generated image for: "${prompt}"`,
+                timestamp: new Date(),
+                model,
+                modelName: model,
+                source: getModelSource(model),
+                messageType: 'image_generation',
+                isGeneratingImage: false,
+                generatedImageUrl: imageUrl,
+                attachments: generatedImageAttachment ? [generatedImageAttachment] : undefined,
+                imageGenerationParams: {
+                  prompt,
+                  size: params?.size || '1024x1024',
+                  response_format: "url",
+                  seed: params?.seed,
+                  guidance_scale: params?.guidance_scale,
+                  watermark: false,
+                }
+              };
+            }
+
+            // Update the conversation with the finalized message
+            const updatedConversation = {
+              ...targetConversation,
+              messages: targetConversation.messages.map(msg =>
+                msg.id === loadingMessageId ? updatedMessage : msg
+              ),
+              updatedAt: new Date(),
+            };
+
+            // Update current conversation if it's the same one
+            setCurrentConversation(prevCurrent =>
+              prevCurrent && prevCurrent.id === targetConversation!.id
+                ? updatedConversation
+                : prevCurrent
             );
 
-          if (loadingMessage) {
-            targetConversation = conv;
-            loadingMessageId = loadingMessage.id;
-            break;
-          }
-        }
+            // Save to storage
+            ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
+              console.error('Error saving finalized conversation:', error);
+            });
 
-        // If we found the loading message, update it
-        if (targetConversation && loadingMessageId) {
-          let updatedMessage: ChatMessage;
-
-          if (isErrorCall) {
-            updatedMessage = {
-              id: loadingMessageId,
-              role: 'assistant',
-              content: `❌ Image generation failed: ${params.error}`,
-              timestamp: new Date(),
-              model,
-              modelName: model,
-              source: getModelSource(model),
-              messageType: 'image_generation',
-              isGeneratingImage: false,
-              isError: true,
-              imageGenerationParams: {
-                prompt,
-                size: params?.size || '1024x1024',
-                response_format: "url",
-                seed: params?.seed,
-                guidance_scale: params?.guidance_scale,
-                watermark: false,
-              }
-            };
-          } else {
-            updatedMessage = {
-              id: loadingMessageId,
-              role: 'assistant',
-              content: `Generated image for: "${prompt}"`,
-              timestamp: new Date(),
-              model,
-              modelName: model,
-              source: getModelSource(model),
-              messageType: 'image_generation',
-              isGeneratingImage: false,
-              generatedImageUrl: imageUrl,
-              attachments: params?.attachment ? [params.attachment] : undefined,
-              imageGenerationParams: {
-                prompt,
-                size: params?.size || '1024x1024',
-                response_format: "url",
-                seed: params?.seed,
-                guidance_scale: params?.guidance_scale,
-                watermark: false,
-              }
-            };
+            // Return updated conversations array
+            return prevConversations.map(conv =>
+              conv.id === targetConversation!.id ? updatedConversation : conv
+            );
           }
 
-          // Update the conversation with the finalized message
-          const updatedConversation = {
-            ...targetConversation,
-            messages: targetConversation.messages.map(msg =>
-              msg.id === loadingMessageId ? updatedMessage : msg
-            ),
-            updatedAt: new Date(),
-          };
+          // If no loading message found, don't update anything
+          console.warn('No loading message found for completion/error');
+          return prevConversations;
+        });
+      };
 
-          // Update current conversation if it's the same one
-          setCurrentConversation(prevCurrent =>
-            prevCurrent && prevCurrent.id === targetConversation!.id
-              ? updatedConversation
-              : prevCurrent
-          );
-
-          // Save to storage
-          ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
-            console.error('Error saving finalized conversation:', error);
-          });
-
-          // Return updated conversations array
-          return prevConversations.map(conv =>
-            conv.id === targetConversation!.id ? updatedConversation : conv
-          );
-        }
-
-        // If no loading message found, don't update anything
-        console.warn('No loading message found for completion/error');
-        return prevConversations;
+      // Execute the completion handler
+      handleCompletion().catch(error => {
+        console.error('Error in handleCompletion:', error);
       });
 
       return;

@@ -174,17 +174,21 @@ export class ImageGenerationService {
 
     if (response_format === 'b64_json') {
       try {
+        // Handle base64 image data
+        const base64ImageData = imageUrl; // ex: /9j/4QBjRXhpZgAATU0AKgAAAAgAAQE7AAIAAABBAAAAGgAAAABhNmIyOGU5M2NmMGIyMDczNmM5ZTBkOTM4NGNjNjk4NDY2ZTcxOThjZmU2ZDRiZTdhNTlkNTAzZDY4NzY3YTJmAP/bAEMAAgEBAQEBAgEBAQICAgICBAMCAgICBQQEAwQGBQYGBgUGBgYHCQgGBwkH...
 
+        // Convert base64 to proper data URI format if needed
+        const dataUri = base64ImageData.startsWith('data:') 
+          ? base64ImageData 
+          : `data:image/jpeg;base64,${base64ImageData}`;
+
+        const attachment = await ImageUploadService.uploadImage(dataUri, userId, filename);
+
+        return attachment;
       } catch (error) {
         console.error('Error handling base64 image:', error);
         throw error;
       }
-      const base64ImageData = imageUrl; // ex: /9j/4QBjRXhpZgAATU0AKgAAAAgAAQE7AAIAAABBAAAAGgAAAABhNmIyOGU5M2NmMGIyMDczNmM5ZTBkOTM4NGNjNjk4NDY2ZTcxOThjZmU2ZDRiZTdhNTlkNTAzZDY4NzY3YTJmAP/bAEMAAgEBAQEBAgEBAQICAgICBAMCAgICBQQEAwQGBQYGBgUGBgYHCQgGBwkH...
-
-
-      const attachment = await ImageUploadService.uploadImage(base64ImageData, userId, filename);
-
-      return attachment;
     } else {
       try {
         // Download the image
