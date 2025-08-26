@@ -121,7 +121,7 @@ export class ImageGenerationService {
         model: params.model,
         prompt: params.prompt,
         size: params.size || "1024x1024",
-        response_format: "b64_json"
+        response_format: "url",
       };
 
       // Add optional parameters if provided
