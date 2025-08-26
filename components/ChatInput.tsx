@@ -439,7 +439,8 @@ const ChatInput = ({
         // Upload to Firebase Storage
         const attachment = await ImageUploadService.uploadImage(
           file,
-          user?.uid || null
+          user?.uid || null,
+          file.name
         );
         setAttachments((prev) => [...prev, attachment]);
       } catch (error) {
@@ -473,11 +474,13 @@ const ChatInput = ({
   const handleImageGenerateClick = useCallback(async () => {
     if (!imagePrompt.trim() || disabled || isImageGenerating) return;
 
+    const localImagePrompt = imagePrompt.trim();
+
     try {
       setIsImageGenerating(true);
 
       const params = {
-        prompt: imagePrompt.trim(),
+        prompt: localImagePrompt,
         model: selectedModel,
         size: selectedImageSize,
         watermark: false,
@@ -490,7 +493,7 @@ const ChatInput = ({
       // First, call the parent callback to add loading message
       if (onImageGenerate) {
         onImageGenerate(
-          imagePrompt.trim(),
+          localImagePrompt,
           "", // Empty URL to indicate loading
           selectedModel,
           selectedModelOption?.source || "system",
@@ -501,6 +504,9 @@ const ChatInput = ({
           }
         );
       }
+
+      // clear prompt input
+      setImagePrompt("");
 
       try {
         // Generate the image in the background
@@ -514,14 +520,14 @@ const ChatInput = ({
         // Download and upload the image to Firebase Storage
         const attachment = await ImageGenerationService.downloadAndUploadImage(
           imageUrl,
-          imagePrompt.trim(),
-          user?.uid || null
+          localImagePrompt,
+          user?.uid || null,
         );
 
         // Call the parent callback again with the final image
         if (onImageGenerate) {
           onImageGenerate(
-            imagePrompt.trim(),
+            localImagePrompt,
             attachment.url,
             selectedModel,
             selectedModelOption?.source || "system",
@@ -542,7 +548,7 @@ const ChatInput = ({
         // Call the parent callback with error state
         if (onImageGenerate) {
           onImageGenerate(
-            imagePrompt.trim(),
+            localImagePrompt,
             "",
             selectedModel,
             selectedModelOption?.source || "system",

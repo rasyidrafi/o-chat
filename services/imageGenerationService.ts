@@ -121,6 +121,7 @@ export class ImageGenerationService {
         model: params.model,
         prompt: params.prompt,
         size: params.size || "1024x1024",
+        response_format: "b64_json"
       };
 
       // Add optional parameters if provided
@@ -144,7 +145,7 @@ export class ImageGenerationService {
       }
 
       const imageData = response.data[0];
-      
+
       if (params.response_format === 'b64_json' && imageData.b64_json) {
         return imageData.b64_json;
       } else if (imageData.url) {
@@ -161,42 +162,60 @@ export class ImageGenerationService {
   static async downloadAndUploadImage(
     imageUrl: string,
     prompt: string,
-    userId: string | null
+    userId: string | null,
+    response_format?: 'url' | 'b64_json'
   ): Promise<MessageAttachment> {
-    try {
-      // Download the image
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download image: ${response.statusText}`);
+    if (!response_format) response_format = 'url';
+
+    // Create a filename based on prompt and timestamp
+    const sanitizedPrompt = prompt.slice(0, 50).replace(/[^a-zA-Z0-9]/g, '_');
+    const timestamp = Date.now();
+    const filename = `generated_image_${sanitizedPrompt}_${timestamp}.jpg`;
+
+    if (response_format === 'b64_json') {
+      try {
+
+      } catch (error) {
+        console.error('Error handling base64 image:', error);
+        throw error;
       }
+      const base64ImageData = imageUrl; // ex: /9j/4QBjRXhpZgAATU0AKgAAAAgAAQE7AAIAAABBAAAAGgAAAABhNmIyOGU5M2NmMGIyMDczNmM5ZTBkOTM4NGNjNjk4NDY2ZTcxOThjZmU2ZDRiZTdhNTlkNTAzZDY4NzY3YTJmAP/bAEMAAgEBAQEBAgEBAQICAgICBAMCAgICBQQEAwQGBQYGBgUGBgYHCQgGBwkH...
 
-      const blob = await response.blob();
 
-      // Create a filename based on prompt and timestamp
-      const sanitizedPrompt = prompt.slice(0, 50).replace(/[^a-zA-Z0-9]/g, '_');
-      const timestamp = Date.now();
-      const filename = `generated_image_${sanitizedPrompt}_${timestamp}.jpg`;
-
-      // Convert blob to File
-      const file = new File([blob], filename, { type: 'image/jpeg' });
-
-      // Upload to Firebase Storage
-      const attachment = await ImageUploadService.uploadImage(file, userId);
+      const attachment = await ImageUploadService.uploadImage(base64ImageData, userId, filename);
 
       return attachment;
-    } catch (error) {
-      console.warn('Failed to download and upload image, falling back to direct URL storage:', error);
+    } else {
+      try {
+        // Download the image
+        const response = await fetch(imageUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to download image: ${response.statusText}`);
+        }
 
-      // Fallback: create attachment with direct URL
-      return {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        type: 'image',
-        url: imageUrl,
-        filename: `generated_image_${Date.now()}.jpeg`,
-        size: 0, // Unknown size for direct URLs
-        mimeType: 'image/jpeg',
-        isDirectUrl: true // Mark as direct URL
-      };
+        const blob = await response.blob();
+
+        // Convert blob to File
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+
+        // Upload to Firebase Storage
+        const attachment = await ImageUploadService.uploadImage(file, userId, filename);
+
+        return attachment;
+      } catch (error) {
+        console.warn('Failed to download and upload image, falling back to direct URL storage:', error);
+
+        // Fallback: create attachment with direct URL
+        return {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          type: 'image',
+          url: imageUrl,
+          filename: `generated_image_${Date.now()}.jpeg`,
+          size: 0, // Unknown size for direct URLs
+          mimeType: 'image/jpeg',
+          isDirectUrl: true // Mark as direct URL
+        };
+      }
     }
   }
 

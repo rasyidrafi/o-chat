@@ -15,18 +15,47 @@ export class ImageUploadService {
   }
 
   static async uploadImage(
-    file: File, 
-    userId: string | null
+    fileOrBase64: File | Blob | ArrayBuffer | Uint8Array | string, 
+    userId: string | null,
+    filename: string,
   ): Promise<MessageAttachment> {
     try {
+      let file: File | Blob;
+      let isBase64Input = false;
+
+      // Handle base64 input
+      if (typeof fileOrBase64 === 'string') {
+        isBase64Input = true;
+        const base64Data = fileOrBase64.replace(/^data:image\/\w+;base64,/, '');
+        const byteString = atob(base64Data);
+        
+        // Directly create Uint8Array from byte string (more efficient)
+        const uint8Array = Uint8Array.from(byteString, c => c.charCodeAt(0));
+        
+        // Determine MIME type from filename
+        const extension = filename.split('.').pop()?.toLowerCase() || 'png';
+        const mimeTypes: Record<string, string> = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp'
+        };
+        const mimeType = mimeTypes[extension] || 'image/png';
+        
+        file = new Blob([uint8Array], { type: mimeType });
+      } else {
+        file = fileOrBase64 as File | Blob;
+      }
+
       const imageId = this.generateImageId();
-      const storagePath = this.generateStoragePath(userId, imageId, file.name);
+      const storagePath = this.generateStoragePath(userId, imageId, filename);
       const storageRef = ref(storage, storagePath);
 
-      // Upload the file
+      // Upload the file (directly using Uint8Array/Blob)
       const uploadResult = await uploadBytes(storageRef, file);
       
-      // Get the download URL (temporary URL for backend access)
+      // Get the download URL
       const downloadUrl = await getDownloadURL(uploadResult.ref);
 
       const attachment: MessageAttachment = {
@@ -34,9 +63,9 @@ export class ImageUploadService {
         type: 'image',
         url: downloadUrl,
         gcsPath: storagePath,
-        filename: file.name,
+        filename: filename,
         size: file.size,
-        mimeType: file.type
+        mimeType: file.type,
       };
 
       return attachment;
@@ -78,7 +107,7 @@ export class ImageUploadService {
     return { isValid: true };
   }
 
-  static createImageDataUrl(file: File): Promise<string> {
+  static createImageDataUrl(file: File | Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);

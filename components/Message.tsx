@@ -864,9 +864,9 @@ const Message: React.FC<MessageProps> = ({
                 />
               </div>
             ) : null}
-            {message.attachments && message.attachments.length > 0 && (
+            {message.generatedImageUrl && (
               <div className="text-xs text-zinc-500 dark:text-zinc-500">
-                Image saved to your library
+                Image will be expired after 1 day.
               </div>
             )}
           </div>
