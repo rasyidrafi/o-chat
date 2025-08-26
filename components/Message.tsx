@@ -181,7 +181,7 @@ const ImageContentComponent: React.FC<{
   }
 
   return (
-    <div className="relative flex justify-center rounded-lg bg-zinc-200 dark:bg-black"
+    <div className="relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black"
          style={{ 
            width: `${displayDimensions.containerWidth}px`, 
            height: `${displayDimensions.containerHeight}px`,

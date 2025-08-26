@@ -155,6 +155,7 @@ export class ChatStorageService {
             mimeType: att.mimeType,
             ...(att.gcsPath !== undefined && { gcsPath: att.gcsPath }),
             ...(att.isDirectUrl !== undefined && { isDirectUrl: att.isDirectUrl }),
+            ...(att.isForEditing !== undefined && { isForEditing: att.isForEditing }),
           }));
         }
 
@@ -253,6 +254,7 @@ export class ChatStorageService {
             mimeType: att.mimeType,
             gcsPath: att.gcsPath,
             isDirectUrl: att.isDirectUrl,
+            isForEditing: att.isForEditing,
           })) : undefined,
         };
       });
@@ -471,7 +473,19 @@ export class ChatStorageService {
           reasoning: data.reasoning || null,
           messageType: data.messageType || 'chat',
           generatedImageUrl: data.generatedImageUrl || null,
-          imageGenerationParams: data.imageGenerationParams || null
+          imageGenerationParams: data.imageGenerationParams || null,
+          // Add missing attachments field
+          attachments: data.attachments ? data.attachments.map((att: any) => ({
+            id: att.id,
+            type: att.type,
+            url: att.url,
+            filename: att.filename,
+            size: att.size,
+            mimeType: att.mimeType,
+            gcsPath: att.gcsPath,
+            isDirectUrl: att.isDirectUrl,
+            isForEditing: att.isForEditing,
+          })) : undefined,
         };
       });
 
