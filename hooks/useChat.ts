@@ -904,13 +904,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                                     ...msg,
                                     content: '', // Clear any status text
                                     attachments: generatedImageAttachment ? [generatedImageAttachment] : [],
-                                    imageGenerationParams: {
-                                      prompt,
-                                      model,
-                                      ...(params || {}),
-                                      originalSource: source, // Store for job resumption
-                                      originalProviderId: providerId, // Store for job resumption
-                                    },
                                     imageGenerationJob: completedJob,
                                     isAsyncImageGeneration: false, // Mark as completed
                                   } as ChatMessage;
@@ -1343,7 +1336,8 @@ export const useChat = (settings?: AppSettings | undefined) => {
             jobId: job.id,
             status: job.status,
             hasAttachments: !!msg.attachments?.length,
-            isAsyncJob: msg.isAsyncImageGeneration
+            isAsyncJob: msg.isAsyncImageGeneration,
+            hasJobData: !!job.data?.length
           });
           
           // Resume polling if job is not completed and doesn't have final result
@@ -1351,19 +1345,177 @@ export const useChat = (settings?: AppSettings | undefined) => {
             // Job is still in progress
             (job.status === 'CREATED' || job.status === 'WAITING' || job.status === 'RUNNING') ||
             // Or job is completed but we don't have the final image attachment
-            (job.status === 'SUCCESS' && (!msg.attachments || msg.attachments.length === 0))
+            (job.status === 'SUCCESS' && (!msg.attachments || msg.attachments.length === 0) && job.data && job.data.length > 0) ||
+            // Or job is completed with attachments but message is still marked as generating (stuck state)
+            (job.status === 'SUCCESS' && msg.attachments && msg.attachments.length > 0 && (msg.isGeneratingImage || msg.isAsyncImageGeneration))
           );
           
           if (shouldResume) {
             foundActiveJobs++;
-            console.log('DEBUG: Resuming job polling for:', job.id, 'status:', job.status, 'reason:', 
-              job.status === 'SUCCESS' ? 'SUCCESS but no attachments' : `status is ${job.status}`);
+            
+            // Determine the reason for resuming
+            let resumeReason = '';
+            if (job.status === 'SUCCESS' && (!msg.attachments || msg.attachments.length === 0)) {
+              resumeReason = 'SUCCESS but no attachments - will download image';
+            } else if (job.status === 'SUCCESS' && msg.attachments && msg.attachments.length > 0 && (msg.isGeneratingImage || msg.isAsyncImageGeneration)) {
+              resumeReason = 'SUCCESS with attachments but stuck in generating state - will fix state';
+            } else {
+              resumeReason = `status is ${job.status}`;
+            }
+            
+            console.log('DEBUG: Resuming job for:', job.id, 'status:', job.status, 'reason:', resumeReason);
             
             // Get original provider info from imageGenerationParams
             const originalSource = msg.imageGenerationParams?.originalSource || 'system';
             const originalProviderId = msg.imageGenerationParams?.originalProviderId;
             
-            // Resume polling for this job
+            // Handle SUCCESS jobs that are stuck in generating state with attachments already present
+            if (job.status === 'SUCCESS' && msg.attachments && msg.attachments.length > 0 && (msg.isGeneratingImage || msg.isAsyncImageGeneration)) {
+              console.log('DEBUG: Fixing stuck completed job immediately:', job.id);
+              
+              // Simply update the message state to mark it as completed (no need to download again)
+              setConversations(prevConversations => {
+                const updatedConversations = prevConversations.map(conv => {
+                  if (conv.id === conversation.id) {
+                    const updatedConv = {
+                      ...conv,
+                      messages: conv.messages.map(convMsg => {
+                        if (convMsg.id === msg.id) {
+                          return {
+                            ...convMsg,
+                            content: convMsg.content || `Generated image for: "${msg.imageGenerationParams?.prompt || 'image'}"`,
+                            isAsyncImageGeneration: false, // Mark as completed
+                            isGeneratingImage: false, // Mark as completed
+                          } as ChatMessage;
+                        }
+                        return convMsg;
+                      }),
+                      updatedAt: new Date(),
+                    };
+                    
+                    // Update currentConversation if it's the same conversation
+                    setCurrentConversation(prevCurrent =>
+                      prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
+                    );
+                    
+                    // Save updated conversation
+                    ChatStorageService.saveConversation(updatedConv, user).catch(error => {
+                      console.error('Error saving fixed stuck job:', error);
+                    });
+                    
+                    return updatedConv;
+                  }
+                  return conv;
+                });
+                
+                return updatedConversations;
+              });
+              
+              return; // Skip polling for this job
+            }
+            
+            // For SUCCESS jobs without attachments, directly handle completion without polling
+            if (job.status === 'SUCCESS' && job.data && job.data.length > 0 && (!msg.attachments || msg.attachments.length === 0)) {
+              console.log('DEBUG: Handling completed job immediately without polling:', job.id);
+              
+              // Handle job completion directly
+              (async () => {
+                try {
+                  // Download and upload the generated image to Firebase Storage
+                  const generatedImageAttachment = await ImageGenerationService.downloadAndUploadImage(
+                    job.data![0].url,
+                    msg.imageGenerationParams!.prompt,
+                    user?.uid || null,
+                    msg.imageGenerationParams!.response_format
+                  );
+
+                  console.log('DEBUG: Successfully downloaded and uploaded image for job:', job.id);
+
+                  // Update the message with the completed image
+                  setConversations(prevConversations => {
+                    const updatedConversations = prevConversations.map(conv => {
+                      if (conv.id === conversation.id) {
+                        const updatedConv = {
+                          ...conv,
+                          messages: conv.messages.map(convMsg => {
+                            if (convMsg.id === msg.id) {
+                              return {
+                                ...convMsg,
+                                content: '', // Clear any status text
+                                attachments: generatedImageAttachment ? [generatedImageAttachment] : [],
+                                imageGenerationJob: job,
+                                isAsyncImageGeneration: false, // Mark as completed
+                                isGeneratingImage: false,
+                              } as ChatMessage;
+                            }
+                            return convMsg;
+                          }),
+                          updatedAt: new Date(),
+                        };
+                        
+                        // Update currentConversation if it's the same conversation
+                        setCurrentConversation(prevCurrent =>
+                          prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
+                        );
+                        
+                        // Save updated conversation with completed job
+                        ChatStorageService.saveConversation(updatedConv, user).catch(error => {
+                          console.error('Error saving resumed job completion:', error);
+                        });
+                        
+                        return updatedConv;
+                      }
+                      return conv;
+                    });
+                    
+                    return updatedConversations;
+                  });
+                } catch (error) {
+                  console.error('Error downloading resumed job image:', error);
+                  // Handle error case
+                  setConversations(prevConversations => {
+                    const updatedConversations = prevConversations.map(conv => {
+                      if (conv.id === conversation.id) {
+                        const updatedConv = {
+                          ...conv,
+                          messages: conv.messages.map(convMsg => {
+                            if (convMsg.id === msg.id) {
+                              return {
+                                ...convMsg,
+                                content: 'Failed to download generated image',
+                                imageGenerationJob: { ...job, status: 'FAILED' as const },
+                                isAsyncImageGeneration: false,
+                                isGeneratingImage: false,
+                              } as ChatMessage;
+                            }
+                            return convMsg;
+                          }),
+                          updatedAt: new Date(),
+                        };
+                        
+                        setCurrentConversation(prevCurrent =>
+                          prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
+                        );
+                        
+                        // Save error state
+                        ChatStorageService.saveConversation(updatedConv, user).catch(error => {
+                          console.error('Error saving error state:', error);
+                        });
+                        
+                        return updatedConv;
+                      }
+                      return conv;
+                    });
+                    
+                    return updatedConversations;
+                  });
+                }
+              })();
+              
+              return; // Skip polling for this completed job
+            }
+            
+            // Resume polling for in-progress jobs
             ImageGenerationJobService.startJobPolling(
               job.id,
               originalSource,
