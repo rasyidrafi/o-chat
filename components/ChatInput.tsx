@@ -713,10 +713,27 @@ const ChatInput = ({
           }
         } else {
           // Use regular image generation
+          // First, show loading state
+          if (onImageGenerate) {
+            onImageGenerate(
+              localImagePrompt,
+              "", // Empty URL for loading
+              selectedModel,
+              selectedModelOption?.source || "system",
+              selectedModelOption?.providerId,
+              {
+                ...params,
+                isLoading: true,
+                isAsyncJob: false,
+              }
+            );
+          }
+
+          // Then generate the image
           const imageUrl = await ImageGenerationService.generateImage(
             params,
             selectedModelOption?.source || "system",
-            selectedProviderId,
+            selectedModelOption?.providerId,
             user
           );
 

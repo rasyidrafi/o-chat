@@ -1069,7 +1069,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       const loadingAiMessage: ChatMessage = {
         id: messageId + '_ai',
         role: 'assistant',
-        content: isAsyncJob ? '' : 'Generating your image...', // Empty content for async jobs
+        content: '', // No text content, just show loading indicator
         timestamp: new Date(timestamp.getTime() + 1),
         model,
         modelName: model,
@@ -1226,7 +1226,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
               updatedMessage = {
                 id: loadingMessageId,
                 role: 'assistant',
-                content: `Generated image for: "${prompt}"`,
+                content: '',
                 timestamp: new Date(),
                 model,
                 modelName: model,
@@ -1383,7 +1383,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
                         if (convMsg.id === msg.id) {
                           return {
                             ...convMsg,
-                            content: convMsg.content || `Generated image for: "${msg.imageGenerationParams?.prompt || 'image'}"`,
+                            content: '',
                             isAsyncImageGeneration: false, // Mark as completed
                             isGeneratingImage: false, // Mark as completed
                           } as ChatMessage;
