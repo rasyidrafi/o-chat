@@ -906,6 +906,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
                                     attachments: generatedImageAttachment ? [generatedImageAttachment] : [],
                                     imageGenerationJob: completedJob,
                                     isAsyncImageGeneration: false, // Mark as completed
+                                    isGeneratingImage: false, // Mark as completed
                                   } as ChatMessage;
                                 }
                                 return msg;
@@ -947,6 +948,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
                                     content: 'Failed to download generated image',
                                     imageGenerationJob: { ...completedJob, status: 'FAILED' as const },
                                     isAsyncImageGeneration: false,
+                                    isGeneratingImage: false,
                                   } as ChatMessage;
                                 }
                                 return msg;
@@ -980,6 +982,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
                                   content: 'Failed to generate image',
                                   imageGenerationJob: completedJob,
                                   isAsyncImageGeneration: false,
+                                  isGeneratingImage: false,
                                 } as ChatMessage;
                               }
                               return msg;

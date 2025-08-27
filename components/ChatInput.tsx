@@ -644,10 +644,6 @@ const ChatInput = ({
     try {
       setIsImageGenerating(true);
 
-      // Clear persistent image immediately when user starts generation
-      setPersistentUploadedImage("");
-      setUploadedImageForEditing("");
-
       const params = {
         prompt: localImagePrompt,
         model: selectedModel,
@@ -660,9 +656,12 @@ const ChatInput = ({
         (m) => m.value === selectedModel
       );
 
-      // Check if model supports job-based generation
+      // Check if model supports job-based generation or editing
       const capabilities = getCurrentModelCapabilities();
-      const useJobBasedGeneration = capabilities && capabilities.hasImageGenerationJobs;
+      const useJobBasedGeneration = capabilities && (
+        capabilities.hasImageGenerationJobs || 
+        (capabilities.hasImageEditing && capabilities.hasImageGenerationJobs && uploadedImageForEditing)
+      );
 
       // clear prompt input
       setImagePrompt("");
@@ -762,8 +761,9 @@ const ChatInput = ({
           }
         }
 
-        // Clear the prompt after successful generation/job creation
+        // Clear the prompt and images after successful generation/job creation
         setImagePrompt("");
+        clearAllImages();
       } catch (generationError: any) {
         console.error("Image generation failed:", generationError);
 
