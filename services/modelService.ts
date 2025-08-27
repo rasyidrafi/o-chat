@@ -15,7 +15,8 @@ export const getModelCapabilities = (supportedParameters: string[]) => {
         hasReasoning: params.some(p => p.includes('reasoning') || p.includes('include_reasoning')),
         hasVision: params.some(p => p.includes('vision') || p.includes('image')),
         hasImageGeneration: params.some(p => p.includes('image_generation')),
-        hasImageEditing: params.some(p => p.includes('image_editing'))
+        hasImageEditing: params.some(p => p.includes('image_editing')),
+        hasImageGenerationJobs: params.some(p => p.includes('image_generation_jobs'))
     };
     
     return capabilities;

@@ -143,6 +143,21 @@ export class ChatStorageService {
         if (message.generatedImageUrl !== undefined) messageData.generatedImageUrl = message.generatedImageUrl;
         if (message.isGeneratingImage !== undefined) messageData.isGeneratingImage = message.isGeneratingImage;
         if (message.isReasoningComplete !== undefined) messageData.isReasoningComplete = message.isReasoningComplete;
+        if (message.isAsyncImageGeneration !== undefined) messageData.isAsyncImageGeneration = message.isAsyncImageGeneration;
+
+        // Handle imageGenerationJob
+        if (message.imageGenerationJob) {
+          messageData.imageGenerationJob = {
+            id: message.imageGenerationJob.id,
+            model: message.imageGenerationJob.model,
+            created: message.imageGenerationJob.created,
+            status: message.imageGenerationJob.status,
+            prompt: message.imageGenerationJob.prompt,
+            size: message.imageGenerationJob.size,
+            ...(message.imageGenerationJob.data && { data: message.imageGenerationJob.data }),
+            ...(message.imageGenerationJob.info && { info: message.imageGenerationJob.info }),
+          };
+        }
 
         // Handle attachments
         if (message.attachments && message.attachments.length > 0) {
@@ -170,6 +185,8 @@ export class ChatStorageService {
           if (params.watermark !== undefined) cleanParams.watermark = params.watermark;
           if (params.seed !== undefined && params.seed !== -1) cleanParams.seed = params.seed;
           if (params.guidance_scale !== undefined) cleanParams.guidance_scale = params.guidance_scale;
+          if (params.originalSource !== undefined) cleanParams.originalSource = params.originalSource;
+          if (params.originalProviderId !== undefined) cleanParams.originalProviderId = params.originalProviderId;
 
           if (Object.keys(cleanParams).length > 0) {
             messageData.imageGenerationParams = cleanParams;
@@ -473,7 +490,20 @@ export class ChatStorageService {
           reasoning: data.reasoning || null,
           messageType: data.messageType || 'chat',
           generatedImageUrl: data.generatedImageUrl || null,
+          isGeneratingImage: data.isGeneratingImage || false,
+          isAsyncImageGeneration: data.isAsyncImageGeneration || false,
           imageGenerationParams: data.imageGenerationParams || null,
+          // Handle imageGenerationJob
+          imageGenerationJob: data.imageGenerationJob ? {
+            id: data.imageGenerationJob.id,
+            model: data.imageGenerationJob.model,
+            created: data.imageGenerationJob.created,
+            status: data.imageGenerationJob.status,
+            prompt: data.imageGenerationJob.prompt,
+            size: data.imageGenerationJob.size,
+            data: data.imageGenerationJob.data || [],
+            info: data.imageGenerationJob.info || undefined,
+          } : undefined,
           // Add missing attachments field
           attachments: data.attachments ? data.attachments.map((att: any) => ({
             id: att.id,

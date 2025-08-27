@@ -39,7 +39,11 @@ export interface ChatMessage {
     seed?: number;
     guidance_scale?: number;
     watermark?: boolean;
+    originalSource?: string; // Store original source for job resumption
+    originalProviderId?: string; // Store original providerId for job resumption
   };
+  imageGenerationJob?: ImageGenerationJob;
+  isAsyncImageGeneration?: boolean;
 }
 
 export interface MessageAttachment {
@@ -52,6 +56,23 @@ export interface MessageAttachment {
   mimeType: string;
   isDirectUrl?: boolean; // Flag to indicate this is a direct URL (not uploaded to Firebase)
   isForEditing?: boolean; // Flag to indicate this image is for editing (not vision attachment)
+}
+
+export interface ImageGenerationJob {
+  id: string;
+  model: string;
+  created: number;
+  status: 'CREATED' | 'WAITING' | 'RUNNING' | 'SUCCESS' | 'FAILED';
+  prompt: string;
+  size: string;
+  data?: Array<{ url: string }>;
+  info?: {
+    queueRank?: string;
+    queueLen?: string;
+    error?: string;
+    details?: any;
+    code?: string;
+  };
 }
 
 export interface ChatConversation {

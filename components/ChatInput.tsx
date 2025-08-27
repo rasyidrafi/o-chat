@@ -11,6 +11,7 @@ import {
 import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from "../constants/models";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
+import { ImageGenerationJobService } from "../services/imageGenerationJobService";
 import { MessageAttachment } from "../types/chat";
 import { User } from "firebase/auth";
 
@@ -133,8 +134,8 @@ const ChatInput = ({
               setUploadedImageForEditing(persistentUploadedImage);
             }
           }
-          // Priority 2: If model has image generation only (no editing), switch to image_generation mode
-          else if (capabilities.hasImageGeneration && !capabilities.hasImageEditing) {
+          // Priority 2: If model has image generation (including jobs), switch to image_generation mode
+          else if (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) {
             setInputMode("image_generation");
             // Hide any uploaded images for generation-only models (they don't support image input)
             setUploadedImageForEditing("");
@@ -659,57 +660,92 @@ const ChatInput = ({
         (m) => m.value === selectedModel
       );
 
-      // First, call the parent callback to add loading message
-      if (onImageGenerate) {
-        onImageGenerate(
-          localImagePrompt,
-          "", // Empty URL to indicate loading
-          selectedModel,
-          selectedModelOption?.source || "system",
-          selectedModelOption?.providerId,
-          {
-            ...params,
-            isLoading: true,
-          }
-        );
-      }
+      // Check if model supports job-based generation
+      const capabilities = getCurrentModelCapabilities();
+      const useJobBasedGeneration = capabilities && capabilities.hasImageGenerationJobs;
 
       // clear prompt input
       setImagePrompt("");
 
       try {
-        // Generate the image in the background
-        const imageUrl = await ImageGenerationService.generateImage(
-          params,
-          selectedModelOption?.source || "system",
-          selectedProviderId,
-          user
-        );
+        if (useJobBasedGeneration) {
+          // For job-based generation, show immediate loading first
+          if (onImageGenerate) {
+            onImageGenerate(
+              localImagePrompt,
+              "", // Empty URL for jobs
+              selectedModel,
+              selectedModelOption?.source || "system",
+              selectedModelOption?.providerId,
+              {
+                ...params,
+                isLoading: true,
+                isAsyncJob: true,
+                job: null, // No job data yet - will be added when created
+              }
+            );
+          }
 
-        // Download and upload the image to Firebase Storage
-        const attachment = await ImageGenerationService.downloadAndUploadImage(
-          imageUrl,
-          localImagePrompt,
-          user?.uid || null,
-        );
-
-        // Call the parent callback again with the final image
-        if (onImageGenerate) {
-          onImageGenerate(
-            localImagePrompt,
-            attachment.url,
-            selectedModel,
+          // Then create the job asynchronously
+          const job = await ImageGenerationJobService.createImageGenerationJob(
+            params,
             selectedModelOption?.source || "system",
             selectedModelOption?.providerId,
-            {
-              ...params,
-              attachment,
-              isLoading: false,
-            }
+            user
           );
+
+          // Update with job data - this will trigger job polling
+          if (onImageGenerate) {
+            onImageGenerate(
+              localImagePrompt,
+              "", // Empty URL for jobs
+              selectedModel,
+              selectedModelOption?.source || "system",
+              selectedModelOption?.providerId,
+              {
+                ...params,
+                isLoading: true,
+                isAsyncJob: true,
+                job: job,
+                isJobUpdate: true, // Flag to indicate this is a job update
+              }
+            );
+          }
+        } else {
+          // Use regular image generation
+          const imageUrl = await ImageGenerationService.generateImage(
+            params,
+            selectedModelOption?.source || "system",
+            selectedProviderId,
+            user
+          );
+
+          // Download and upload the image to Firebase Storage
+          const attachment = await ImageGenerationService.downloadAndUploadImage(
+            imageUrl,
+            localImagePrompt,
+            user?.uid || null,
+          );
+
+          // Call the parent callback again with the final image
+          if (onImageGenerate) {
+            onImageGenerate(
+              localImagePrompt,
+              attachment.url,
+              selectedModel,
+              selectedModelOption?.source || "system",
+              selectedModelOption?.providerId,
+              {
+                ...params,
+                attachment,
+                isLoading: false,
+                isAsyncJob: false,
+              }
+            );
+          }
         }
 
-        // Clear the prompt after successful generation
+        // Clear the prompt after successful generation/job creation
         setImagePrompt("");
       } catch (generationError: any) {
         console.error("Image generation failed:", generationError);
@@ -725,6 +761,7 @@ const ChatInput = ({
             {
               ...params,
               isLoading: false,
+              isAsyncJob: useJobBasedGeneration,
               error: generationError.message || "Image generation failed",
             }
           );
@@ -753,6 +790,7 @@ const ChatInput = ({
     onImageGenerate,
     user,
     uploadedImageForEditing,
+    getCurrentModelCapabilities,
   ]);
 
   // Remove attachment

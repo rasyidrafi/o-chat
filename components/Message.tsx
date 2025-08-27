@@ -859,6 +859,31 @@ const Message: React.FC<MessageProps> = ({
                       320
                     );
 
+                  const isAsyncJob = message.isAsyncImageGeneration;
+                  const job = message.imageGenerationJob;
+                  
+                  let loadingText = "Generating image...";
+                  
+                  if (isAsyncJob && job) {
+                    switch (job.status) {
+                      case 'CREATED':
+                        loadingText = "Creating image generation job...";
+                        break;
+                      case 'WAITING':
+                        if (job.info?.queueRank && job.info?.queueLen) {
+                          loadingText = `You are on queue ${job.info.queueRank} of ${job.info.queueLen}`;
+                        } else {
+                          loadingText = "Waiting in queue...";
+                        }
+                        break;
+                      case 'RUNNING':
+                        loadingText = "Generating...";
+                        break;
+                      default:
+                        loadingText = "Processing...";
+                    }
+                  }
+
                   return (
                     <div
                       className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center relative overflow-hidden"
@@ -875,7 +900,12 @@ const Message: React.FC<MessageProps> = ({
                       <div className="flex flex-col items-center space-y-3 text-zinc-500 dark:text-zinc-400 z-10">
                         <LoadingIndicator size="md" color="primary" />
                         <div className="text-xs text-center px-4">
-                          <div>Generating image...</div>
+                          <div>{loadingText}</div>
+                          {isAsyncJob && (
+                            <div className="mt-1 text-zinc-400 dark:text-zinc-500">
+                              You can leave this page and come back later
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
