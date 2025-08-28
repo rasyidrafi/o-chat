@@ -1,11 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Search, X } from './Icons';
 import { useChat } from '../hooks/useChat';
+import { ChatConversation } from '../types/chat';
 
 interface SearchCenterProps {
   isOpen: boolean;
   onClose: () => void;
   chat: ReturnType<typeof useChat>;
+}
+
+interface GroupedConversations {
+  [key: string]: ChatConversation[];
 }
 
 const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) => {
@@ -24,13 +29,36 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside modal to close
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    // Add event listener with a small delay to avoid immediate closure
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   // Focus search input when modal opens
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         searchInputRef.current?.focus();
       }, 100);
+      return () => clearTimeout(timeoutId);
     }
   }, [isOpen]);
 
@@ -41,22 +69,31 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
     }
   }, [isOpen]);
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
     }
-  };
+  }, [onClose]);
 
-  // Function to highlight search terms
-  const highlightText = (text: string, query: string) => {
+  // Memoized function to highlight search terms
+  const highlightText = useCallback((text: string, query: string) => {
     if (!query.trim()) return text;
     
     const regex = new RegExp(`(${query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded text-zinc-900 dark:text-zinc-100">$1</mark>');
-  };
+  }, []);
 
-  // Debounced search function
+  // Debounced search function - memoized
   const debouncedSearch = useCallback((query: string) => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -69,37 +106,29 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
   }, [setSearchQuery, searchConversations]);
 
   // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setLocalSearchQuery(query);
     debouncedSearch(query);
-  };
+  }, [debouncedSearch]);
 
   // Clear search
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
     setLocalSearchQuery('');
     clearSearch();
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-  };
+  }, [clearSearch]);
 
   // Handle conversation selection
-  const handleConversationSelect = (conversation: any) => {
+  const handleConversationSelect = useCallback((conversation: ChatConversation) => {
     selectConversation(conversation);
     onClose();
-  };
+  }, [selectConversation, onClose]);
 
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const formatDate = (date: Date) => {
+  // Memoized date formatting function
+  const formatDate = useCallback((date: Date) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
@@ -119,30 +148,92 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
     } else {
       return 'Older';
     }
-  };
+  }, []);
 
-  // Determine which conversations to display
-  const displayConversations = localSearchQuery.trim() ? filteredConversations : conversations.slice(0, 20); // Show recent 20 when no search
+  // Memoized function to extract text content from message
+  // (removed as we're only showing titles now)
 
-  // Group conversations by date
-  const groupedConversations = displayConversations.reduce((groups: { [key: string]: typeof displayConversations }, conversation) => {
-    const dateKey = formatDate(conversation.updatedAt);
-    if (!groups[dateKey]) {
-      groups[dateKey] = [];
-    }
-    groups[dateKey].push(conversation);
-    return groups;
-  }, {});
+  // Memoized display conversations
+  const displayConversations = useMemo(() => {
+    return localSearchQuery.trim() ? filteredConversations : conversations.slice(0, 20);
+  }, [localSearchQuery, filteredConversations, conversations]);
 
-  // Define the order of groups
-  const groupOrder = ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Older'];
-  
-  // Sort the grouped conversations by the defined order
-  const orderedGroups = groupOrder
-    .filter(group => groupedConversations[group] && groupedConversations[group].length > 0)
-    .map(group => [group, groupedConversations[group]] as [string, typeof displayConversations]);
+  // Memoized grouped conversations
+  const groupedConversations = useMemo((): GroupedConversations => {
+    return displayConversations.reduce((groups: GroupedConversations, conversation) => {
+      const dateKey = formatDate(conversation.updatedAt);
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(conversation);
+      return groups;
+    }, {});
+  }, [displayConversations, formatDate]);
 
+  // Memoized ordered groups
+  const orderedGroups = useMemo(() => {
+    const groupOrder = ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Older'];
+    
+    return groupOrder
+      .filter(group => groupedConversations[group] && groupedConversations[group].length > 0)
+      .map(group => [group, groupedConversations[group]] as [string, ChatConversation[]]);
+  }, [groupedConversations]);
+
+  // Memoized conversation item component to prevent unnecessary re-renders
+  const ConversationItem = React.memo<{
+    conversation: ChatConversation;
+    isActive: boolean;
+    searchQuery: string;
+    onSelect: (conversation: ChatConversation) => void;
+    highlightText: (text: string, query: string) => string;
+  }>(({ conversation, isActive, searchQuery, onSelect, highlightText }) => {
+    const handleClick = useCallback(() => {
+      onSelect(conversation);
+    }, [conversation, onSelect]);
+
+    // Remove textContent as we're not showing message content anymore
+
+    return (
+      <button
+        onClick={handleClick}
+        className={`w-full text-left px-6 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors group ${
+          isActive
+            ? 'bg-purple-50 dark:bg-purple-900/20 border-r-2 border-purple-500'
+            : ''
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-white text-xs font-medium">
+              {conversation.title?.charAt(0).toUpperCase() || 'C'}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-zinc-900 dark:text-white truncate mb-1">
+              {searchQuery.trim() ? (
+                <span 
+                  dangerouslySetInnerHTML={{
+                    __html: highlightText(conversation.title || 'Untitled Conversation', searchQuery)
+                  }}
+                />
+              ) : (
+                conversation.title || 'Untitled Conversation'
+              )}
+            </div>
+            <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+              {conversation.updatedAt.toLocaleDateString()} at {conversation.updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+        </div>
+      </button>
+    );
+  });
+
+  // Early return for better performance
   if (!isOpen) return null;
+
+  const hasSearchQuery = localSearchQuery.trim();
+  const hasResults = orderedGroups.length > 0;
 
   return (
     <>
@@ -151,13 +242,13 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
         className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] transition-opacity duration-300 ease-out ${
           isOpen ? 'opacity-100' : 'opacity-0'
         }`}
-        onClick={onClose}
         aria-hidden="true"
       />
       
       {/* Search Center Modal */}
       <div className="fixed inset-0 z-[100] flex items-start justify-center pt-16 px-4">
         <div 
+          ref={modalRef}
           className={`bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden transition-all duration-300 ease-out ${
             isOpen 
               ? 'opacity-100 scale-100 translate-y-0' 
@@ -216,128 +307,51 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
           >
             {isSearching ? (
               <div className="flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-zinc-400">
-                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
                 <div className="text-sm">Searching conversations...</div>
               </div>
-            ) : (
-              <>
-                {/* Show search results or recent conversations */}
-                {orderedGroups.length > 0 ? (
-                  orderedGroups.map(([dateGroup, convs]) => (
-                    <div key={dateGroup} className="mb-6 last:mb-2">
-                      <div className="px-6 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider sticky top-0 bg-white dark:bg-[#1c1c1c]">
-                        {localSearchQuery.trim() ? `${dateGroup} (${convs.length} result${convs.length !== 1 ? 's' : ''})` : dateGroup}
-                      </div>
-                      <div className="space-y-1">
-                        {convs.map((conversation) => (
-                          <button
-                            key={conversation.id}
-                            onClick={() => handleConversationSelect(conversation)}
-                            className={`w-full text-left px-6 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors group ${
-                              currentConversation?.id === conversation.id
-                                ? 'bg-purple-50 dark:bg-purple-900/20 border-r-2 border-purple-500'
-                                : ''
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span className="text-white text-xs font-medium">
-                                  {conversation.title?.charAt(0).toUpperCase() || 'C'}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-zinc-900 dark:text-white truncate mb-1">
-                                  {localSearchQuery.trim() ? (
-                                    <span 
-                                      dangerouslySetInnerHTML={{
-                                        __html: highlightText(conversation.title || 'Untitled Conversation', localSearchQuery)
-                                      }}
-                                    />
-                                  ) : (
-                                    conversation.title || 'Untitled Conversation'
-                                  )}
-                                </div>
-                                {conversation.messages?.[0]?.content && (
-                                  <div className="text-sm text-zinc-500 dark:text-zinc-400 overflow-hidden">
-                                    <div 
-                                      className="overflow-hidden"
-                                      style={{
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                        lineHeight: '1.4'
-                                      }}
-                                    >
-                                      {localSearchQuery.trim() ? (
-                                        <span 
-                                          dangerouslySetInnerHTML={{
-                                            __html: highlightText(
-                                              (() => {
-                                                const content = conversation.messages[0].content;
-                                                const text = typeof content === 'string' 
-                                                  ? content 
-                                                  : content.filter(item => item.type === 'text').map(item => item.text).join(' ');
-                                                return text.substring(0, 150) + (text.length > 150 ? '...' : '');
-                                              })(),
-                                              localSearchQuery
-                                            )
-                                          }}
-                                        />
-                                      ) : (
-                                        <>
-                                          {(() => {
-                                            const content = conversation.messages[0].content;
-                                            const text = typeof content === 'string' 
-                                              ? content 
-                                              : content.filter(item => item.type === 'text').map(item => item.text).join(' ');
-                                            return text.substring(0, 150);
-                                          })()}
-                                          {(() => {
-                                            const content = conversation.messages[0].content;
-                                            const text = typeof content === 'string' 
-                                              ? content 
-                                              : content.filter(item => item.type === 'text').map(item => item.text).join(' ');
-                                            return text.length > 150 && '...';
-                                          })()}
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                                  {conversation.updatedAt.toLocaleDateString()} at {conversation.updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center text-zinc-500 dark:text-zinc-400 py-12">
-                    {localSearchQuery.trim() ? (
-                      <>
-                        <div className="text-lg mb-2">No conversations found</div>
-                        <div className="text-sm">
-                          No conversations found for "<span className="font-medium">{localSearchQuery}</span>"
-                        </div>
-                        <button
-                          onClick={handleClearSearch}
-                          className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 underline mt-3 text-sm"
-                        >
-                          Clear search
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-lg mb-2">No conversations yet</div>
-                        <div className="text-sm">Start a new chat to begin!</div>
-                      </>
-                    )}
+            ) : hasResults ? (
+              orderedGroups.map(([dateGroup, convs]) => (
+                <div key={dateGroup} className="mb-6 last:mb-2">
+                  <div className="px-6 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider sticky top-0 bg-white dark:bg-[#1c1c1c]">
+                    {hasSearchQuery ? `${dateGroup} (${convs.length} result${convs.length !== 1 ? 's' : ''})` : dateGroup}
                   </div>
+                  <div className="space-y-1">
+                    {convs.map((conversation) => (
+                      <ConversationItem
+                        key={conversation.id}
+                        conversation={conversation}
+                        isActive={currentConversation?.id === conversation.id}
+                        searchQuery={localSearchQuery}
+                        onSelect={handleConversationSelect}
+                        highlightText={highlightText}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-zinc-500 dark:text-zinc-400 py-12">
+                {hasSearchQuery ? (
+                  <>
+                    <div className="text-lg mb-2">No conversations found</div>
+                    <div className="text-sm">
+                      No conversations found for "<span className="font-medium">{localSearchQuery}</span>"
+                    </div>
+                    <button
+                      onClick={handleClearSearch}
+                      className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 underline mt-3 text-sm"
+                    >
+                      Clear search
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-lg mb-2">No conversations yet</div>
+                    <div className="text-sm">Start a new chat to begin!</div>
+                  </>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>

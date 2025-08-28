@@ -181,10 +181,7 @@ const App: React.FC = () => {
       </ConfirmationDialog>
       <SearchCenter
         isOpen={ui.isSearchCenterOpen}
-        onClose={() => {
-          setUi(prev => ({ ...prev, isSearchCenterOpen: false }));
-          chat.clearSearch();
-        }}
+        onClose={() => setUi(prev => ({ ...prev, isSearchCenterOpen: false }))}
         chat={chat}
       />
     </>
