@@ -385,31 +385,31 @@ const CodeBlock: React.FC<{
 
 
     const renderContent = () => {
-      if (viewMode === "ascii") {
-        return (
-          <div
-            className={`${showHeader ? "p-4" : "px-1.5 py-0.5"} ${
-              showHeader ? "" : "rounded"
-            }`}
-            style={{
-              backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
-            }}
-          >
-            <code
-              className="text-zinc-800 dark:text-zinc-200 text-xs font-mono block"
-              style={{
-                lineHeight: "1.2",
-                fontSize: "0.85em",
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-                whiteSpace: isWrapped ? "pre-wrap" : "pre",
-              }}
-            >
-              {children}
-            </code>
-          </div>
-        );
-      }
+      // if (viewMode === "ascii") {
+      //   return (
+      //     <div
+      //       className={`${showHeader ? "p-4" : "px-1.5 py-0.5"} ${
+      //         showHeader ? "" : "rounded"
+      //       }`}
+      //       style={{
+      //         backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
+      //       }}
+      //     >
+      //       <code
+      //         className="text-zinc-800 dark:text-zinc-200 text-xs font-mono block"
+      //         style={{
+      //           lineHeight: "1.2",
+      //           fontSize: "0.85em",
+      //           fontFamily:
+      //             'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+      //           whiteSpace: isWrapped ? "pre-wrap" : "pre",
+      //         }}
+      //       >
+      //         {children}
+      //       </code>
+      //     </div>
+      //   );
+      // }
 
       return (
         <div
@@ -458,7 +458,7 @@ const CodeBlock: React.FC<{
 
     // Code block or multi-line with header
     return (
-      <div className="relative group mb-4 w-full max-w-full overflow-hidden">
+      <div className="relative group my-4 w-full max-w-full overflow-hidden">
         <div
           className="relative w-full rounded-lg"
           style={{
@@ -472,7 +472,7 @@ const CodeBlock: React.FC<{
           <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
             {/* Left side: View mode selector (only show if has ASCII patterns or forced) */}
             <div className="flex items-center">
-              <div className="inline-flex rounded-md bg-zinc-200 dark:bg-zinc-700 p-0.5">
+              {/* <div className="inline-flex rounded-md bg-zinc-200 dark:bg-zinc-700 p-0.5">
                 <button
                   onClick={() => handleViewModeChange("code")}
                   className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
@@ -493,7 +493,7 @@ const CodeBlock: React.FC<{
                 >
                   Raw Format
                 </button>
-              </div>
+              </div> */}
             </div>
 
             {/* Right side: Controls */}
@@ -678,21 +678,21 @@ const MarkdownComponents = {
       );
     }
 
-    // Multi-line code - check if it's ASCII art/table
-    const isAsciiArt =
-      /[+\-|═│┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬]/.test(text) || // Box drawing chars
-      /^\s*[+\-|]+\s*$/.test(text.split("\n")[0]) || // ASCII table headers
-      /\+[-=]+\+/.test(text) || // Table borders like +---+
-      /\|.*\|/.test(text); // Content between pipes
+    // // Multi-line code - check if it's ASCII art/table
+    // const isAsciiArt =
+    //   /[+\-|═│┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬]/.test(text) || // Box drawing chars
+    //   /^\s*[+\-|]+\s*$/.test(text.split("\n")[0]) || // ASCII table headers
+    //   /\+[-=]+\+/.test(text) || // Table borders like +---+
+    //   /\|.*\|/.test(text); // Content between pipes
 
-    if (isAsciiArt) {
-      // Multi-line ASCII art -> render with header and view options
-      return (
-        <CodeBlock forceAscii={true} isInlineMultiLine={true} {...props}>
-          {children}
-        </CodeBlock>
-      );
-    }
+    // if (isAsciiArt) {
+    //   // Multi-line ASCII art -> render with header and view options
+    //   return (
+    //     <CodeBlock forceAscii={true} isInlineMultiLine={true} {...props}>
+    //       {children}
+    //     </CodeBlock>
+    //   );
+    // }
 
     // Multi-line regular code -> render as code block with header
     return (
@@ -859,7 +859,6 @@ const createMarkdownProcessor = () =>
       rehypeKatex,
       rehypeReactModule,
     ]) => {
-      console.log("Creating processor with math support");
       return {
         processor: unified
           .unified()
@@ -999,7 +998,6 @@ const Message: React.FC<MessageProps> = memo(
         processedText = processedText.replace(
           /\\\[([\s\S]*?)\\\]/g,
           (match, content) => {
-            console.log("Converting display math:", match);
             return `$$${content}$$`;
           }
         );
@@ -1008,7 +1006,6 @@ const Message: React.FC<MessageProps> = memo(
         processedText = processedText.replace(
           /\\\(([\s\S]*?)\\\)/g,
           (match, content) => {
-            console.log("Converting inline math:", match);
             return `$${content}$`;
           }
         );
