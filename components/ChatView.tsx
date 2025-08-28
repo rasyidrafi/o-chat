@@ -1,5 +1,5 @@
 // Improved ChatView with better scroll handling
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
@@ -51,16 +51,26 @@ const ChatView: React.FC<ChatViewProps> = ({
     typeof window !== "undefined" ? window.innerWidth : 0
   );
 
+  // Throttled resize handler for better performance
   React.useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const handleResize = () => {
-      setWindowWidth(window.innerWidth);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setWindowWidth(window.innerWidth);
+      }, 100); // Throttle to 100ms
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
-  const isMobile = windowWidth < 768;
+  // Memoize mobile calculation to prevent unnecessary re-renders
+  const isMobile = useMemo(() => windowWidth < 768, [windowWidth]);
 
   // State to track selected model info from ChatInput
   const [selectedModelInfo, setSelectedModelInfo] = React.useState({
@@ -72,11 +82,18 @@ const ChatView: React.FC<ChatViewProps> = ({
   // State to control scroll-to-bottom button visibility
   const [showScrollToBottom, setShowScrollToBottom] = React.useState(false);
 
-  // Handler to scroll to bottom
+  // Handler to scroll to bottom - memoized to prevent recreation
   const handleScrollToBottom = useCallback(() => {
     const event = new CustomEvent("scrollToBottom");
     window.dispatchEvent(event);
   }, []);
+
+  // Optimized scroll trigger with requestAnimationFrame for better performance
+  const triggerScrollToBottom = useCallback(() => {
+    requestAnimationFrame(() => {
+      handleScrollToBottom();
+    });
+  }, [handleScrollToBottom]);
 
   const handleSendMessage = useCallback(
     (
@@ -88,12 +105,10 @@ const ChatView: React.FC<ChatViewProps> = ({
     ) => {
       sendMessage(message, model, source, providerId, attachments);
       
-      // Trigger scroll to bottom after a brief delay to ensure message is added
-      setTimeout(() => {
-        handleScrollToBottom();
-      }, 50);
+      // Use optimized scroll trigger
+      triggerScrollToBottom();
     },
-    [sendMessage, handleScrollToBottom]
+    [sendMessage, triggerScrollToBottom]
   );
 
   const handleImageGenerate = useCallback(
@@ -107,12 +122,10 @@ const ChatView: React.FC<ChatViewProps> = ({
     ) => {
       generateImage(prompt, imageUrl, model, source, providerId, params);
       
-      // Trigger scroll to bottom after a brief delay to ensure message is added
-      setTimeout(() => {
-        handleScrollToBottom();
-      }, 50);
+      // Use optimized scroll trigger
+      triggerScrollToBottom();
     },
-    [generateImage, handleScrollToBottom]
+    [generateImage, triggerScrollToBottom]
   );
 
   const handlePromptSelect = useCallback(
@@ -134,70 +147,101 @@ const ChatView: React.FC<ChatViewProps> = ({
     []
   );
 
-  // Calculate sidebar width based on collapsed state
-  const sidebarWidth = isSidebarCollapsed ? 80 : 256; // w-20 = 80px, w-64 = 256px
+  // Calculate sidebar width based on collapsed state - memoized
+  const sidebarWidth = useMemo(() => 
+    isSidebarCollapsed ? 80 : 256, // w-20 = 80px, w-64 = 256px
+    [isSidebarCollapsed]
+  );
 
-  const shouldShowWelcome = !currentConversation;
+  const shouldShowWelcome = useMemo(() => 
+    !currentConversation, 
+    [currentConversation]
+  );
 
-  const getThemeIcon = () => {
-    const iconProps = {
-      initial: { opacity: 0, rotate: -90, scale: 0.5 },
-      animate: { opacity: 1, rotate: 0, scale: 1 },
-      exit: { opacity: 0, rotate: 90, scale: 0.5 },
-      transition: { duration: animationsDisabled ? 0 : 0.3 },
-    };
+  // Memoized theme icon props to prevent recreation on every render
+  const themeIconProps = useMemo(() => ({
+    initial: { opacity: 0, rotate: -90, scale: 0.5 },
+    animate: { opacity: 1, rotate: 0, scale: 1 },
+    exit: { opacity: 0, rotate: 90, scale: 0.5 },
+    transition: { duration: animationsDisabled ? 0 : 0.3 },
+  }), [animationsDisabled]);
 
+  const getThemeIcon = useCallback(() => {
     switch (theme) {
       case "light":
         return (
-          <motion.div key="moon" {...iconProps}>
+          <motion.div key="moon" {...themeIconProps}>
             <Moon className="w-5 h-5" />
           </motion.div>
         );
       case "dark":
         return (
-          <motion.div key="sun" {...iconProps}>
+          <motion.div key="sun" {...themeIconProps}>
             <Sun className="w-5 h-5" />
           </motion.div>
         );
       case "system":
         return (
-          <motion.div key="desktop" {...iconProps}>
+          <motion.div key="desktop" {...themeIconProps}>
             <Desktop className="w-5 h-5" />
           </motion.div>
         );
       default:
         return (
-          <motion.div key="sun" {...iconProps}>
+          <motion.div key="sun" {...themeIconProps}>
             <Sun className="w-5 h-5" />
           </motion.div>
         );
     }
-  };
+  }, [theme, themeIconProps]);
+
+  // Memoize styles to prevent object recreation on every render
+  const sidebarButtonStyle = useMemo(() => ({
+    top: "10px",
+  }), []);
+
+  const buttonSizeStyle = useMemo(() => ({
+    width: "40px",
+    height: "40px",
+  }), []);
+
+  const topRightButtonsStyle = useMemo(() => ({
+    top: "10px",
+    right: "18px",
+  }), []);
+
+  const sidebarTransition = useMemo(() => ({
+    duration: animationsDisabled ? 0 : 0.3,
+    ease: "easeOut" as const,
+  }), [animationsDisabled]);
+
+  // Memoize padding styles for scroll button and chat input
+  const scrollButtonPadding = useMemo(() => ({
+    paddingLeft: isMobile ? "16px" : `${sidebarWidth + 16}px`,
+    paddingRight: "16px",
+    paddingBottom: isMobile ? "140px" : "160px",
+  }), [isMobile, sidebarWidth]);
+
+  const chatInputPadding = useMemo(() => ({
+    paddingLeft: isMobile ? "0" : `${sidebarWidth + 16}px`,
+    paddingRight: isMobile ? "0" : "16px",
+  }), [isMobile, sidebarWidth]);
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-[#1c1c1c] relative">
       {/* Top-left positioned collapse button for desktop */}
       <motion.div
         className="fixed z-50 hidden md:block"
-        style={{
-          top: "10px",
-        }}
+        style={sidebarButtonStyle}
         animate={{
           left: `${sidebarWidth + 10}px`,
         }}
-        transition={{
-          duration: animationsDisabled ? 0 : 0.3,
-          ease: "easeOut",
-        }}
+        transition={sidebarTransition}
       >
         <button
           onClick={toggleSidebar}
           className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200"
-          style={{
-            width: "40px",
-            height: "40px",
-          }}
+          style={buttonSizeStyle}
           aria-label="Toggle sidebar"
         >
           <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
@@ -208,17 +252,14 @@ const ChatView: React.FC<ChatViewProps> = ({
       <div
         className="fixed z-50 md:hidden"
         style={{
-          top: "10px",
+          ...sidebarButtonStyle,
           left: "10px",
         }}
       >
         <button
           onClick={onMenuClick}
           className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200"
-          style={{
-            width: "40px",
-            height: "40px",
-          }}
+          style={buttonSizeStyle}
           aria-label="Open menu"
         >
           <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
@@ -228,18 +269,12 @@ const ChatView: React.FC<ChatViewProps> = ({
       {/* Top-right positioned buttons */}
       <div
         className="fixed z-10 flex items-center"
-        style={{
-          top: "10px",
-          right: "18px",
-        }}
+        style={topRightButtonsStyle}
       >
         <button
           onClick={() => onOpenSettings()}
           className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200"
-          style={{
-            width: "40px",
-            height: "40px",
-          }}
+          style={buttonSizeStyle}
           aria-label="Settings"
         >
           <SlidersHorizontal className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
@@ -250,10 +285,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           aria-label={`Switch to ${
             theme === "light" ? "dark" : theme === "dark" ? "system" : "light"
           } mode`}
-          style={{
-            width: "40px",
-            height: "40px",
-          }}
+          style={buttonSizeStyle}
         >
           <AnimatePresence mode="wait" initial={false}>
             {getThemeIcon()}
@@ -282,7 +314,7 @@ const ChatView: React.FC<ChatViewProps> = ({
             <MessageList
               messages={currentConversation?.messages || []}
               streamingMessageId={streamingState.currentMessageId}
-              onStopStreaming={stopStreaming}
+              // onStopStreaming={stopStreaming}
               animationsDisabled={animationsDisabled}
               isLoadingMessages={isLoadingMessages}
               isLoadingMoreMessages={isLoadingMoreMessages}
@@ -298,11 +330,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
           <div
             className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 flex justify-center"
-            style={{
-              paddingLeft: isMobile ? "16px" : `${sidebarWidth + 16}px`,
-              paddingRight: "16px",
-              paddingBottom: isMobile ? "140px" : "160px",
-            }}
+            style={scrollButtonPadding}
           >
             <SmallButton
               onClick={handleScrollToBottom}
@@ -333,10 +361,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
         <div
           className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"
-          style={{
-            paddingLeft: isMobile ? "0" : `${sidebarWidth + 16}px`,
-            paddingRight: isMobile ? "0" : "16px",
-          }}
+          style={chatInputPadding}
         >
           <ChatInput
             onMessageSend={handleSendMessage}

@@ -1,5 +1,5 @@
-// Clean Message component with unified markdown processing
-import React, { useMemo, useEffect, useRef, useState } from "react";
+// Clean Message component with unified markdown processing and performance optimizations
+import React, { useMemo, useEffect, useRef, useState, useCallback, memo } from "react";
 import { ChatMessage, MessageAttachment } from "../types/chat";
 import { motion, AnimatePresence } from "framer-motion";
 import TypingIndicator from "./TypingIndicator";
@@ -55,7 +55,7 @@ const ImageContentComponent: React.FC<{
   alt?: string;
   gcsPath?: string;
   attachment?: MessageAttachment;
-}> = ({ url, alt = "Uploaded image", gcsPath, attachment }) => {
+}> = memo(({ url, alt = "Uploaded image", gcsPath, attachment }) => {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [isLoading, setIsLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -134,23 +134,23 @@ const ImageContentComponent: React.FC<{
     setShowExpiredPlaceholder(false);
   }, [currentUrl]);
 
-  const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
+  const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
     const img = event.currentTarget;
     setNaturalDimensions({
       width: img.naturalWidth,
       height: img.naturalHeight,
     });
     setImageLoading(false);
-  };
+  }, []);
 
-  const handleImageError = () => {
+  const handleImageError = useCallback(() => {
     setImageError(true);
     setImageLoading(false);
 
     if (attachment?.isDirectUrl) {
       setShowExpiredPlaceholder(true);
     }
-  };
+  }, [attachment?.isDirectUrl]);
 
   // Loading state
   if (isLoading) {
@@ -260,7 +260,9 @@ const ImageContentComponent: React.FC<{
       ) : null}
     </div>
   );
-};
+});
+
+ImageContentComponent.displayName = 'ImageContentComponent';
 
 interface MessageProps {
   message: ChatMessage;
@@ -274,7 +276,7 @@ const CodeBlock: React.FC<{
   className?: string;
   forceAscii?: boolean;
   isInlineMultiLine?: boolean;
-}> = ({
+}> = memo(({
   children,
   className,
   forceAscii = false,
@@ -286,7 +288,6 @@ const CodeBlock: React.FC<{
     forceAscii ? "ascii" : "code"
   );
   const [isWrapped, setIsWrapped] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const codeRef = useRef<HTMLElement>(null);
 
   // Check if it's a single line inline code (no newlines and no language)
@@ -296,18 +297,11 @@ const CodeBlock: React.FC<{
   // Show header for everything EXCEPT single line inline code
   const showHeader = !isSingleLineInline;
 
-  // Handle view mode changes with smooth transition
-  const handleViewModeChange = (newMode: "code" | "ascii") => {
+  // Handle view mode changes (simplified since AnimatePresence handles transitions)
+  const handleViewModeChange = useCallback((newMode: "code" | "ascii") => {
     if (newMode === viewMode) return;
-
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setViewMode(newMode);
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 150);
-    }, 150);
-  };
+    setViewMode(newMode);
+  }, [viewMode]);
 
   // Dynamically load highlight.js theme based on isDark
   useEffect(() => {
@@ -370,7 +364,7 @@ const CodeBlock: React.FC<{
     }
   }, [children, className, viewMode]);
 
-  const copyToClipboard = async () => {
+  const copyToClipboard = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(children);
       setCopied(true);
@@ -378,7 +372,7 @@ const CodeBlock: React.FC<{
     } catch (err) {
       console.error("Failed to copy:", err);
     }
-  };
+  }, [children]);
 
   // Check if content has ASCII patterns for showing ASCII option
   const hasAsciiPatterns =
@@ -475,28 +469,30 @@ const CodeBlock: React.FC<{
         <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
           {/* Left side: View mode selector (only show if has ASCII patterns or forced) */}
           <div className="flex items-center">
-            <div className="inline-flex rounded-md bg-zinc-200 dark:bg-zinc-700 p-0.5">
-              <button
-                onClick={() => handleViewModeChange("code")}
-                className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
-                  viewMode === "code"
-                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                    : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-                }`}
-              >
-                Code
-              </button>
-              <button
-                onClick={() => handleViewModeChange("ascii")}
-                className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
-                  viewMode === "ascii"
-                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                    : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-                }`}
-              >
-                Raw Format
-              </button>
-            </div>
+            {(hasAsciiPatterns || forceAscii) && (
+              <div className="inline-flex rounded-md bg-zinc-200 dark:bg-zinc-700 p-0.5">
+                <button
+                  onClick={() => handleViewModeChange("code")}
+                  className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
+                    viewMode === "code"
+                      ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                >
+                  Code
+                </button>
+                <button
+                  onClick={() => handleViewModeChange("ascii")}
+                  className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
+                    viewMode === "ascii"
+                      ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                >
+                  Raw Format
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right side: Controls */}
@@ -566,19 +562,25 @@ const CodeBlock: React.FC<{
         </div>
 
         {/* Content container with proper flex layout */}
-        <div
-          className="flex-1 min-h-0"
-          style={{
-            opacity: isTransitioning ? 0 : 1,
-            transition: "opacity 150ms ease-in-out",
-          }}
-        >
-          {renderContent()}
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={viewMode} // This ensures animation when switching between modes
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="flex-1 min-h-0"
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
-};
+});
+
+// Set display names for debugging
+CodeBlock.displayName = 'CodeBlock';
 
 // Custom components for rehype-react
 const MarkdownComponents = {
@@ -769,8 +771,8 @@ const MarkdownComponents = {
   hr: (props: any) => <HorizontalRule {...props} />, // Use extracted component
 };
 
-// Mermaid diagram component
-const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
+// Mermaid diagram component with memoization
+const MermaidDiagram: React.FC<{ code: string }> = memo(({ code }) => {
   const [mermaidLib, setMermaidLib] = useState<any>(null);
 
   useEffect(() => {
@@ -833,9 +835,9 @@ const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
-};
+});
 
-// Markdown processor (rehype-react, unified, etc.)
+MermaidDiagram.displayName = 'MermaidDiagram';
 const createMarkdownProcessor = () =>
   Promise.all([
     import("unified"),
@@ -872,7 +874,7 @@ const createMarkdownProcessor = () =>
     }
   );
 
-const Message: React.FC<MessageProps> = ({
+const Message: React.FC<MessageProps> = memo(({
   message,
   isStreaming = false,
   onLoaded,
@@ -884,17 +886,23 @@ const Message: React.FC<MessageProps> = ({
   const [isProcessorReady, setIsProcessorReady] = useState(false);
   const [isContentReady, setIsContentReady] = useState(false);
 
-  // Load markdown processor lazily
+  // Memoized markdown processor creation
+  const createProcessorMemo = useMemo(() => {
+    if (isUser) return null;
+    return createMarkdownProcessor();
+  }, [isUser]);
+
+  // Load markdown processor lazily with memoization
   useEffect(() => {
-    if (!isUser && !processor) {
-      createMarkdownProcessor().then(({ processor: markdownProcessor }) => {
+    if (!isUser && !processor && createProcessorMemo) {
+      createProcessorMemo.then(({ processor: markdownProcessor }) => {
         setProcessor(markdownProcessor);
         setIsProcessorReady(true);
       });
     } else if (isUser) {
       setIsProcessorReady(true);
     }
-  }, [isUser, processor]);
+  }, [isUser, processor, createProcessorMemo]);
 
   // Set content ready when processor is ready or for user messages
   useEffect(() => {
@@ -975,12 +983,9 @@ const Message: React.FC<MessageProps> = ({
     return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
   };
 
+  // Memoized content processing with stable dependencies
   const processedContent = useMemo(() => {
-    if (isUser || !message.content) return null;
-
-    if (!processor || !isProcessorReady) {
-      return null;
-    }
+    if (isUser || !message.content || !processor || !isProcessorReady) return null;
 
     const preProcessLatex = (text: string) => {
       // Step 1: Unicode sanitization
@@ -1008,16 +1013,6 @@ const Message: React.FC<MessageProps> = ({
           return `$${content}$`;
         }
       );
-
-      // Debug: Check the final result
-      const finalMathMatches = processedText.match(
-        /\$\$[\s\S]*?\$\$|\$[^$\n]*?\$/g
-      );
-      if (finalMathMatches) {
-        console.log("Final math expressions:", finalMathMatches.slice(0, 5)); // Show first 5 only
-      } else {
-        console.log("No valid math expressions found after conversion");
-      }
 
       return processedText;
     };
@@ -1316,6 +1311,8 @@ const Message: React.FC<MessageProps> = ({
       </div>
     </motion.div>
   );
-};
+});
+
+Message.displayName = 'Message';
 
 export default Message;
