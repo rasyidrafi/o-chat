@@ -366,14 +366,17 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         </div>
 
         {/* Server Models Filters */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+        <div className={`flex flex-col lg:flex-row gap-4 mb-6 transition-all duration-300 ${
+          modelsManager.isLoadingSystemModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+        }`}>
           <div className="flex-1">
             <input
               type="text"
               placeholder="Search server models..."
               value={serverFilter.searchQuery}
               onChange={(e) => serverFilter.handleSearchChange(e.target.value)}
-              className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+              disabled={modelsManager.isLoadingSystemModels}
+              className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           <div className="flex-shrink-0 lg:w-80">
@@ -395,6 +398,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             isVisible={modelsManager.isLoadingSystemModels}
             title="Loading server models..."
             subtitle="Please wait while we fetch the latest models from our servers"
+            className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md"
           />
 
           {/* Error State */}
@@ -430,8 +434,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
           )}
 
           {/* Server Models Grid */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 transition-opacity duration-200 ${
-            modelsManager.isLoadingSystemModels ? 'opacity-30' : 'opacity-100'
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 transition-all duration-300 ${
+            modelsManager.isLoadingSystemModels ? 'opacity-50 blur-sm pointer-events-none' : 'opacity-100 blur-none'
           }`}>
             <AnimatePresence mode="wait">
               {paginatedServerModels.models.map((model, index) => (
@@ -470,7 +474,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         </h2>
 
         {/* Provider Selection */}
-        <div className="mb-6">
+        <div className={`mb-6 transition-all duration-300 ${
+          modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+        }`}>
           <CustomDropdown
             label="Select API Provider"
             description=""
@@ -493,7 +499,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         {selectedProvider && (
           <>
             {/* BYOK Tab Navigation */}
-            <div className="flex border-b border-zinc-200 dark:border-zinc-700 mb-6">
+            <div className={`flex border-b border-zinc-200 dark:border-zinc-700 mb-6 transition-all duration-300 ${
+              modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+            }`}>
               <button
                 onClick={() => setActiveByokTab("available")}
                 className={`px-4 py-2 border-b-2 transition-colors ${
@@ -517,14 +525,17 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             </div>
 
             {/* BYOK Models Filters */}
-            <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className={`flex flex-col lg:flex-row gap-4 mb-6 transition-all duration-300 ${
+              modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+            }`}>
               <div className="flex-1">
                 <input
                   type="text"
                   placeholder="Search BYOK models..."
                   value={byokFilter.searchQuery}
                   onChange={(e) => byokFilter.handleSearchChange(e.target.value)}
-                  className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                  disabled={modelsManager.isLoadingModels}
+                  className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -556,6 +567,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 isVisible={modelsManager.isLoadingModels}
                 title="Loading models..."
                 subtitle="Please wait while we fetch models from your selected provider"
+                className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md"
               />
 
               {/* Error State */}
@@ -581,8 +593,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
               {/* BYOK Models Grid */}
               {paginatedByokModels.models.length > 0 && (
-                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 transition-opacity duration-200 ${
-                  modelsManager.isLoadingModels ? 'opacity-30' : 'opacity-100'
+                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 transition-all duration-300 ${
+                  modelsManager.isLoadingModels ? 'opacity-50 blur-sm pointer-events-none' : 'opacity-100 blur-none'
                 }`}>
                   <AnimatePresence mode="wait">
                     {paginatedByokModels.models.map((model, index) => (

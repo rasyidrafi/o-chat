@@ -142,13 +142,19 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
             </div>
 
             {/* Filter Options */}
-            <div className="max-h-80 overflow-y-auto">
+            <div 
+              className="max-h-80 overflow-y-auto thin-scrollbar"
+              style={{
+                maskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)'
+              }}
+            >
               {filteredCategories.length > 0 ? (
                 filteredCategories.map((category, categoryIndex) => (
                   <div key={category.id} className="p-2">
                     {/* Category Header */}
                     {categories.length > 1 && (
-                      <div className="flex items-center gap-2 px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                      <div className="flex items-center gap-2 px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide sticky top-0 bg-white dark:bg-zinc-800">
                         {category.icon && <category.icon className="w-3 h-3" />}
                         {category.label}
                       </div>

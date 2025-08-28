@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SettingsTextarea from '../SettingsTextarea';
-import SettingsToggle from '../SettingsToggle';
+import TabButtonGroup from '../../ui/TabButtonGroup';
 import CustomDropdown from '../../ui/CustomDropdown';
 import FontSizeSelector from '../FontSizeSelector';
 import FontPreview from '../FontPreview';
@@ -57,12 +57,25 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
             <div>
                 <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">Visual Options</h2>
                 <div className="space-y-6 mt-6">
-                    <SettingsToggle 
-                        label="Disable Animation"
-                        description="Disables all animations throughout the app for a simpler experience."
-                        isOn={settings.animationsDisabled}
-                        onToggle={() => updateSettings({animationsDisabled: !settings.animationsDisabled})}
-                    />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <h4 className="font-medium text-zinc-900 dark:text-white">Disable Animation</h4>
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400">Disables all animations throughout the app for a simpler experience.</p>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <TabButtonGroup
+                                options={[
+                                    { value: false, label: 'Enabled' },
+                                    { value: true, label: 'Disabled' }
+                                ]}
+                                value={settings.animationsDisabled}
+                                onChange={(animationsDisabled: boolean) => updateSettings({ animationsDisabled })}
+                                animationsDisabled={settings.animationsDisabled}
+                            />
+                        </div>
+                    </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
                         <div className="space-y-6">
                             <div className="space-y-2">
@@ -71,7 +84,7 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({ settings, updateSet
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <FontSizeSelector
+                            <TabButtonGroup
                                 options={[
                                     { value: 1, label: 'Default' },
                                     { value: 1.15, label: 'Big' },

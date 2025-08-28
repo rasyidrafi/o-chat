@@ -11,7 +11,7 @@ interface SettingsTextareaProps {
 const SettingsTextarea: React.FC<SettingsTextareaProps> = ({ label, value, onChange, maxLength, placeholder }) => {
     return (
         <div>
-            <label className="block text-sm font-medium text-zinc-800 dark:text-zinc-300 mb-1">{label}</label>
+            <label className="block text-sm font-medium text-zinc-800 dark:text-zinc-300 mb-2">{label}</label>
             <div className="relative">
                 <textarea
                     value={value}

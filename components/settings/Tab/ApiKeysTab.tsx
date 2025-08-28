@@ -372,7 +372,7 @@ const ApiKeysTab: React.FC = () => {
         API Keys
       </h2>
       <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-        This app offers free chats using Google's Gemini 1.5 Flash. For other
+        This app offers free chats using provided models. For other
         models, like those from Anthropic or OpenAI, you will need to provide
         your own API key below. Your keys are stored securely on your device and
         are never sent to our servers.
