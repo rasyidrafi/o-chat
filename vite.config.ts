@@ -15,7 +15,8 @@ export default defineConfig(() => {
               'ui-vendor': ['framer-motion'],
               'markdown-vendor': ['unified', 'remark-parse', 'remark-gfm', 'remark-rehype', 'rehype-react'],
               'syntax-vendor': ['highlight.js'],
-              'chart-vendor': ['mermaid']
+              'chart-vendor': ['mermaid'],
+              'openai-vendor': ['openai']
             }
           }
         },
