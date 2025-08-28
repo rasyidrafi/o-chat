@@ -8,13 +8,14 @@ interface SearchCenterProps {
   isOpen: boolean;
   onClose: () => void;
   chat: ReturnType<typeof useChat>;
+  animationsDisabled?: boolean;
 }
 
 interface GroupedConversations {
   [key: string]: ChatConversation[];
 }
 
-const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) => {
+const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat, animationsDisabled = false }) => {
   const {
     conversations,
     currentConversation,
@@ -213,6 +214,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: animationsDisabled ? 0 : 0.2 }}
           onClick={onClose}
           className="fixed inset-0 z-[100] flex items-start justify-center pt-16 px-4 bg-black/50 backdrop-blur-sm"
         >
@@ -220,7 +222,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
             initial={{ scale: 0.95, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 20, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{ duration: animationsDisabled ? 0 : 0.2, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={handleKeyDown}
             className="bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"

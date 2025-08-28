@@ -12,11 +12,12 @@ import {
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  animationsDisabled?: boolean;
 }
 
 type AuthTab = "Login" | "Register";
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, animationsDisabled = false }) => {
   const [activeTab, setActiveTab] = useState<AuthTab>("Login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -79,6 +80,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: animationsDisabled ? 0 : 0.2 }}
           onClick={handleClose}
           className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
         >
@@ -86,7 +88,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             initial={{ scale: 0.95, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 20, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{ duration: animationsDisabled ? 0 : 0.2, ease: "easeOut" }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden"
           >
@@ -111,11 +113,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   title="Login"
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
+                  animationsDisabled={animationsDisabled}
                 />
                 <Tab
                   title="Register"
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
+                  animationsDisabled={animationsDisabled}
                 />
               </div>
             </div>
@@ -147,7 +151,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ duration: animationsDisabled ? 0 : 0.2 }}
                     >
                       <Input
                         id="confirmPassword"
@@ -194,9 +198,10 @@ interface TabProps {
   title: AuthTab;
   activeTab: AuthTab;
   setActiveTab: (tab: AuthTab) => void;
+  animationsDisabled: boolean;
 }
 
-const Tab: React.FC<TabProps> = ({ title, activeTab, setActiveTab }) => {
+const Tab: React.FC<TabProps> = ({ title, activeTab, setActiveTab, animationsDisabled }) => {
   const isActive = activeTab === title;
   return (
     <button
@@ -214,6 +219,7 @@ const Tab: React.FC<TabProps> = ({ title, activeTab, setActiveTab }) => {
         <motion.div
           className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-pink-500"
           layoutId="auth-tab-indicator"
+          transition={{ duration: animationsDisabled ? 0 : 0.2 }}
         />
       )}
     </button>

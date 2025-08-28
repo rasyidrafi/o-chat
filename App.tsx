@@ -166,6 +166,7 @@ const App: React.FC = () => {
       <AuthModal
         isOpen={ui.isAuthModalOpen}
         onClose={() => setUi(prev => ({ ...prev, isAuthModalOpen: false }))}
+        animationsDisabled={settings.animationsDisabled}
       />
       <ConfirmationDialog
         isOpen={ui.isConfirmDialogOpen}
@@ -176,6 +177,7 @@ const App: React.FC = () => {
         confirmVariant={modal.confirmDialogProps.confirmVariant}
         onCancel={modal.confirmDialogProps.onCancel}
         cancelText={modal.confirmDialogProps.cancelText}
+        animationsDisabled={settings.animationsDisabled}
       >
         {modal.confirmDialogProps.description}
       </ConfirmationDialog>
@@ -183,6 +185,7 @@ const App: React.FC = () => {
         isOpen={ui.isSearchCenterOpen}
         onClose={() => setUi(prev => ({ ...prev, isSearchCenterOpen: false }))}
         chat={chat}
+        animationsDisabled={settings.animationsDisabled}
       />
     </>
   );

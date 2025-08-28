@@ -13,6 +13,7 @@ interface ConfirmationDialogProps {
     confirmVariant?: 'primary' | 'destructive';
     cancelText?: string;
     onCancel?: () => void;
+    animationsDisabled?: boolean;
 }
 
 const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -25,6 +26,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
     confirmVariant = 'primary',
     cancelText = 'Cancel',
     onCancel,
+    animationsDisabled = false,
 }) => {
     const handleCancelClick = onCancel || onClose;
 
@@ -35,6 +37,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
+                    transition={{ duration: animationsDisabled ? 0 : 0.2 }}
                     onClick={onClose}
                     className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
                 >
@@ -42,7 +45,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                         initial={{ scale: 0.95, y: 20, opacity: 0 }}
                         animate={{ scale: 1, y: 0, opacity: 1 }}
                         exit={{ scale: 0.95, y: 20, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        transition={{ duration: animationsDisabled ? 0 : 0.2, ease: 'easeOut' }}
                         onClick={(e) => e.stopPropagation()}
                         className="w-full max-w-sm bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden"
                     >
