@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from './Icons';
 import { useChat } from '../hooks/useChat';
 import { ChatConversation } from '../types/chat';
@@ -29,28 +30,6 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Handle click outside modal to close
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    // Add event listener with a small delay to avoid immediate closure
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
 
   // Focus search input when modal opens
   useEffect(() => {
@@ -150,9 +129,6 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
     }
   }, []);
 
-  // Memoized function to extract text content from message
-  // (removed as we're only showing titles now)
-
   // Memoized display conversations
   const displayConversations = useMemo(() => {
     return localSearchQuery.trim() ? filteredConversations : conversations.slice(0, 20);
@@ -191,8 +167,6 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
       onSelect(conversation);
     }, [conversation, onSelect]);
 
-    // Remove textContent as we're not showing message content anymore
-
     return (
       <button
         onClick={handleClick}
@@ -229,134 +203,129 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) =>
     );
   });
 
-  // Early return for better performance
-  if (!isOpen) return null;
-
   const hasSearchQuery = localSearchQuery.trim();
   const hasResults = orderedGroups.length > 0;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] transition-opacity duration-300 ease-out ${
-          isOpen ? 'opacity-100' : 'opacity-0'
-        }`}
-        aria-hidden="true"
-      />
-      
-      {/* Search Center Modal */}
-      <div className="fixed inset-0 z-[100] flex items-start justify-center pt-16 px-4">
-        <div 
-          ref={modalRef}
-          className={`bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden transition-all duration-300 ease-out ${
-            isOpen 
-              ? 'opacity-100 scale-100 translate-y-0' 
-              : 'opacity-0 scale-95 translate-y-4'
-          }`}
-          onKeyDown={handleKeyDown}
-          onClick={(e) => e.stopPropagation()}
-          tabIndex={-1}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 z-[100] flex items-start justify-center pt-16 px-4 bg-black/50 backdrop-blur-sm"
         >
-          {/* Header with search */}
-          <div className="p-6 border-b border-zinc-200 dark:border-zinc-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
-                Search conversations...
-              </h2>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                aria-label="Close search"
-              >
-                <X className="w-5 h-5 text-zinc-500" />
-              </button>
-            </div>
-            
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={localSearchQuery}
-                onChange={handleSearchChange}
-                placeholder="Search your threads..."
-                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg py-3 pl-10 pr-10 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-              {localSearchQuery && (
-                <button
-                  onClick={handleClearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-                  aria-label="Clear search"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Results */}
-          <div 
-            ref={scrollContainerRef}
-            className="flex-1 overflow-y-auto thin-scrollbar"
-            style={{
-              maskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)'
-            }}
+          <motion.div
+            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.95, y: 20, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={handleKeyDown}
+            className="bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
+            tabIndex={-1}
           >
-            {isSearching ? (
-              <div className="flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-zinc-400">
-                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
-                <div className="text-sm">Searching conversations...</div>
+            {/* Header with search */}
+            <div className="p-6 border-b border-zinc-200 dark:border-zinc-700">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
+                  Search conversations...
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                  aria-label="Close search"
+                >
+                  <X className="w-5 h-5 text-zinc-500" />
+                </button>
               </div>
-            ) : hasResults ? (
-              orderedGroups.map(([dateGroup, convs]) => (
-                <div key={dateGroup} className="mb-6 last:mb-2">
-                  <div className="px-6 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider sticky top-0 bg-white dark:bg-[#1c1c1c]">
-                    {hasSearchQuery ? `${dateGroup} (${convs.length} result${convs.length !== 1 ? 's' : ''})` : dateGroup}
-                  </div>
-                  <div className="space-y-1">
-                    {convs.map((conversation) => (
-                      <ConversationItem
-                        key={conversation.id}
-                        conversation={conversation}
-                        isActive={currentConversation?.id === conversation.id}
-                        searchQuery={localSearchQuery}
-                        onSelect={handleConversationSelect}
-                        highlightText={highlightText}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-zinc-500 dark:text-zinc-400 py-12">
-                {hasSearchQuery ? (
-                  <>
-                    <div className="text-lg mb-2">No conversations found</div>
-                    <div className="text-sm">
-                      No conversations found for "<span className="font-medium">{localSearchQuery}</span>"
-                    </div>
-                    <button
-                      onClick={handleClearSearch}
-                      className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 underline mt-3 text-sm"
-                    >
-                      Clear search
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-lg mb-2">No conversations yet</div>
-                    <div className="text-sm">Start a new chat to begin!</div>
-                  </>
+              
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={localSearchQuery}
+                  onChange={handleSearchChange}
+                  placeholder="Search your threads..."
+                  className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg py-3 pl-10 pr-10 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                {localSearchQuery && (
+                  <button
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 )}
               </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
+            </div>
+
+            {/* Results */}
+            <div 
+              ref={scrollContainerRef}
+              className="flex-1 overflow-y-auto thin-scrollbar"
+              style={{
+                maskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)'
+              }}
+            >
+              {isSearching ? (
+                <div className="flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-zinc-400">
+                  <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
+                  <div className="text-sm">Searching conversations...</div>
+                </div>
+              ) : hasResults ? (
+                orderedGroups.map(([dateGroup, convs]) => (
+                  <div key={dateGroup} className="mb-6 last:mb-2">
+                    <div className="px-6 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider sticky top-0 bg-white dark:bg-[#1c1c1c]">
+                      {hasSearchQuery ? `${dateGroup} (${convs.length} result${convs.length !== 1 ? 's' : ''})` : dateGroup}
+                    </div>
+                    <div className="space-y-1">
+                      {convs.map((conversation) => (
+                        <ConversationItem
+                          key={conversation.id}
+                          conversation={conversation}
+                          isActive={currentConversation?.id === conversation.id}
+                          searchQuery={localSearchQuery}
+                          onSelect={handleConversationSelect}
+                          highlightText={highlightText}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-zinc-500 dark:text-zinc-400 py-12">
+                  {hasSearchQuery ? (
+                    <>
+                      <div className="text-lg mb-2">No conversations found</div>
+                      <div className="text-sm">
+                        No conversations found for "<span className="font-medium">{localSearchQuery}</span>"
+                      </div>
+                      <button
+                        onClick={handleClearSearch}
+                        className="text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300 underline mt-3 text-sm"
+                      >
+                        Clear search
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-lg mb-2">No conversations yet</div>
+                      <div className="text-sm">Start a new chat to begin!</div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
