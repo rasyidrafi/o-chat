@@ -10,7 +10,7 @@ import ContactUsTab from './settings/Tab/ContactUsTab';
 import { User } from 'firebase/auth';
 import Button from './ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AppSettings } from '../App';
+import { AppSettings } from '../hooks/useSettings';
 import { ChatStorageService } from '../services/chatStorageService';
 
 // Avatar component with fallback handling (same as in Sidebar)

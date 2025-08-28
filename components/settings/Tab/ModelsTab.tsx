@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import CustomDropdown from "../../ui/CustomDropdown";
 import ModelCard from "../ModelCard";
-import { AppSettings } from "../../../App";
+import { AppSettings } from "../../../hooks/useSettings";
 import { Provider, Model } from "../../../types/providers";
 import {
   fetchModels,

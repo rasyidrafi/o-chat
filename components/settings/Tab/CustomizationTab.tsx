@@ -5,7 +5,7 @@ import CustomDropdown from '../../ui/CustomDropdown';
 import FontSizeSelector from '../FontSizeSelector';
 import FontPreview from '../FontPreview';
 import Button from '../../ui/Button';
-import { AppSettings } from '../../../App';
+import { AppSettings } from '../../../hooks/useSettings';
 import HorizontalRule from '@/components/ui/HorizontalRule';
 
 interface CustomizationTabProps {

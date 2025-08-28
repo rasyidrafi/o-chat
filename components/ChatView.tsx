@@ -4,7 +4,7 @@ import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
 import { SlidersHorizontal, Sun, Moon, Desktop, Menu } from "./Icons";
-import { Theme } from "../App";
+import { Theme } from "../hooks/useSettings";
 import { Tab as SettingsTab } from "./SettingsPage";
 import { User as FirebaseUser } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
