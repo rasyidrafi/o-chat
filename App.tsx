@@ -5,7 +5,7 @@ import SettingsPage, { Tab as SettingsTab } from "./components/SettingsPage";
 import AuthModal from "./components/auth/AuthModal";
 import ConfirmationDialog from "./components/ui/ConfirmationDialog";
 import SearchCenter from "./components/SearchCenter";
-import { app, auth, db } from "./firebase.ts"; // Import the initialized Firebase app and db
+import { app, auth, db } from "./firebase.ts";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore";
 import { useChat } from "./hooks/useChat";
@@ -34,23 +34,26 @@ const defaultConfirmDialogProps = {
 };
 
 const App: React.FC = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [initialSettingsTab, setInitialSettingsTab] =
-    useState<SettingsTab>("Customization");
+  const [ui, setUi] = useState({
+    isMobileMenuOpen: false,
+    isSidebarCollapsed: false,
+    isSettingsOpen: false,
+    isAuthModalOpen: false,
+    isConfirmDialogOpen: false,
+    isSearchCenterOpen: false
+  });
+
+  const [modal, setModal] = useState({
+    initialSettingsTab: "Customization" as SettingsTab,
+    confirmDialogProps: defaultConfirmDialogProps
+  });
+  
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [isSearchCenterOpen, setIsSearchCenterOpen] = useState(false);
-  const [confirmDialogProps, setConfirmDialogProps] = useState(
-    defaultConfirmDialogProps
-  );
   const [settingsUnsubscribe, setSettingsUnsubscribe] = useState<
     (() => void) | null
   >(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
-  const sidebarRef = useRef<HTMLElement>(null); // <-- new ref
+  const sidebarRef = useRef<HTMLElement>(null);
 
   const loadGuestSettings = (): AppSettings => ({
     theme: (localStorage.getItem("theme") as Theme) || "system",
@@ -113,7 +116,7 @@ const App: React.FC = () => {
       }
 
       if (currentUser) {
-        setIsAuthModalOpen(false);
+        setUi(prev => ({ ...prev, isAuthModalOpen: false }));
 
         const localSettings = loadGuestSettings();
         const guestSettingsKeys: Array<keyof AppSettings> = [
@@ -164,7 +167,7 @@ const App: React.FC = () => {
                   setSettings(cloudSettings);
                   setSettingsLoaded(true);
                   clearLocalSettings();
-                  setIsConfirmDialogOpen(false);
+                  setUi(prev => ({ ...prev, isConfirmDialogOpen: false }));
                   setupFirestoreListener();
                 },
                 confirmText: "Use Cloud",
@@ -176,7 +179,7 @@ const App: React.FC = () => {
                   setSettingsLoaded(true);
                   await setDoc(settingsRef, localSettings);
                   clearLocalSettings();
-                  setIsConfirmDialogOpen(false);
+                  setUi(prev => ({ ...prev, isConfirmDialogOpen: false }));
                   setupFirestoreListener();
                 },
               });
@@ -224,17 +227,13 @@ const App: React.FC = () => {
   }, []);
 
   const openSettings = (tab: SettingsTab = "Customization") => {
-    setInitialSettingsTab(tab);
-    setIsSettingsOpen(true);
+    setModal(prev => ({ ...prev, initialSettingsTab: tab }));
+    setUi(prev => ({ ...prev, isSettingsOpen: true }));
   };
 
   const closeSettings = () => {
-    setIsSettingsOpen(false);
+    setUi(prev => ({ ...prev, isSettingsOpen: false }));
   };
-
-  useEffect(() => {
-    console.log("Firebase Initialized:", app.name);
-  }, []);
 
   const toggleTheme = () => {
     const themes: Theme[] = ["light", "dark", "system"];
@@ -270,7 +269,7 @@ const App: React.FC = () => {
       await signOut(auth);
       // Clear current conversation to show welcome page
       chat.selectConversation(null);
-      setIsConfirmDialogOpen(false);
+      setUi(prev => ({ ...prev, isConfirmDialogOpen: false }));
       closeSettings();
     } catch (error) {
       console.error("Error signing out:", error);
@@ -278,10 +277,13 @@ const App: React.FC = () => {
   };
 
   const openConfirmationDialog = (
-    props: Partial<typeof confirmDialogProps>
+    props: Partial<typeof modal.confirmDialogProps>
   ) => {
-    setConfirmDialogProps({ ...defaultConfirmDialogProps, ...props });
-    setIsConfirmDialogOpen(true);
+    setModal(prev => ({ 
+      ...prev, 
+      confirmDialogProps: { ...defaultConfirmDialogProps, ...props }
+    }));
+    setUi(prev => ({ ...prev, isConfirmDialogOpen: true }));
   };
 
   const onSignOutClick = () => {
@@ -299,20 +301,20 @@ const App: React.FC = () => {
     <>
       <div className="flex h-screen w-full bg-white dark:bg-[#1c1c1c] text-zinc-900 dark:text-zinc-200 font-sans overflow-hidden">
         <Sidebar
-          ref={sidebarRef} // <-- forward ref
-          isMobileMenuOpen={isMobileMenuOpen}
-          setIsMobileMenuOpen={setIsMobileMenuOpen}
-          isCollapsed={isSidebarCollapsed}
+          ref={sidebarRef}
+          isMobileMenuOpen={ui.isMobileMenuOpen}
+          setIsMobileMenuOpen={(open) => setUi(prev => ({ ...prev, isMobileMenuOpen: open }))}
+          isCollapsed={ui.isSidebarCollapsed}
           user={user}
           onLoginClick={() => openSettings("Account")}
           onSignOutClick={onSignOutClick}
-          onOpenSearchCenter={() => setIsSearchCenterOpen(true)}
+          onOpenSearchCenter={() => setUi(prev => ({ ...prev, isSearchCenterOpen: true }))}
           chat={chat}
         />
         <ChatView
-          onMenuClick={() => setIsMobileMenuOpen(true)}
-          toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          isSidebarCollapsed={isSidebarCollapsed}
+          onMenuClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: true }))}
+          toggleSidebar={() => setUi(prev => ({ ...prev, isSidebarCollapsed: !prev.isSidebarCollapsed }))}
+          isSidebarCollapsed={ui.isSidebarCollapsed}
           onOpenSettings={openSettings}
           theme={settings.theme}
           toggleTheme={toggleTheme}
@@ -320,46 +322,45 @@ const App: React.FC = () => {
           animationsDisabled={settings.animationsDisabled}
           chat={chat}
         />
-        {isMobileMenuOpen && (
+        {ui.isMobileMenuOpen && (
           <div
             className="fixed inset-0 bg-black/60 z-30 md:hidden"
-            onClick={() => setIsMobileMenuOpen(false)}
+            onClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: false }))}
             aria-hidden="true"
           ></div>
         )}
       </div>
-      {isSettingsOpen && (
+      {ui.isSettingsOpen && (
         <SettingsPage
           onClose={closeSettings}
           user={user}
-          initialTab={initialSettingsTab}
+          initialTab={modal.initialSettingsTab}
           settings={settings}
           updateSettings={updateSettings}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenAuthModal={() => setUi(prev => ({ ...prev, isAuthModalOpen: true }))}
           onSignOutClick={onSignOutClick}
         />
       )}
       <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        isOpen={ui.isAuthModalOpen}
+        onClose={() => setUi(prev => ({ ...prev, isAuthModalOpen: false }))}
       />
       <ConfirmationDialog
-        isOpen={isConfirmDialogOpen}
-        onClose={() => setIsConfirmDialogOpen(false)}
-        onConfirm={confirmDialogProps.onConfirm}
-        title={confirmDialogProps.title}
-        confirmText={confirmDialogProps.confirmText}
-        confirmVariant={confirmDialogProps.confirmVariant}
-        onCancel={confirmDialogProps.onCancel}
-        cancelText={confirmDialogProps.cancelText}
+        isOpen={ui.isConfirmDialogOpen}
+        onClose={() => setUi(prev => ({ ...prev, isConfirmDialogOpen: false }))}
+        onConfirm={modal.confirmDialogProps.onConfirm}
+        title={modal.confirmDialogProps.title}
+        confirmText={modal.confirmDialogProps.confirmText}
+        confirmVariant={modal.confirmDialogProps.confirmVariant}
+        onCancel={modal.confirmDialogProps.onCancel}
+        cancelText={modal.confirmDialogProps.cancelText}
       >
-        {confirmDialogProps.description}
+        {modal.confirmDialogProps.description}
       </ConfirmationDialog>
       <SearchCenter
-        isOpen={isSearchCenterOpen}
+        isOpen={ui.isSearchCenterOpen}
         onClose={() => {
-          setIsSearchCenterOpen(false);
-          // Clear search when closing
+          setUi(prev => ({ ...prev, isSearchCenterOpen: false }));
           chat.clearSearch();
         }}
         chat={chat}
