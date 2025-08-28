@@ -1,5 +1,12 @@
 // Clean Message component with unified markdown processing and performance optimizations
-import React, { useMemo, useEffect, useRef, useState, useCallback, memo } from "react";
+import React, {
+  useMemo,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  memo,
+} from "react";
 import { ChatMessage, MessageAttachment } from "../types/chat";
 import { motion, AnimatePresence } from "framer-motion";
 import TypingIndicator from "./TypingIndicator";
@@ -134,14 +141,17 @@ const ImageContentComponent: React.FC<{
     setShowExpiredPlaceholder(false);
   }, [currentUrl]);
 
-  const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = event.currentTarget;
-    setNaturalDimensions({
-      width: img.naturalWidth,
-      height: img.naturalHeight,
-    });
-    setImageLoading(false);
-  }, []);
+  const handleImageLoad = useCallback(
+    (event: React.SyntheticEvent<HTMLImageElement>) => {
+      const img = event.currentTarget;
+      setNaturalDimensions({
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+      });
+      setImageLoading(false);
+    },
+    []
+  );
 
   const handleImageError = useCallback(() => {
     setImageError(true);
@@ -262,7 +272,7 @@ const ImageContentComponent: React.FC<{
   );
 });
 
-ImageContentComponent.displayName = 'ImageContentComponent';
+ImageContentComponent.displayName = "ImageContentComponent";
 
 interface MessageProps {
   message: ChatMessage;
@@ -276,200 +286,192 @@ const CodeBlock: React.FC<{
   className?: string;
   forceAscii?: boolean;
   isInlineMultiLine?: boolean;
-}> = memo(({
-  children,
-  className,
-  forceAscii = false,
-  isInlineMultiLine = false,
-}) => {
-  const [copied, setCopied] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-  const [viewMode, setViewMode] = useState<"code" | "ascii">(
-    forceAscii ? "ascii" : "code"
-  );
-  const [isWrapped, setIsWrapped] = useState(false);
-  const codeRef = useRef<HTMLElement>(null);
+}> = memo(
+  ({ children, className, forceAscii = false, isInlineMultiLine = false }) => {
+    const [copied, setCopied] = useState(false);
+    const [isDark, setIsDark] = useState(false);
+    const [viewMode, setViewMode] = useState<"code" | "ascii">(
+      forceAscii ? "ascii" : "code"
+    );
+    const [isWrapped, setIsWrapped] = useState(false);
+    const codeRef = useRef<HTMLElement>(null);
 
-  // Check if it's a single line inline code (no newlines and no language)
-  const isSingleLineInline =
-    !className && !isInlineMultiLine && !children.includes("\n");
+    // Check if it's a single line inline code (no newlines and no language)
+    const isSingleLineInline =
+      !className && !isInlineMultiLine && !children.includes("\n");
 
-  // Show header for everything EXCEPT single line inline code
-  const showHeader = !isSingleLineInline;
+    // Show header for everything EXCEPT single line inline code
+    const showHeader = !isSingleLineInline;
 
-  // Handle view mode changes (simplified since AnimatePresence handles transitions)
-  const handleViewModeChange = useCallback((newMode: "code" | "ascii") => {
-    if (newMode === viewMode) return;
-    setViewMode(newMode);
-  }, [viewMode]);
+    // Handle view mode changes (simplified since AnimatePresence handles transitions)
+    const handleViewModeChange = useCallback(
+      (newMode: "code" | "ascii") => {
+        if (newMode === viewMode) return;
+        setViewMode(newMode);
+      },
+      [viewMode]
+    );
 
-  // Dynamically load highlight.js theme based on isDark
-  useEffect(() => {
-    const darkHref =
-      "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-dark.min.css";
-    const lightHref =
-      "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-light.min.css";
-    const themeId = "hljs-theme-dynamic";
+    // Dynamically load highlight.js theme based on isDark
+    useEffect(() => {
+      const darkHref =
+        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-dark.min.css";
+      const lightHref =
+        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-light.min.css";
+      const themeId = "hljs-theme-dynamic";
 
-    // Helper to add or update theme link
-    const setTheme = (dark: boolean) => {
-      let link = document.getElementById(themeId) as HTMLLinkElement | null;
-      if (!link) {
-        link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.id = themeId;
-        document.head.appendChild(link);
+      // Helper to add or update theme link
+      const setTheme = (dark: boolean) => {
+        let link = document.getElementById(themeId) as HTMLLinkElement | null;
+        if (!link) {
+          link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.id = themeId;
+          document.head.appendChild(link);
+        }
+        link.href = dark ? darkHref : lightHref;
+      };
+
+      setTheme(isDark);
+
+      return () => {
+        // Optionally remove theme link on unmount
+        // const link = document.getElementById(themeId);
+        // if (link) link.remove();
+      };
+    }, [isDark]);
+
+    // Detect dark mode
+    useEffect(() => {
+      const checkDarkMode = () => {
+        setIsDark(document.documentElement.classList.contains("dark"));
+      };
+      checkDarkMode();
+      const observer = new MutationObserver(checkDarkMode);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+      return () => observer.disconnect();
+    }, []);
+
+    // Highlight code using highlight.js
+    const [highlighted, setHighlighted] = useState<string>("");
+    useEffect(() => {
+      if (viewMode === "code") {
+        let lang = className?.replace("language-", "") || "";
+        if (!hljs.getLanguage(lang)) lang = "plaintext";
+        try {
+          const result =
+            lang === "plaintext"
+              ? hljs.highlightAuto(children)
+              : hljs.highlight(children, { language: lang });
+          setHighlighted(result.value);
+        } catch {
+          setHighlighted(children);
+        }
       }
-      link.href = dark ? darkHref : lightHref;
-    };
+    }, [children, className, viewMode]);
 
-    setTheme(isDark);
-
-    return () => {
-      // Optionally remove theme link on unmount
-      // const link = document.getElementById(themeId);
-      // if (link) link.remove();
-    };
-  }, [isDark]);
-
-  // Detect dark mode
-  useEffect(() => {
-    const checkDarkMode = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    };
-    checkDarkMode();
-    const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => observer.disconnect();
-  }, []);
-
-  // Highlight code using highlight.js
-  const [highlighted, setHighlighted] = useState<string>("");
-  useEffect(() => {
-    if (viewMode === "code") {
-      let lang = className?.replace("language-", "") || "";
-      if (!hljs.getLanguage(lang)) lang = "plaintext";
+    const copyToClipboard = useCallback(async () => {
       try {
-        const result =
-          lang === "plaintext"
-            ? hljs.highlightAuto(children)
-            : hljs.highlight(children, { language: lang });
-        setHighlighted(result.value);
-      } catch {
-        setHighlighted(children);
+        await navigator.clipboard.writeText(children);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy:", err);
       }
-    }
-  }, [children, className, viewMode]);
+    }, [children]);
 
-  const copyToClipboard = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(children);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  }, [children]);
 
-  // Check if content has ASCII patterns for showing ASCII option
-  const hasAsciiPatterns =
-    /[+\-|═│┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬]/.test(children) ||
-    /^\s*[+\-|]+\s*$/.test(children.split("\n")[0]) ||
-    /\+[-=]+\+/.test(children) ||
-    /\|.*\|/.test(children);
+    const renderContent = () => {
+      if (viewMode === "ascii") {
+        return (
+          <div
+            className={`${showHeader ? "p-4" : "px-1.5 py-0.5"} ${
+              showHeader ? "" : "rounded"
+            }`}
+            style={{
+              backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
+            }}
+          >
+            <code
+              className="text-zinc-800 dark:text-zinc-200 text-xs font-mono block"
+              style={{
+                lineHeight: "1.2",
+                fontSize: "0.85em",
+                fontFamily:
+                  'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                whiteSpace: isWrapped ? "pre-wrap" : "pre",
+              }}
+            >
+              {children}
+            </code>
+          </div>
+        );
+      }
 
-  const renderContent = () => {
-    if (viewMode === "ascii") {
       return (
         <div
-          className={`${showHeader ? "p-4" : "px-1.5 py-0.5"} ${
-            showHeader ? "" : "rounded"
-          }`}
+          className={`${showHeader ? "" : "rounded-lg"} overflow-hidden`}
           style={{
             backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
           }}
         >
-          <code
-            className="text-zinc-800 dark:text-zinc-200 text-xs font-mono block"
+          <div
+            className={`${
+              isWrapped ? "overflow-x-visible" : "overflow-x-auto"
+            } thin-scrollbar`}
             style={{
-              lineHeight: "1.2",
-              fontSize: "0.85em",
-              fontFamily:
-                'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-              whiteSpace: isWrapped ? "pre-wrap" : "pre",
+              maxWidth: "100%",
+              width: "100%",
             }}
           >
-            {children}
-          </code>
+            <code
+              ref={codeRef}
+              className={`${
+                className ? className + " hljs" : "hljs"
+              } block p-4 text-sm leading-relaxed ${
+                isWrapped ? "whitespace-pre-wrap" : "whitespace-pre"
+              }`}
+              style={{
+                margin: 0,
+                width: isWrapped ? "100%" : "max-content",
+                minWidth: isWrapped ? "auto" : "100%",
+                maxWidth: isWrapped ? "100%" : "none",
+              }}
+              dangerouslySetInnerHTML={{ __html: highlighted }}
+            />
+          </div>
         </div>
+      );
+    };
+
+    if (!showHeader) {
+      // Simple inline code without header (only for single-line inline)
+      return (
+        <code className="bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-xs font-mono">
+          {children}
+        </code>
       );
     }
 
+    // Code block or multi-line with header
     return (
-      <div
-        className={`${showHeader ? "" : "rounded-lg"} overflow-hidden`}
-        style={{
-          backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
-        }}
-      >
+      <div className="relative group mb-4 w-full max-w-full overflow-hidden">
         <div
-          className={`${
-            isWrapped ? "overflow-x-visible" : "overflow-x-auto"
-          } thin-scrollbar`}
+          className="relative w-full rounded-lg"
           style={{
             maxWidth: "100%",
             width: "100%",
+            overflow: "hidden",
+            backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
           }}
         >
-          <code
-            ref={codeRef}
-            className={`${
-              className ? className + " hljs" : "hljs"
-            } block p-4 text-sm leading-relaxed ${
-              isWrapped ? "whitespace-pre-wrap" : "whitespace-pre"
-            }`}
-            style={{
-              margin: 0,
-              width: isWrapped ? "100%" : "max-content",
-              minWidth: isWrapped ? "auto" : "100%",
-              maxWidth: isWrapped ? "100%" : "none",
-            }}
-            dangerouslySetInnerHTML={{ __html: highlighted }}
-          />
-        </div>
-      </div>
-    );
-  };
-
-  if (!showHeader) {
-    // Simple inline code without header (only for single-line inline)
-    return (
-      <code className="bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-xs font-mono">
-        {children}
-      </code>
-    );
-  }
-
-  // Code block or multi-line with header
-  return (
-    <div className="relative group mb-4 w-full max-w-full overflow-hidden">
-      <div
-        className="relative w-full rounded-lg"
-        style={{
-          maxWidth: "100%",
-          width: "100%",
-          overflow: "hidden",
-          backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
-        }}
-      >
-        {/* Header with controls */}
-        <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
-          {/* Left side: View mode selector (only show if has ASCII patterns or forced) */}
-          <div className="flex items-center">
-            {(hasAsciiPatterns || forceAscii) && (
+          {/* Header with controls */}
+          <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
+            {/* Left side: View mode selector (only show if has ASCII patterns or forced) */}
+            <div className="flex items-center">
               <div className="inline-flex rounded-md bg-zinc-200 dark:bg-zinc-700 p-0.5">
                 <button
                   onClick={() => handleViewModeChange("code")}
@@ -492,95 +494,95 @@ const CodeBlock: React.FC<{
                   Raw Format
                 </button>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Right side: Controls */}
-          <div className="flex items-center space-x-2">
-            {/* Text wrap toggle */}
-            <button
-              onClick={() => setIsWrapped(!isWrapped)}
-              className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
-              title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
-            >
-              <svg
-                className={`w-4 h-4 transition-colors duration-150 ${
-                  isWrapped
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-zinc-600 dark:text-zinc-400"
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {/* Right side: Controls */}
+            <div className="flex items-center space-x-2">
+              {/* Text wrap toggle */}
+              <button
+                onClick={() => setIsWrapped(!isWrapped)}
+                className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+                title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h8m-8 6h16"
-                />
-              </svg>
-            </button>
+                <svg
+                  className={`w-4 h-4 transition-colors duration-150 ${
+                    isWrapped
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-zinc-600 dark:text-zinc-400"
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h8m-8 6h16"
+                  />
+                </svg>
+              </button>
 
-            {/* Copy button */}
-            <button
-              onClick={copyToClipboard}
-              className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
-              title={copied ? "Copied!" : "Copy to clipboard"}
-            >
-              {copied ? (
-                <svg
-                  className="w-4 h-4 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              )}
-            </button>
+              {/* Copy button */}
+              <button
+                onClick={copyToClipboard}
+                className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+                title={copied ? "Copied!" : "Copy to clipboard"}
+              >
+                {copied ? (
+                  <svg
+                    className="w-4 h-4 text-green-600 dark:text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Content container with proper flex layout */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={viewMode} // This ensures animation when switching between modes
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="flex-1 min-h-0"
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
+          {/* Content container with proper flex layout */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={viewMode} // This ensures animation when switching between modes
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="flex-1 min-h-0"
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 // Set display names for debugging
-CodeBlock.displayName = 'CodeBlock';
+CodeBlock.displayName = "CodeBlock";
 
 // Custom components for rehype-react
 const MarkdownComponents = {
@@ -837,7 +839,7 @@ const MermaidDiagram: React.FC<{ code: string }> = memo(({ code }) => {
   );
 });
 
-MermaidDiagram.displayName = 'MermaidDiagram';
+MermaidDiagram.displayName = "MermaidDiagram";
 const createMarkdownProcessor = () =>
   Promise.all([
     import("unified"),
@@ -874,445 +876,445 @@ const createMarkdownProcessor = () =>
     }
   );
 
-const Message: React.FC<MessageProps> = memo(({
-  message,
-  isStreaming = false,
-  onLoaded,
-  animationsDisabled,
-}) => {
-  const isUser = message.role === "user";
-  const isAssistant = message.role === "assistant";
-  const [processor, setProcessor] = useState<any>(null);
-  const [isProcessorReady, setIsProcessorReady] = useState(false);
-  const [isContentReady, setIsContentReady] = useState(false);
+const Message: React.FC<MessageProps> = memo(
+  ({ message, isStreaming = false, onLoaded, animationsDisabled }) => {
+    const isUser = message.role === "user";
+    const isAssistant = message.role === "assistant";
+    const [processor, setProcessor] = useState<any>(null);
+    const [isProcessorReady, setIsProcessorReady] = useState(false);
+    const [isContentReady, setIsContentReady] = useState(false);
 
-  // Memoized markdown processor creation
-  const createProcessorMemo = useMemo(() => {
-    if (isUser) return null;
-    return createMarkdownProcessor();
-  }, [isUser]);
+    // Memoized markdown processor creation
+    const createProcessorMemo = useMemo(() => {
+      if (isUser) return null;
+      return createMarkdownProcessor();
+    }, [isUser]);
 
-  // Load markdown processor lazily with memoization
-  useEffect(() => {
-    if (!isUser && !processor && createProcessorMemo) {
-      createProcessorMemo.then(({ processor: markdownProcessor }) => {
-        setProcessor(markdownProcessor);
+    // Load markdown processor lazily with memoization
+    useEffect(() => {
+      if (!isUser && !processor && createProcessorMemo) {
+        createProcessorMemo.then(({ processor: markdownProcessor }) => {
+          setProcessor(markdownProcessor);
+          setIsProcessorReady(true);
+        });
+      } else if (isUser) {
         setIsProcessorReady(true);
-      });
-    } else if (isUser) {
-      setIsProcessorReady(true);
-    }
-  }, [isUser, processor, createProcessorMemo]);
+      }
+    }, [isUser, processor, createProcessorMemo]);
 
-  // Set content ready when processor is ready or for user messages
-  useEffect(() => {
-    if (isProcessorReady) {
-      const timer = setTimeout(() => {
-        setIsContentReady(true);
-      }, 50);
+    // Set content ready when processor is ready or for user messages
+    useEffect(() => {
+      if (isProcessorReady) {
+        const timer = setTimeout(() => {
+          setIsContentReady(true);
+        }, 50);
 
-      const timer2 = setTimeout(() => {
-        onLoaded();
-      }, 300);
+        const timer2 = setTimeout(() => {
+          onLoaded();
+        }, 300);
 
-      return () => {
-        clearTimeout(timer);
-        clearTimeout(timer2);
-      };
-    }
-  }, [isProcessorReady]);
+        return () => {
+          clearTimeout(timer);
+          clearTimeout(timer2);
+        };
+      }
+    }, [isProcessorReady]);
 
-  // Simple fade animation
-  const fadeVariants = {
-    initial: {
-      opacity: 0,
-    },
-    animate: {
-      opacity: 1,
-      transition: {
-        duration: 0.3,
-        ease: "easeOut",
+    // Simple fade animation
+    const fadeVariants = {
+      initial: {
+        opacity: 0,
       },
-    },
-    exit: {
-      opacity: 0,
-      transition: {
-        duration: 0.2,
+      animate: {
+        opacity: 1,
+        transition: {
+          duration: 0.3,
+          ease: "easeOut",
+        },
       },
-    },
-  };
-
-  const formatTime = (date: Date) => {
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    const diffInDays = Math.floor(diffInHours / 24);
-
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else if (diffInHours < 48) {
-      return `Yesterday ${date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    } else if (diffInDays < 7) {
-      return `${diffInDays} days ago ${date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    } else {
-      return `${date.toLocaleDateString([], {
-        month: "short",
-        day: "numeric",
-      })} ${date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    }
-  };
-
-  const getMessageStyles = () => {
-    if (isUser) {
-      return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-100 border border-zinc-300/50 dark:border-zinc-700/50";
-    }
-    if (message.isError) {
-      return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
-    }
-    return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
-  };
-
-  // Memoized content processing with stable dependencies
-  const processedContent = useMemo(() => {
-    if (isUser || !message.content || !processor || !isProcessorReady) return null;
-
-    const preProcessLatex = (text: string) => {
-      // Step 1: Unicode sanitization
-      let processedText = text
-        .replace(/[\u00A0\u200B-\u200F\u202F\u205F\u3000]/g, " ")
-        .replace(/[\u2010-\u2015\u2212]/g, "-")
-        .replace(/[\u2018\u2019]/g, "'")
-        .replace(/[\u201C\u201D]/g, '"');
-
-      // Step 2: Handle LaTeX delimiters properly - FIXED VERSION
-      // Convert display math \[...\] to $$...$$ (non-greedy match)
-      processedText = processedText.replace(
-        /\\\[([\s\S]*?)\\\]/g,
-        (match, content) => {
-          console.log("Converting display math:", match);
-          return `$$${content}$$`;
-        }
-      );
-
-      // Convert inline math \(...\) to $...$ (non-greedy match)
-      processedText = processedText.replace(
-        /\\\(([\s\S]*?)\\\)/g,
-        (match, content) => {
-          console.log("Converting inline math:", match);
-          return `$${content}$`;
-        }
-      );
-
-      return processedText;
+      exit: {
+        opacity: 0,
+        transition: {
+          duration: 0.2,
+        },
+      },
     };
 
-    try {
-      if (typeof message.content === "string") {
-        const preProcessedContent = preProcessLatex(message.content);
-        const result = processor.processSync(preProcessedContent);
-        return result.result as React.ReactElement;
-      }
-      return null;
-    } catch (error) {
-      console.error("Markdown processing error:", error);
-      if (typeof message.content === "string") {
-        return (
-          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-            {message.content}
-          </div>
-        );
-      }
-      return null;
-    }
-  }, [message.content, processor, isUser, isProcessorReady]);
+    const formatTime = (date: Date) => {
+      const now = new Date();
+      const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+      const diffInDays = Math.floor(diffInHours / 24);
 
-  const renderContent = () => {
-    // Handle image generation messages
-    if (message.messageType === "image_generation") {
-      if (isUser) {
-        return (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <span className="font-medium">Image Generation Request:</span>
-            </div>
-            <div className="text-sm leading-relaxed whitespace-pre-wrap">
-              {typeof message.content === "string"
-                ? message.content
-                : message.content.find((item) => item.type === "text")?.text ||
-                  ""}
-            </div>
-
-            {/* Display input image for editing if attachments exist */}
-            {message.attachments && message.attachments.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-xs text-zinc-500 dark:text-zinc-500">
-                  Input image for editing:
-                </div>
-                {message.attachments.map((attachment, index) => (
-                  <ImageContentComponent
-                    key={index}
-                    url={attachment.url}
-                    gcsPath={attachment.gcsPath}
-                    attachment={attachment}
-                    alt="Input image for editing"
-                  />
-                ))}
-              </div>
-            )}
-
-            {message.imageGenerationParams && (
-              <div className="text-xs text-zinc-500 dark:text-zinc-500 space-y-1">
-                {/* Hide size for user messages since it's generation size, not original image size */}
-                {message.imageGenerationParams.seed !== undefined &&
-                  message.imageGenerationParams.seed !== -1 && (
-                    <div>Seed: {message.imageGenerationParams.seed}</div>
-                  )}
-                {message.imageGenerationParams.guidance_scale && (
-                  <div>
-                    Guidance Scale:{" "}
-                    {message.imageGenerationParams.guidance_scale}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
+      if (diffInHours < 24) {
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } else if (diffInHours < 48) {
+        return `Yesterday ${date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`;
+      } else if (diffInDays < 7) {
+        return `${diffInDays} days ago ${date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`;
       } else {
-        return (
-          <div className="space-y-3">
-            <div className="text-sm leading-relaxed">
-              {typeof message.content === "string"
-                ? message.content
-                : message.content.find((item) => item.type === "text")?.text ||
-                  "Generated image"}
+        return `${date.toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+        })} ${date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`;
+      }
+    };
+
+    const getMessageStyles = () => {
+      if (isUser) {
+        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-100 border border-zinc-300/50 dark:border-zinc-700/50";
+      }
+      if (message.isError) {
+        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
+      }
+      return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
+    };
+
+    // Memoized content processing with stable dependencies
+    const processedContent = useMemo(() => {
+      if (isUser || !message.content || !processor || !isProcessorReady)
+        return null;
+
+      const preProcessLatex = (text: string) => {
+        // Step 1: Unicode sanitization
+        let processedText = text
+          .replace(/[\u00A0\u200B-\u200F\u202F\u205F\u3000]/g, " ")
+          .replace(/[\u2010-\u2015\u2212]/g, "-")
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"');
+
+        // Step 2: Handle LaTeX delimiters properly - FIXED VERSION
+        // Convert display math \[...\] to $$...$$ (non-greedy match)
+        processedText = processedText.replace(
+          /\\\[([\s\S]*?)\\\]/g,
+          (match, content) => {
+            console.log("Converting display math:", match);
+            return `$$${content}$$`;
+          }
+        );
+
+        // Convert inline math \(...\) to $...$ (non-greedy match)
+        processedText = processedText.replace(
+          /\\\(([\s\S]*?)\\\)/g,
+          (match, content) => {
+            console.log("Converting inline math:", match);
+            return `$${content}$`;
+          }
+        );
+
+        return processedText;
+      };
+
+      try {
+        if (typeof message.content === "string") {
+          const preProcessedContent = preProcessLatex(message.content);
+          const result = processor.processSync(preProcessedContent);
+          return result.result as React.ReactElement;
+        }
+        return null;
+      } catch (error) {
+        console.error("Markdown processing error:", error);
+        if (typeof message.content === "string") {
+          return (
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+              {message.content}
             </div>
-            {message.isGeneratingImage && message.imageGenerationParams ? (
-              <div className="max-w-md">
-                {(() => {
-                  const dimensions =
-                    ImageGenerationService.calculatePlaceholderDimensions(
-                      message.imageGenerationParams.size || "1024x1024",
-                      320
-                    );
+          );
+        }
+        return null;
+      }
+    }, [message.content, processor, isUser, isProcessorReady]);
 
-                  const isAsyncJob = message.isAsyncImageGeneration;
-                  const job = message.imageGenerationJob;
+    const renderContent = () => {
+      // Handle image generation messages
+      if (message.messageType === "image_generation") {
+        if (isUser) {
+          return (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <span className="font-medium">Image Generation Request:</span>
+              </div>
+              <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                {typeof message.content === "string"
+                  ? message.content
+                  : message.content.find((item) => item.type === "text")
+                      ?.text || ""}
+              </div>
 
-                  let loadingText = "Generating image...";
+              {/* Display input image for editing if attachments exist */}
+              {message.attachments && message.attachments.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-500">
+                    Input image for editing:
+                  </div>
+                  {message.attachments.map((attachment, index) => (
+                    <ImageContentComponent
+                      key={index}
+                      url={attachment.url}
+                      gcsPath={attachment.gcsPath}
+                      attachment={attachment}
+                      alt="Input image for editing"
+                    />
+                  ))}
+                </div>
+              )}
 
-                  if (isAsyncJob && job) {
-                    switch (job.status) {
-                      case "CREATED":
-                        loadingText = "Creating image generation job...";
-                        break;
-                      case "WAITING":
-                        if (job.info?.queueRank && job.info?.queueLen) {
-                          loadingText = `You are on queue ${job.info.queueRank} of ${job.info.queueLen}`;
-                        } else {
-                          loadingText = "Waiting in queue...";
-                        }
-                        break;
-                      case "RUNNING":
-                        loadingText = "Generating...";
-                        break;
-                      default:
-                        loadingText = "Processing...";
+              {message.imageGenerationParams && (
+                <div className="text-xs text-zinc-500 dark:text-zinc-500 space-y-1">
+                  {/* Hide size for user messages since it's generation size, not original image size */}
+                  {message.imageGenerationParams.seed !== undefined &&
+                    message.imageGenerationParams.seed !== -1 && (
+                      <div>Seed: {message.imageGenerationParams.seed}</div>
+                    )}
+                  {message.imageGenerationParams.guidance_scale && (
+                    <div>
+                      Guidance Scale:{" "}
+                      {message.imageGenerationParams.guidance_scale}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        } else {
+          return (
+            <div className="space-y-3">
+              <div className="text-sm leading-relaxed">
+                {typeof message.content === "string"
+                  ? message.content
+                  : message.content.find((item) => item.type === "text")
+                      ?.text || "Generated image"}
+              </div>
+              {message.isGeneratingImage && message.imageGenerationParams ? (
+                <div className="max-w-md">
+                  {(() => {
+                    const dimensions =
+                      ImageGenerationService.calculatePlaceholderDimensions(
+                        message.imageGenerationParams.size || "1024x1024",
+                        320
+                      );
+
+                    const isAsyncJob = message.isAsyncImageGeneration;
+                    const job = message.imageGenerationJob;
+
+                    let loadingText = "Generating image...";
+
+                    if (isAsyncJob && job) {
+                      switch (job.status) {
+                        case "CREATED":
+                          loadingText = "Creating image generation job...";
+                          break;
+                        case "WAITING":
+                          if (job.info?.queueRank && job.info?.queueLen) {
+                            loadingText = `You are on queue ${job.info.queueRank} of ${job.info.queueLen}`;
+                          } else {
+                            loadingText = "Waiting in queue...";
+                          }
+                          break;
+                        case "RUNNING":
+                          loadingText = "Generating...";
+                          break;
+                        default:
+                          loadingText = "Processing...";
+                      }
                     }
-                  }
 
-                  return (
-                    <div
-                      className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center relative overflow-hidden"
-                      style={{
-                        width: dimensions.width,
-                        height: dimensions.height,
-                        aspectRatio: dimensions.aspectRatio,
-                      }}
-                    >
-                      {/* Shimmer effect background */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer bg-[length:200%_100%]"></div>
+                    return (
+                      <div
+                        className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center relative overflow-hidden"
+                        style={{
+                          width: dimensions.width,
+                          height: dimensions.height,
+                          aspectRatio: dimensions.aspectRatio,
+                        }}
+                      >
+                        {/* Shimmer effect background */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer bg-[length:200%_100%]"></div>
 
-                      {/* Loading content */}
-                      <div className="flex flex-col items-center space-y-3 text-zinc-500 dark:text-zinc-400 z-10">
-                        <LoadingIndicator size="md" color="primary" />
-                        <div className="text-xs text-center px-4">
-                          <div>{loadingText}</div>
-                          {isAsyncJob && (
-                            <div className="mt-1 text-zinc-400 dark:text-zinc-500">
-                              You can leave this page and come back later
-                            </div>
-                          )}
+                        {/* Loading content */}
+                        <div className="flex flex-col items-center space-y-3 text-zinc-500 dark:text-zinc-400 z-10">
+                          <LoadingIndicator size="md" color="primary" />
+                          <div className="text-xs text-center px-4">
+                            <div>{loadingText}</div>
+                            {isAsyncJob && (
+                              <div className="mt-1 text-zinc-400 dark:text-zinc-500">
+                                You can leave this page and come back later
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
+                    );
+                  })()}
+                </div>
+              ) : message.generatedImageUrl ||
+                (message.attachments && message.attachments.length > 0) ? (
+                <div className="max-w-md">
+                  <ImageContentComponent
+                    url={
+                      message.generatedImageUrl ||
+                      message.attachments?.[0]?.url ||
+                      ""
+                    }
+                    alt="Generated image"
+                    gcsPath={message.attachments?.[0]?.gcsPath}
+                    attachment={message.attachments?.[0]}
+                  />
+                </div>
+              ) : null}
+              {(message.generatedImageUrl ||
+                (message.attachments && message.attachments.length > 0)) && (
+                <div className="text-xs text-zinc-500 dark:text-zinc-500">
+                  Image will be expired after several hours.
+                </div>
+              )}
+            </div>
+          );
+        }
+      }
+
+      if (isUser) {
+        // Handle user messages with potentially complex content
+        if (typeof message.content === "string") {
+          return (
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+              {message.content}
+            </div>
+          );
+        } else {
+          // Handle complex content with text and images
+          return (
+            <div className="space-y-2 flex flex-col">
+              {message.content.map((item, index) => {
+                if (item.type === "text") {
+                  return (
+                    <div
+                      key={index}
+                      className="text-sm leading-relaxed whitespace-pre-wrap"
+                    >
+                      {item.text}
                     </div>
                   );
-                })()}
-              </div>
-            ) : message.generatedImageUrl ||
-              (message.attachments && message.attachments.length > 0) ? (
-              <div className="max-w-md">
-                <ImageContentComponent
-                  url={
-                    message.generatedImageUrl ||
-                    message.attachments?.[0]?.url ||
-                    ""
-                  }
-                  alt="Generated image"
-                  gcsPath={message.attachments?.[0]?.gcsPath}
-                  attachment={message.attachments?.[0]}
-                />
-              </div>
-            ) : null}
-            {(message.generatedImageUrl ||
-              (message.attachments && message.attachments.length > 0)) && (
-              <div className="text-xs text-zinc-500 dark:text-zinc-500">
-                Image will be expired after several hours.
+                } else if (item.type === "image_url") {
+                  // Find matching attachment for GCS path
+                  const attachment = message.attachments?.find(
+                    (att) => att.url === item.image_url.url
+                  );
+
+                  return (
+                    <ImageContentComponent
+                      key={index}
+                      url={item.image_url.url}
+                      gcsPath={attachment?.gcsPath}
+                      attachment={attachment}
+                      alt="User uploaded image"
+                    />
+                  );
+                }
+                return null;
+              })}
+            </div>
+          );
+        }
+      }
+
+      return (
+        <div className="space-y-3 w-full max-w-full min-w-0">
+          <ReasoningDisplay
+            reasoning={message.reasoning || ""}
+            isReasoningComplete={message.isReasoningComplete || false}
+            isStreaming={isStreaming}
+          />
+
+          <AnimatePresence mode="wait">
+            {!isContentReady ? (
+              <motion.div
+                key="processing"
+                variants={fadeVariants}
+                initial={animationsDisabled ? {} : "initial"}
+                animate="animate"
+                exit={animationsDisabled ? {} : "exit"}
+                className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
+              >
+                <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
+                  <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
+                  <span>Processing...</span>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="content"
+                variants={fadeVariants}
+                initial={animationsDisabled ? {} : "initial"}
+                animate="animate"
+                className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
+              >
+                {processedContent}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    };
+
+    return (
+      <motion.div
+        variants={fadeVariants}
+        initial={animationsDisabled ? {} : "initial"}
+        animate="animate"
+        exit={animationsDisabled ? {} : "exit"}
+        className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+      >
+        <div
+          className={`my-4 flex flex-col ${
+            isUser
+              ? "max-w-full items-end"
+              : "w-full max-w-full items-start min-w-0"
+          }`}
+        >
+          <div className={getMessageStyles()}>
+            {renderContent()}
+
+            {isStreaming && !isUser && (
+              <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
+            )}
+
+            {isStreaming && !isUser && (
+              <div className="mt-3 flex items-center justify-between">
+                <TypingIndicator />
               </div>
             )}
           </div>
-        );
-      }
-    }
 
-    if (isUser) {
-      // Handle user messages with potentially complex content
-      if (typeof message.content === "string") {
-        return (
-          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-            {message.content}
+          <div
+            className={`text-xs text-zinc-500 dark:text-zinc-400 ${
+              isUser ? "text-right mt-2" : "text-left mt-4"
+            }`}
+          >
+            {formatTime(message.timestamp)}
+            {(message.model || message.modelName) && isAssistant && (
+              <span className="ml-2">
+                • {message.modelName || message.model}
+              </span>
+            )}
           </div>
-        );
-      } else {
-        // Handle complex content with text and images
-        return (
-          <div className="space-y-2 flex flex-col">
-            {message.content.map((item, index) => {
-              if (item.type === "text") {
-                return (
-                  <div
-                    key={index}
-                    className="text-sm leading-relaxed whitespace-pre-wrap"
-                  >
-                    {item.text}
-                  </div>
-                );
-              } else if (item.type === "image_url") {
-                // Find matching attachment for GCS path
-                const attachment = message.attachments?.find(
-                  (att) => att.url === item.image_url.url
-                );
-
-                return (
-                  <ImageContentComponent
-                    key={index}
-                    url={item.image_url.url}
-                    gcsPath={attachment?.gcsPath}
-                    attachment={attachment}
-                    alt="User uploaded image"
-                  />
-                );
-              }
-              return null;
-            })}
-          </div>
-        );
-      }
-    }
-
-    return (
-      <div className="space-y-3 w-full max-w-full min-w-0">
-        <ReasoningDisplay
-          reasoning={message.reasoning || ""}
-          isReasoningComplete={message.isReasoningComplete || false}
-          isStreaming={isStreaming}
-        />
-
-        <AnimatePresence mode="wait">
-          {!isContentReady ? (
-            <motion.div
-              key="processing"
-              variants={fadeVariants}
-              initial={animationsDisabled ? {} : "initial"}
-              animate="animate"
-              exit={animationsDisabled ? {} : "exit"}
-              className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
-            >
-              <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
-                <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
-                <span>Processing...</span>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="content"
-              variants={fadeVariants}
-              initial={animationsDisabled ? {} : "initial"}
-              animate="animate"
-              className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
-            >
-              {processedContent}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        </div>
+      </motion.div>
     );
-  };
+  }
+);
 
-  return (
-    <motion.div
-      variants={fadeVariants}
-      initial={animationsDisabled ? {} : "initial"}
-      animate="animate"
-      exit={animationsDisabled ? {} : "exit"}
-      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-    >
-      <div
-        className={`my-4 flex flex-col ${
-          isUser
-            ? "max-w-full items-end"
-            : "w-full max-w-full items-start min-w-0"
-        }`}
-      >
-        <div className={getMessageStyles()}>
-          {renderContent()}
-
-          {isStreaming && !isUser && (
-            <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
-          )}
-
-          {isStreaming && !isUser && (
-            <div className="mt-3 flex items-center justify-between">
-              <TypingIndicator />
-            </div>
-          )}
-        </div>
-
-        <div
-          className={`text-xs text-zinc-500 dark:text-zinc-400 ${
-            isUser ? "text-right mt-2" : "text-left mt-4"
-          }`}
-        >
-          {formatTime(message.timestamp)}
-          {(message.model || message.modelName) && isAssistant && (
-            <span className="ml-2">• {message.modelName || message.model}</span>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-});
-
-Message.displayName = 'Message';
+Message.displayName = "Message";
 
 export default Message;
