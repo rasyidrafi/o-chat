@@ -264,7 +264,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                                         <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">Usage</h3>
                                    </div>
                                     {isLoadingUsage ? (
-                                        <div className="flex items-center justify-center py-8">
+                                        <div className="h-50 flex items-center justify-center py-8">
                                             <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
                                         </div>
                                     ) : (
@@ -281,9 +281,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                                                 </div>
                                                 <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
                                                      <motion.div 
-                                                         className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" 
+                                                         className="bg-gradient-to-r from-blue-400 to-blue-500 h-1.5 rounded-full" 
                                                          initial={settings.animationsDisabled ? {} : { width: 0 }}
-                                                         animate={{ width: `${Math.min((totalConversations/100)*100, 100)}%` }}
+                                                         animate={{ width: `${Math.min(Math.max((totalConversations / 30) * 70 + 30, 20), 100)}%` }}
                                                          transition={{ duration: settings.animationsDisabled ? 0 : 0.8, ease: "easeOut" }}
                                                      />
                                                 </div>
@@ -291,41 +291,46 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onClose, user, initialTab, 
                                             </div>
                                             <div>
                                                 <div className="flex justify-between text-xs font-medium mb-1">
-                                                     <span className="text-zinc-600 dark:text-zinc-300">Backed by Us</span>
-                                                     <span className="text-zinc-500 dark:text-zinc-400">{backedByServerCount} / unlimited</span>
+                                                     <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1.5">
+                                                         Backed by Us
+                                                         <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
+                                                             Unlimited
+                                                         </span>
+                                                     </span>
+                                                     <span className="text-zinc-500 dark:text-zinc-400">{backedByServerCount}</span>
                                                 </div>
                                                 <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
                                                      <motion.div 
-                                                         className="bg-zinc-400 dark:bg-zinc-500 h-1.5 rounded-full" 
+                                                         className="bg-gradient-to-r from-green-400 to-green-500 h-1.5 rounded-full" 
                                                          initial={settings.animationsDisabled ? {} : { width: 0 }}
-                                                         animate={{ width: `${Math.min((backedByServerCount/1000)*100, 100)}%` }}
+                                                         animate={{ width: `${Math.min(Math.max((backedByServerCount / 50) * 70 + 30, 20), 100)}%` }}
                                                          transition={{ duration: settings.animationsDisabled ? 0 : 0.8, ease: "easeOut", delay: settings.animationsDisabled ? 0 : 0.1 }}
                                                      />
                                                 </div>
-                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{backedByServerCount} messages usage</p>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{backedByServerCount} messages sent</p>
                                             </div>
                                              <div>
                                                 <div className="flex justify-between text-xs font-medium mb-1">
                                                      <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-                                                         Your Own Api
+                                                         Your Own API
                                                          <Info className="w-3.5 h-3.5 text-pink-500" />
                                                      </span>
                                                      <span className="text-zinc-500 dark:text-zinc-400">{byokCount}</span>
                                                 </div>
                                                 <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
                                                      <motion.div 
-                                                         className="bg-pink-500 h-1.5 rounded-full" 
+                                                         className="bg-gradient-to-r from-pink-400 to-pink-500 h-1.5 rounded-full" 
                                                          initial={settings.animationsDisabled ? {} : { width: 0 }}
-                                                         animate={{ width: `${Math.min((byokCount/1000)*100, 100)}%` }}
+                                                         animate={{ width: `${Math.min(Math.max((byokCount / 80) * 70 + 30, 20), 100)}%` }}
                                                          transition={{ duration: settings.animationsDisabled ? 0 : 0.8, ease: "easeOut", delay: settings.animationsDisabled ? 0 : 0.2 }}
                                                      />
                                                 </div>
-                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{byokCount} messages</p>
+                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{byokCount} messages sent</p>
                                             </div>
                                             <div className="bg-zinc-200/50 dark:bg-zinc-900/50 rounded-lg p-3 flex items-start gap-2.5">
                                                  <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400 mt-0.5 flex-shrink-0" />
                                                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                                                     Messages sent using your own API key are managed by yourself. Please be mindful of your billing as we are not responsible for any charges incurred.
+                                                     Server-backed messages are unlimited and free. Messages using your own API key are billed directly to you - please monitor your API usage and costs.
                                                  </p>
                                              </div>
                                         </motion.div>
