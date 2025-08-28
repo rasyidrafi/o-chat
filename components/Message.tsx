@@ -54,18 +54,16 @@ const ImageContentComponent: React.FC<{
   alt?: string;
   gcsPath?: string;
   attachment?: MessageAttachment;
-}> = ({
-  url,
-  alt = "Uploaded image",
-  gcsPath,
-  attachment,
-}) => {
+}> = ({ url, alt = "Uploaded image", gcsPath, attachment }) => {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [isLoading, setIsLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
-  const [naturalDimensions, setNaturalDimensions] = useState<{width: number, height: number} | null>(null);
+  const [naturalDimensions, setNaturalDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Max dimensions for container
   const maxWidth = 320;
@@ -75,12 +73,12 @@ const ImageContentComponent: React.FC<{
   const displayDimensions = useMemo(() => {
     if (!naturalDimensions) {
       // Fallback dimensions while loading - use full container size
-      return { 
-        width: maxWidth, 
-        height: maxHeight, 
-        containerWidth: maxWidth, 
+      return {
+        width: maxWidth,
+        height: maxHeight,
+        containerWidth: maxWidth,
         containerHeight: maxHeight,
-        fillsContainer: true
+        fillsContainer: true,
       };
     }
 
@@ -106,14 +104,14 @@ const ImageContentComponent: React.FC<{
     const finalHeight = Math.round(displayHeight);
 
     // Check if image fills the entire container (no black borders)
-    const fillsContainer = (finalWidth === maxWidth && finalHeight === maxHeight);
+    const fillsContainer = finalWidth === maxWidth && finalHeight === maxHeight;
 
     return {
       width: finalWidth,
       height: finalHeight,
       containerWidth: maxWidth,
       containerHeight: maxHeight,
-      fillsContainer
+      fillsContainer,
     };
   }, [naturalDimensions, maxWidth, maxHeight]);
 
@@ -137,7 +135,10 @@ const ImageContentComponent: React.FC<{
 
   const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
     const img = event.currentTarget;
-    setNaturalDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+    setNaturalDimensions({
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+    });
     setImageLoading(false);
   };
 
@@ -153,13 +154,13 @@ const ImageContentComponent: React.FC<{
   // Loading state
   if (isLoading) {
     return (
-      <div 
+      <div
         className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center"
-        style={{ 
-          width: `${displayDimensions.containerWidth}px`, 
+        style={{
+          width: `${displayDimensions.containerWidth}px`,
           height: `${displayDimensions.containerHeight}px`,
           minWidth: `${displayDimensions.containerWidth}px`,
-          minHeight: `${displayDimensions.containerHeight}px`
+          minHeight: `${displayDimensions.containerHeight}px`,
         }}
       >
         <div className="text-zinc-500 text-xs">Loading...</div>
@@ -172,11 +173,11 @@ const ImageContentComponent: React.FC<{
     return (
       <div
         className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
-        style={{ 
-          width: `${displayDimensions.containerWidth}px`, 
+        style={{
+          width: `${displayDimensions.containerWidth}px`,
           height: `${displayDimensions.containerHeight}px`,
           minWidth: `${displayDimensions.containerWidth}px`,
-          minHeight: `${displayDimensions.containerHeight}px`
+          minHeight: `${displayDimensions.containerHeight}px`,
         }}
       >
         <div className="text-zinc-500 text-xs text-center px-2">
@@ -187,20 +188,22 @@ const ImageContentComponent: React.FC<{
   }
 
   return (
-    <div className="relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black"
-         style={{ 
-           width: `${displayDimensions.containerWidth}px`, 
-           height: `${displayDimensions.containerHeight}px`,
-           minWidth: `${displayDimensions.containerWidth}px`,
-           minHeight: `${displayDimensions.containerHeight}px`
-         }}>
+    <div
+      className="relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black"
+      style={{
+        width: `${displayDimensions.containerWidth}px`,
+        height: `${displayDimensions.containerHeight}px`,
+        minWidth: `${displayDimensions.containerWidth}px`,
+        minHeight: `${displayDimensions.containerHeight}px`,
+      }}
+    >
       {/* Loading placeholder */}
       {imageLoading && !imageError && !showExpiredPlaceholder && (
         <div
           className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
           style={{
             minWidth: `${displayDimensions.containerWidth}px`,
-            minHeight: `${displayDimensions.containerHeight}px`
+            minHeight: `${displayDimensions.containerHeight}px`,
           }}
         >
           <div className="flex items-center space-x-2 text-zinc-500">
@@ -223,16 +226,14 @@ const ImageContentComponent: React.FC<{
           src={currentUrl}
           alt={alt}
           className={`cursor-pointer hover:opacity-90 transition-opacity object-contain ${
-            displayDimensions.fillsContainer ? 'rounded-lg' : ''
-          } ${
-            imageLoading ? "opacity-0" : "opacity-100"
-          }`}
+            displayDimensions.fillsContainer ? "rounded-lg" : ""
+          } ${imageLoading ? "opacity-0" : "opacity-100"}`}
           style={{
             width: `${displayDimensions.width}px`,
             height: `${displayDimensions.height}px`,
             maxWidth: `${displayDimensions.containerWidth}px`,
             maxHeight: `${displayDimensions.containerHeight}px`,
-            position: imageLoading ? "absolute" : "relative"
+            position: imageLoading ? "absolute" : "relative",
           }}
           onLoad={handleImageLoad}
           onError={handleImageError}
@@ -244,11 +245,11 @@ const ImageContentComponent: React.FC<{
       ) : imageError && !showExpiredPlaceholder ? (
         <div
           className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
-          style={{ 
-            width: `${displayDimensions.containerWidth}px`, 
+          style={{
+            width: `${displayDimensions.containerWidth}px`,
             height: `${displayDimensions.containerHeight}px`,
             minWidth: `${displayDimensions.containerWidth}px`,
-            minHeight: `${displayDimensions.containerHeight}px`
+            minHeight: `${displayDimensions.containerHeight}px`,
           }}
         >
           <div className="text-zinc-500 text-xs text-center px-2">
@@ -487,6 +488,32 @@ const MarkdownComponents = {
   ),
 
   code: ({ children, className, ...props }: any) => {
+    const text = String(children);
+
+    // Detect ASCII diagrams (multi-line OR contains box-drawing chars)
+    const isAscii = text.includes("\n") || /[+|\-]{2,}/.test(text);
+
+    if (isAscii) {
+      // Render ASCII diagrams in a block
+      return (
+        <div className="mb-2 flex justify-center bg-zinc-200 dark:bg-zinc-700 rounded py-3">
+          <code
+            className="bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 px-1.5 py-0.5 text-xs font-mono block align-baseline"
+            style={{
+              lineHeight: "1.2",
+              fontSize: "0.85em",
+              fontFamily:
+                'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+              whiteSpace: "pre", // preserve ASCII spacing
+            }}
+            {...props}
+          >
+            {children}
+          </code>
+        </div>
+      );
+    }
+
     // Inline code
     if (!className) {
       return (
@@ -811,7 +838,7 @@ const Message: React.FC<MessageProps> = ({
                 : message.content.find((item) => item.type === "text")?.text ||
                   ""}
             </div>
-            
+
             {/* Display input image for editing if attachments exist */}
             {message.attachments && message.attachments.length > 0 && (
               <div className="space-y-2">
@@ -829,7 +856,7 @@ const Message: React.FC<MessageProps> = ({
                 ))}
               </div>
             )}
-            
+
             {message.imageGenerationParams && (
               <div className="text-xs text-zinc-500 dark:text-zinc-500 space-y-1">
                 {/* Hide size for user messages since it's generation size, not original image size */}
@@ -867,22 +894,22 @@ const Message: React.FC<MessageProps> = ({
 
                   const isAsyncJob = message.isAsyncImageGeneration;
                   const job = message.imageGenerationJob;
-                  
+
                   let loadingText = "Generating image...";
-                  
+
                   if (isAsyncJob && job) {
                     switch (job.status) {
-                      case 'CREATED':
+                      case "CREATED":
                         loadingText = "Creating image generation job...";
                         break;
-                      case 'WAITING':
+                      case "WAITING":
                         if (job.info?.queueRank && job.info?.queueLen) {
                           loadingText = `You are on queue ${job.info.queueRank} of ${job.info.queueLen}`;
                         } else {
                           loadingText = "Waiting in queue...";
                         }
                         break;
-                      case 'RUNNING':
+                      case "RUNNING":
                         loadingText = "Generating...";
                         break;
                       default:
@@ -918,17 +945,23 @@ const Message: React.FC<MessageProps> = ({
                   );
                 })()}
               </div>
-            ) : message.generatedImageUrl || (message.attachments && message.attachments.length > 0) ? (
+            ) : message.generatedImageUrl ||
+              (message.attachments && message.attachments.length > 0) ? (
               <div className="max-w-md">
                 <ImageContentComponent
-                  url={message.generatedImageUrl || message.attachments?.[0]?.url || ''}
+                  url={
+                    message.generatedImageUrl ||
+                    message.attachments?.[0]?.url ||
+                    ""
+                  }
                   alt="Generated image"
                   gcsPath={message.attachments?.[0]?.gcsPath}
                   attachment={message.attachments?.[0]}
                 />
               </div>
             ) : null}
-            {(message.generatedImageUrl || (message.attachments && message.attachments.length > 0)) && (
+            {(message.generatedImageUrl ||
+              (message.attachments && message.attachments.length > 0)) && (
               <div className="text-xs text-zinc-500 dark:text-zinc-500">
                 Image will be expired after several hours.
               </div>
