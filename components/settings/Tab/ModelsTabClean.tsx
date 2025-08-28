@@ -1,16 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import CustomDropdown from "../../ui/CustomDropdown";
 import ModelCard from "../ModelCard";
-import AdvancedFilter from "../../ui/AdvancedFilter";
-import { LoadingOverlay } from "../../ui/LoadingOverlay";
 import { AppSettings } from "../../../hooks/useSettings";
 import { Provider } from "../../../types/providers";
 import { useModelsManager } from "../../../hooks/useModelsManager";
 import { usePagination, useSearchAndFilter } from "../../../hooks/usePagination";
 import { useLocalStorageData } from "../../../hooks/useLocalStorageData";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw } from "../../Icons";
-import { MODEL_FILTER_CATEGORIES, FILTER_ID_MAPPING, REVERSE_FILTER_ID_MAPPING } from "../../../constants/modelFilters";
 
 interface ModelsTabProps {
   settings: AppSettings;
@@ -18,6 +14,7 @@ interface ModelsTabProps {
 
 // Constants
 const ITEMS_PER_PAGE = 6;
+const FEATURE_OPTIONS = ["Tool Calling", "Reasoning", "Vision", "Image Generation", "Image Editing"];
 
 const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // State management
@@ -36,34 +33,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // Pagination and filtering for server models
   const serverPagination = usePagination<any>({ itemsPerPage: ITEMS_PER_PAGE });
   const serverFilter = useSearchAndFilter();
-
-  // Convert between old feature names and new filter IDs
-  const convertFeaturesToFilterIds = useCallback((features: string[]): string[] => {
-    return features.map(feature => FILTER_ID_MAPPING[feature] || feature.toLowerCase().replace(/\s+/g, '-'));
-  }, []);
-
-  // Handle advanced filter changes
-  const handleServerFilterChange = useCallback((filterId: string) => {
-    const featureName = REVERSE_FILTER_ID_MAPPING[filterId];
-    if (featureName) {
-      serverFilter.handleFeatureToggle(featureName);
-    }
-  }, [serverFilter]);
-
-  const handleServerClearAllFilters = useCallback(() => {
-    serverFilter.clearFilters();
-  }, [serverFilter]);
-
-  const handleByokFilterChange = useCallback((filterId: string) => {
-    const featureName = REVERSE_FILTER_ID_MAPPING[filterId];
-    if (featureName) {
-      byokFilter.handleFeatureToggle(featureName);
-    }
-  }, [byokFilter]);
-
-  const handleByokClearAllFilters = useCallback(() => {
-    byokFilter.clearFilters();
-  }, [byokFilter]);
 
   // Load providers on component mount
   useEffect(() => {
@@ -268,10 +237,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     modelsManager.saveSelectedServerModels(allSelectableModels);
   }, [modelsManager]);
 
-  const handleRefreshServerModels = useCallback(() => {
-    modelsManager.refreshSystemModels(true); // Force refresh to bypass cache
-  }, [modelsManager]);
-
   // Helper functions
   const isServerModelEnabled = useCallback((modelId: string): boolean => {
     return modelsManager.selectedServerModels.some(m => m.id === modelId);
@@ -342,23 +307,14 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
           </h2>
           <div className="flex gap-2">
             <button
-              onClick={handleRefreshServerModels}
-              disabled={modelsManager.isLoadingSystemModels}
-              className="px-3 py-1 text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-              title="Refresh server models"
-            >
-              <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
-              {modelsManager.isLoadingSystemModels ? 'Loading...' : 'Refresh'}
-            </button>
-            <button
               onClick={handleServerSelectAll}
-              className="px-3 py-1 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40"
+              className="px-3 py-1.5 text-sm font-medium bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 transition-colors"
             >
               Select All
             </button>
             <button
               onClick={handleServerUnselectAll}
-              className="px-3 py-1 text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40"
+              className="px-3 py-1.5 text-sm font-medium bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 transition-colors"
             >
               Unselect All
             </button>
@@ -366,7 +322,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         </div>
 
         {/* Server Models Filters */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
             <input
               type="text"
@@ -376,88 +332,68 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
               className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
             />
           </div>
-          <div className="flex-shrink-0 lg:w-80">
-            <AdvancedFilter
-              categories={MODEL_FILTER_CATEGORIES}
-              selectedFilters={convertFeaturesToFilterIds(serverFilter.selectedFeatures)}
-              onFilterChange={handleServerFilterChange}
-              onClearAll={handleServerClearAllFilters}
-              placeholder="Filter by capabilities"
-              disabled={modelsManager.isLoadingSystemModels}
-            />
+          <div className="flex flex-wrap gap-2">
+            {FEATURE_OPTIONS.map((feature) => (
+              <button
+                key={feature}
+                onClick={() => serverFilter.handleFeatureToggle(feature)}
+                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                  serverFilter.selectedFeatures.includes(feature)
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                    : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600"
+                }`}
+              >
+                {feature}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Server Models Content Area */}
-        <div className="relative min-h-[400px]">
-          {/* Loading Overlay */}
-          <LoadingOverlay
-            isVisible={modelsManager.isLoadingSystemModels}
-            title="Loading server models..."
-            subtitle="Please wait while we fetch the latest models from our servers"
-          />
-
-          {/* Error State */}
-          {modelsManager.systemModelsError && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-yellow-800 dark:text-yellow-200 font-medium">
-                    Failed to fetch server models
-                  </p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
-                    {modelsManager.systemModelsError}
-                  </p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
-                    Using fallback models. This might be due to:
-                  </p>
-                  <ul className="text-sm text-yellow-600 dark:text-yellow-400 mt-1 ml-4 list-disc">
-                    <li>Network connectivity issues</li>
-                    <li>Server maintenance</li>
-                    <li>Missing Firebase configuration</li>
-                  </ul>
-                </div>
-                <button
-                  onClick={handleRefreshServerModels}
-                  disabled={modelsManager.isLoadingSystemModels}
-                  className="ml-4 px-3 py-1 text-sm bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
-                >
-                  <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
-                  Retry
-                </button>
-              </div>
+        {/* Server Models Loading State */}
+        {modelsManager.isLoadingSystemModels ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-zinc-500 dark:text-zinc-400">Loading server models...</p>
             </div>
-          )}
-
-          {/* Server Models Grid */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 transition-opacity duration-200 ${
-            modelsManager.isLoadingSystemModels ? 'opacity-30' : 'opacity-100'
-          }`}>
-            <AnimatePresence mode="wait">
-              {paginatedServerModels.models.map((model, index) => (
-                <motion.div
-                  key={model.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ 
-                    duration: settings.animationsDisabled ? 0 : 0.2, 
-                    delay: settings.animationsDisabled ? 0 : index * 0.05 
-                  }}
-                >
-                  <ModelCard
-                    key={model.id}
-                    name={model.name}
-                    description={model.description}
-                    features={model.features}
-                    isEnabled={isServerModelEnabled(model.id)}
-                    onToggle={(enabled) => handleServerModelToggle(model.id, model.name, enabled)}
-                    disabled={modelsManager.isLoadingSystemModels}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
           </div>
+        ) : modelsManager.systemModelsError ? (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+            <p className="text-yellow-800 dark:text-yellow-200">
+              {modelsManager.systemModelsError}
+            </p>
+            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+              Using fallback models.
+            </p>
+          </div>
+        ) : null}
+
+        {/* Server Models Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <AnimatePresence mode="wait">
+            {paginatedServerModels.models.map((model, index) => (
+              <motion.div
+                key={model.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ 
+                  duration: settings.animationsDisabled ? 0 : 0.2, 
+                  delay: settings.animationsDisabled ? 0 : index * 0.05 
+                }}
+              >
+                <ModelCard
+                  key={model.id}
+                  name={model.name}
+                  description={model.description}
+                  features={model.features}
+                  isEnabled={isServerModelEnabled(model.id)}
+                  onToggle={(enabled) => handleServerModelToggle(model.id, model.name, enabled)}
+                  disabled={false}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
         {renderPagination('server')}
@@ -517,7 +453,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             </div>
 
             {/* BYOK Models Filters */}
-            <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="flex-1">
                 <input
                   type="text"
@@ -527,63 +463,43 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                   className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-shrink-0 lg:w-80">
-                  <AdvancedFilter
-                    categories={MODEL_FILTER_CATEGORIES}
-                    selectedFilters={convertFeaturesToFilterIds(byokFilter.selectedFeatures)}
-                    onFilterChange={handleByokFilterChange}
-                    onClearAll={handleByokClearAllFilters}
-                    placeholder="Filter by capabilities"
-                    disabled={modelsManager.isLoadingModels}
-                  />
-                </div>
-                {activeByokTab === "selected" && (
-                  <button
-                    onClick={handleUnselectAll}
-                    className="px-3 py-1.5 text-sm font-medium bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 transition-colors whitespace-nowrap"
-                  >
-                    Unselect All
-                  </button>
-                )}
-              </div>
+              {activeByokTab === "selected" && (
+                <button
+                  onClick={handleUnselectAll}
+                  className="px-3 py-1.5 text-sm font-medium bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 transition-colors whitespace-nowrap"
+                >
+                  Unselect All
+                </button>
+              )}
             </div>
 
-            {/* BYOK Models Content Area */}
-            <div className="relative min-h-[400px]">
-              {/* Loading Overlay */}
-              <LoadingOverlay
-                isVisible={modelsManager.isLoadingModels}
-                title="Loading models..."
-                subtitle="Please wait while we fetch models from your selected provider"
-              />
-
-              {/* Error State */}
-              {modelsManager.modelsError && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-                  <p className="text-red-800 dark:text-red-200">
-                    {modelsManager.modelsError}
-                  </p>
+            {/* BYOK Models Loading State */}
+            {modelsManager.isLoadingModels ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-zinc-500 dark:text-zinc-400">Loading models...</p>
                 </div>
-              )}
-
-              {/* Empty State */}
-              {!modelsManager.isLoadingModels && !modelsManager.modelsError && paginatedByokModels.models.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-zinc-500 dark:text-zinc-400">
-                    {activeByokTab === "selected" 
-                      ? "No models selected yet. Switch to 'Available Models' to select some."
-                      : "No models found."
-                    }
-                  </p>
-                </div>
-              )}
-
-              {/* BYOK Models Grid */}
-              {paginatedByokModels.models.length > 0 && (
-                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 transition-opacity duration-200 ${
-                  modelsManager.isLoadingModels ? 'opacity-30' : 'opacity-100'
-                }`}>
+              </div>
+            ) : modelsManager.modelsError ? (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+                <p className="text-red-800 dark:text-red-200">
+                  {modelsManager.modelsError}
+                </p>
+              </div>
+            ) : paginatedByokModels.models.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-zinc-500 dark:text-zinc-400">
+                  {activeByokTab === "selected" 
+                    ? "No models selected yet. Switch to 'Available Models' to select some."
+                    : "No models found."
+                  }
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* BYOK Models Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   <AnimatePresence mode="wait">
                     {paginatedByokModels.models.map((model, index) => (
                       <motion.div
@@ -602,17 +518,16 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                           features={model.features}
                           isEnabled={isModelSelected(model.id)}
                           onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
-                          disabled={modelsManager.isLoadingModels}
+                          disabled={false}
                         />
                       </motion.div>
                     ))}
                   </AnimatePresence>
                 </div>
-              )}
 
-              {/* Pagination */}
-              {paginatedByokModels.models.length > 0 && renderPagination('byok')}
-            </div>
+                {renderPagination('byok')}
+              </>
+            )}
           </>
         )}
       </section>

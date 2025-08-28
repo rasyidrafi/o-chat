@@ -1,85 +1,65 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Key, Plus, X } from "../../Icons";
 import Button from "../../ui/Button";
 import { Provider } from "../../../types/providers";
+import { useLocalStorageData } from "../../../hooks/useLocalStorageData";
 
-// Storage keys
-const BUILTIN_PROVIDERS_KEY = "builtin_api_providers";
-const CUSTOM_PROVIDERS_KEY = "custom_api_providers";
+// Storage keys - moved to constants for better maintainability
+const STORAGE_KEYS = {
+  BUILTIN_PROVIDERS: "builtin_api_providers",
+  CUSTOM_PROVIDERS: "custom_api_providers",
+} as const;
 
-// Default built-in providers
-const DEFAULT_BUILTIN_PROVIDERS: Provider[] = [
+// Default built-in providers - made immutable
+const DEFAULT_BUILTIN_PROVIDERS: readonly Provider[] = [
   { label: "Anthropic", value: "", id: "anthropic", base_url: "" },
   { label: "OpenAI", value: "", id: "openai", base_url: "" },
-];
+] as const;
 
-// Helper functions for localStorage management
-const loadBuiltInProvidersFromStorage = (): Provider[] => {
-  try {
-    const stored = localStorage.getItem(BUILTIN_PROVIDERS_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return DEFAULT_BUILTIN_PROVIDERS;
-  } catch (error) {
-    console.error("Error loading built-in providers from localStorage:", error);
-    return DEFAULT_BUILTIN_PROVIDERS;
-  }
+// Performance constants
+const SAVE_ANIMATION_DURATION = 500; // ms
+
+// Enhanced localStorage hook for providers
+const useProvidersLocalStorage = () => {
+  const { loadProvidersFromStorage, saveProvidersToStorage } = useLocalStorageData();
+  
+  return useMemo(() => {
+    const loadBuiltInProviders = () => 
+      loadProvidersFromStorage(STORAGE_KEYS.BUILTIN_PROVIDERS, [...DEFAULT_BUILTIN_PROVIDERS]);
+    
+    const loadCustomProviders = () => 
+      loadProvidersFromStorage(STORAGE_KEYS.CUSTOM_PROVIDERS, []);
+    
+    const saveBuiltInProviders = (providers: Provider[]) =>
+      saveProvidersToStorage(STORAGE_KEYS.BUILTIN_PROVIDERS, providers);
+    
+    const saveCustomProviders = (providers: Provider[]) =>
+      saveProvidersToStorage(STORAGE_KEYS.CUSTOM_PROVIDERS, providers);
+
+    return {
+      loadBuiltInProviders,
+      loadCustomProviders,
+      saveBuiltInProviders,
+      saveCustomProviders,
+    };
+  }, [loadProvidersFromStorage, saveProvidersToStorage]);
 };
 
-const loadCustomProvidersFromStorage = (): Provider[] => {
-  try {
-    const stored = localStorage.getItem(CUSTOM_PROVIDERS_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    return [];
-  } catch (error) {
-    console.error("Error loading custom providers from localStorage:", error);
-    return [];
-  }
-};
-
-const saveBuiltInProvidersToStorage = (providers: Provider[]) => {
-  try {
-    localStorage.setItem(BUILTIN_PROVIDERS_KEY, JSON.stringify(providers));
-
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(
-      new CustomEvent("localStorageChange", {
-        detail: { key: BUILTIN_PROVIDERS_KEY, value: providers },
-      })
-    );
-  } catch (error) {
-    console.error("Error saving built-in providers to localStorage:", error);
-  }
-};
-
-const saveCustomProvidersToStorage = (providers: Provider[]) => {
-  try {
-    localStorage.setItem(CUSTOM_PROVIDERS_KEY, JSON.stringify(providers));
-
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(
-      new CustomEvent("localStorageChange", {
-        detail: { key: CUSTOM_PROVIDERS_KEY, value: providers },
-      })
-    );
-  } catch (error) {
-    console.error("Error saving custom providers to localStorage:", error);
-  }
-};
-
-// Generate UUID for custom providers
+// Enhanced UUID generator with better randomness
 const generateUUID = (): string => {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+  if (crypto?.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
-    const v = c == "x" ? r : (r & 0x3) | 0x8;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 };
 
-const ApiProviderCard: React.FC<{
+// Memoized API Provider Card component for better performance
+const ApiProviderCard = React.memo<{
   title: string;
   consoleUrl: string;
   placeholder: string;
@@ -87,144 +67,173 @@ const ApiProviderCard: React.FC<{
   providerKey: string;
   value: string;
   onChange: (value: string) => void;
-}> = ({ title, consoleUrl, placeholder, consoleName, value, onChange }) => {
+}>(({ title, consoleUrl, placeholder, consoleName, value, onChange }) => {
   return (
-    <>
-      <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 space-y-4">
-        {/* Title line */}
-        <div className="flex items-center gap-3">
-          <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-          <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-            {title}
-          </h3>
-        </div>
-
-        {/* Input line */}
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[80px]">
-            API Key:
-          </label>
-          <input
-            type="password"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-          />
-        </div>
-
-        {/* Console link line */}
-        <div>
-          <a
-            href={consoleUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-pink-500 hover:underline"
-          >
-            Get your API key from {consoleName}
-          </a>
-        </div>
+    <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 space-y-4">
+      {/* Title line */}
+      <div className="flex items-center gap-3">
+        <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+          {title}
+        </h3>
       </div>
-    </>
-  );
-};
 
-const OpenAICompatibleProviderCard: React.FC<{
+      {/* Input line */}
+      <div className="flex items-center gap-4">
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[80px]">
+          API Key:
+        </label>
+        <input
+          type="password"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+          autoComplete="new-password"
+        />
+      </div>
+
+      {/* Console link line */}
+      <div>
+        <a
+          href={consoleUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-pink-500 hover:underline"
+        >
+          Get your API key from {consoleName}
+        </a>
+      </div>
+    </div>
+  );
+});
+
+// Set display name for debugging
+ApiProviderCard.displayName = 'ApiProviderCard';
+
+// Memoized OpenAI Compatible Provider Card with validation
+const OpenAICompatibleProviderCard = React.memo<{
   provider: Provider;
   onUpdate: (provider: Provider) => void;
   onDelete: (providerId: string) => void;
-}> = ({ provider, onUpdate, onDelete }) => {
-  const handleChange = (field: keyof Provider, value: string) => {
+}>(({ provider, onUpdate, onDelete }) => {
+  // Memoized change handler to prevent unnecessary re-renders
+  const handleChange = useCallback((field: keyof Provider, value: string) => {
     const updatedProvider = { ...provider, [field]: value };
     onUpdate(updatedProvider);
-  };
+  }, [provider, onUpdate]);
+
+  // Memoized delete handler
+  const handleDelete = useCallback(() => {
+    onDelete(provider.id);
+  }, [onDelete, provider.id]);
 
   return (
-    <>
-      <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 relative">
-        <button
-          onClick={() => onDelete(provider.id)}
-          className="absolute top-4 right-4 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
-          aria-label="Delete provider"
-        >
-          <X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-        </button>
+    <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 relative">
+      <button
+        onClick={handleDelete}
+        className="absolute top-4 right-4 p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
+        aria-label="Delete provider"
+        type="button"
+      >
+        <X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+      </button>
 
-        <div className="flex items-center gap-3 mb-4">
-          <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-          <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-            OpenAI Compatible Provider
-          </h3>
+      <div className="flex items-center gap-3 mb-4">
+        <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+          OpenAI Compatible Provider
+        </h3>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            Provider Name
+          </label>
+          <input
+            type="text"
+            value={provider.label}
+            onChange={(e) => handleChange("label", e.target.value)}
+            placeholder="e.g., Local LLM, Custom API"
+            className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+            autoComplete="off"
+          />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Provider Name
-            </label>
-            <input
-              type="text"
-              value={provider.label}
-              onChange={(e) => handleChange("label", e.target.value)}
-              placeholder="e.g., Local LLM, Custom API"
-              className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            Base URL
+          </label>
+          <input
+            type="url"
+            value={provider.base_url || ""}
+            onChange={(e) => handleChange("base_url", e.target.value)}
+            placeholder="https://api.example.com/v1"
+            className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+            autoComplete="url"
+          />
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Base URL
-            </label>
-            <input
-              type="url"
-              value={provider.base_url || ""}
-              onChange={(e) => handleChange("base_url", e.target.value)}
-              placeholder="https://api.example.com/v1"
-              className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              API Key
-            </label>
-            <input
-              type="password"
-              value={provider.value ?? ""}
-              onChange={(e) => handleChange("value", e.target.value)}
-              placeholder="sk-..."
-              className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            API Key
+          </label>
+          <input
+            type="password"
+            value={provider.value ?? ""}
+            onChange={(e) => handleChange("value", e.target.value)}
+            placeholder="sk-..."
+            className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+            autoComplete="new-password"
+          />
         </div>
       </div>
-    </>
+    </div>
   );
-};
+});
+
+// Set display name for debugging
+OpenAICompatibleProviderCard.displayName = 'OpenAICompatibleProviderCard';
 
 const ApiKeysTab: React.FC = () => {
+  // Use the enhanced localStorage hook
+  const {
+    loadBuiltInProviders,
+    loadCustomProviders, 
+    saveBuiltInProviders,
+    saveCustomProviders
+  } = useProvidersLocalStorage();
+
+  // State management
   const [builtInProviders, setBuiltInProviders] = useState<Provider[]>([]);
   const [customProviders, setCustomProviders] = useState<Provider[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  
+  // Refs for performance optimization
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load providers from localStorage on mount
+  // Load providers from localStorage on mount - memoized
   useEffect(() => {
-    const loadedBuiltInProviders = loadBuiltInProvidersFromStorage();
-    const loadedCustomProviders = loadCustomProvidersFromStorage();
+    const loadedBuiltInProviders = loadBuiltInProviders();
+    const loadedCustomProviders = loadCustomProviders();
     setBuiltInProviders(loadedBuiltInProviders);
     setCustomProviders(loadedCustomProviders);
-  }, []);
+  }, [loadBuiltInProviders, loadCustomProviders]);
 
-  // Update individual built-in provider values
-  const updateBuiltInProviderValue = (providerId: string, value: string) => {
+  // Memoized built-in provider update handler
+  const updateBuiltInProviderValue = useCallback((providerId: string, value: string) => {
     setBuiltInProviders((prev) =>
       prev.map((p) => (p.id === providerId ? { ...p, value } : p))
     );
     setHasChanges(true);
-  };
+    setSaveError(null); // Clear any previous errors
+  }, []);
 
-  const addNewProvider = () => {
+  // Memoized add new provider handler
+  const addNewProvider = useCallback(() => {
     const newProvider: Provider = {
       id: generateUUID(),
       label: "",
@@ -233,66 +242,129 @@ const ApiKeysTab: React.FC = () => {
     };
     setCustomProviders((prev) => [...prev, newProvider]);
     setHasChanges(true);
-  };
+    setSaveError(null);
+  }, []);
 
-  const updateProvider = (updatedProvider: Provider) => {
+  // Memoized update provider handler
+  const updateProvider = useCallback((updatedProvider: Provider) => {
     setCustomProviders((prev) =>
       prev.map((provider) =>
         provider.id === updatedProvider.id ? updatedProvider : provider
       )
     );
     setHasChanges(true);
-  };
+    setSaveError(null);
+  }, []);
 
-  const deleteProvider = (providerId: string) => {
+  // Memoized delete provider handler
+  const deleteProvider = useCallback((providerId: string) => {
     setCustomProviders((prev) =>
       prev.filter((provider) => provider.id !== providerId)
     );
     setHasChanges(true);
+    setSaveError(null);
 
+    // Clean up associated model data
     const modelProviderKey = `models_${providerId}`;
     localStorage.removeItem(modelProviderKey);
-  };
+  }, []);
 
-  // Save all providers to localStorage
-  const handleSaveAll = async () => {
+  // Enhanced validation function
+  const validateCustomProviders = useCallback((providers: Provider[]): string | null => {
+    const invalidProviders = providers.filter((p, index) => {
+      const hasEmptyLabel = !p.label.trim();
+      const hasEmptyUrl = !p.base_url?.trim();
+      const hasEmptyValue = !p.value?.trim();
+      
+      if (hasEmptyLabel || hasEmptyUrl || hasEmptyValue) {
+        return true;
+      }
+      
+      // Check for duplicate names
+      const duplicateName = providers.findIndex(
+        (other, otherIndex) => 
+          otherIndex !== index && 
+          other.label.trim().toLowerCase() === p.label.trim().toLowerCase()
+      ) !== -1;
+      
+      return duplicateName;
+    });
+
+    if (invalidProviders.length > 0) {
+      return "Please fill in all fields and ensure unique provider names before saving.";
+    }
+    
+    return null;
+  }, []);
+
+  // Enhanced save handler with better error handling
+  const handleSaveAll = useCallback(async () => {
+    if (isSaving) return; // Prevent double-saves
+
     setIsSaving(true);
+    setSaveError(null);
+    
     try {
-      // Validate custom providers before saving
-      const invalidCustomProviders = customProviders.filter(
-        (p) => !p.label.trim() || !p.base_url?.trim() || !p.value?.trim()
-      );
-
-      if (invalidCustomProviders.length > 0) {
-        alert("Please fill in all fields for custom providers before saving.");
-        setIsSaving(false);
+      // Validate custom providers
+      const validationError = validateCustomProviders(customProviders);
+      if (validationError) {
+        setSaveError(validationError);
         return;
       }
 
-      saveBuiltInProvidersToStorage(builtInProviders);
-      saveCustomProvidersToStorage(customProviders);
+      // Save to localStorage using the hook functions
+      const builtInSaved = saveBuiltInProviders(builtInProviders);
+      const customSaved = saveCustomProviders(customProviders);
+      
+      if (!builtInSaved || !customSaved) {
+        throw new Error("Failed to save providers to localStorage");
+      }
+      
       setHasChanges(false);
 
       // Brief delay to show saving state
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, SAVE_ANIMATION_DURATION));
     } catch (error) {
       console.error("Error saving providers:", error);
-      alert("Failed to save providers. Please try again.");
+      setSaveError("Failed to save providers. Please try again.");
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [
+    builtInProviders, 
+    customProviders, 
+    isSaving, 
+    saveBuiltInProviders, 
+    saveCustomProviders,
+    validateCustomProviders
+  ]);
 
-  // Check if we can add a new provider
-  const canAddNewProvider =
-    customProviders.length === 0 ||
-    (customProviders[customProviders.length - 1].label.trim() &&
-      customProviders[customProviders.length - 1].base_url?.trim() &&
-      (customProviders[customProviders.length - 1].value ?? "").trim());
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
-  // Get provider values for the built-in providers
-  const anthropicProvider = builtInProviders.find((p) => p.id === "anthropic");
-  const openaiProvider = builtInProviders.find((p) => p.id === "openai");
+  // Memoized computed values for better performance
+  const canAddNewProvider = useMemo(() => {
+    if (customProviders.length === 0) return true;
+    
+    const lastProvider = customProviders[customProviders.length - 1];
+    return !!(
+      lastProvider.label.trim() &&
+      lastProvider.base_url?.trim() &&
+      (lastProvider.value ?? "").trim()
+    );
+  }, [customProviders]);
+
+  // Memoized provider lookups
+  const { anthropicProvider, openaiProvider } = useMemo(() => ({
+    anthropicProvider: builtInProviders.find((p) => p.id === "anthropic"),
+    openaiProvider: builtInProviders.find((p) => p.id === "openai"),
+  }), [builtInProviders]);
 
   return (
     <div>
@@ -305,6 +377,14 @@ const ApiKeysTab: React.FC = () => {
         your own API key below. Your keys are stored securely on your device and
         are never sent to our servers.
       </p>
+      
+      {/* Error display */}
+      {saveError && (
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-700 dark:text-red-400">{saveError}</p>
+        </div>
+      )}
+      
       <div className="space-y-6">
         <ApiProviderCard
           title="Anthropic API Key"

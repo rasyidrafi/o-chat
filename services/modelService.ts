@@ -11,12 +11,34 @@ export const getModelCapabilities = (supportedParameters: string[]) => {
     const params = supportedParameters.map(p => p.toLowerCase());
     
     const capabilities = {
-        hasTools: params.some(p => p.includes('tools') || p.includes('tool_choice')),
-        hasReasoning: params.some(p => p.includes('reasoning') || p.includes('include_reasoning')),
-        hasVision: params.some(p => p.includes('vision') || p.includes('image')),
-        hasImageGeneration: params.some(p => p.includes('image_generation')),
-        hasImageEditing: params.some(p => p.includes('image_editing')),
-        hasImageGenerationJobs: params.some(p => p.includes('image_generation_jobs'))
+        hasTools: params.some(p => 
+            p.includes('tools') || 
+            p.includes('tool_choice') || 
+            p.includes('function_calling')
+        ),
+        hasReasoning: params.some(p => 
+            p.includes('reasoning') || 
+            p.includes('include_reasoning')
+        ),
+        hasVision: params.some(p => 
+            p.includes('vision') || 
+            p.includes('multimodal') ||
+            (p.includes('image') && !p.includes('image_generation') && !p.includes('image_editing'))
+        ),
+        hasImageGeneration: params.some(p => 
+            p.includes('image_generation')
+        ),
+        hasImageGenerationJobs: params.some(p => 
+            p.includes('image_generation_jobs')
+        ),
+        hasImageEditing: params.some(p => 
+            p.includes('image_editing')
+        ),
+        hasTextGeneration: params.some(p => 
+            p.includes('text_generation') || 
+            p.includes('completion') ||
+            p.includes('chat')
+        )
     };
     
     return capabilities;
@@ -32,8 +54,10 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
     // Use the shared constant for fallback models
     const fallbackModels = DEFAULT_SYSTEM_MODELS;
 
+    console.log('🔍 Fetching system models...', { baseURL });
+
     if (!baseURL) {
-        console.warn('VITE_FIREBASE_FUNC_BASE_API not configured, using fallback models');
+        console.warn('⚠️ VITE_FIREBASE_FUNC_BASE_API not configured, using fallback models');
         return fallbackModels;
     }
 
@@ -42,11 +66,14 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
         let idToken: string | undefined;
         const currentUser = auth.currentUser;
         
+        console.log('👤 Current user:', currentUser?.uid || 'Not authenticated');
+        
         if (currentUser) {
             try {
                 idToken = await currentUser.getIdToken();
+                console.log('🔑 Got Firebase ID token');
             } catch (tokenError) {
-                console.warn('Failed to get Firebase ID token:', tokenError);
+                console.warn('⚠️ Failed to get Firebase ID token:', tokenError);
                 // Continue without token - the API will decide if auth is required
             }
         }
@@ -63,6 +90,8 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
         // Construct the API URLs
         const modelsUrl = `${baseURL.replace(/\/$/, '')}/models`;
         
+        console.log('🌐 Making API request to:', modelsUrl);
+        
         // Prepare fetch promises
         const fetchPromises = [
             fetch(modelsUrl, {
@@ -73,6 +102,8 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
 
         // Fetch both APIs in parallel
         const responses = await Promise.all(fetchPromises);
+        
+        console.log('📡 API Response status:', responses[0].status, responses[0].statusText);
         
         // Check if models API response is ok
         if (!responses[0].ok) {
@@ -92,9 +123,12 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
             // The API might return models in a 'data' array
             fetchedModels = modelsData.data;
         } else {
-            console.warn('Unexpected response format from system models API, using fallback models');
+            console.warn('⚠️ Unexpected response format from system models API, using fallback models');
+            console.log('📄 Response data:', modelsData);
             return fallbackModels;
         }
+        
+        console.log('📋 Fetched models count:', fetchedModels.length);
         
         // Merge models with descriptions
         const processedModels = fetchedModels.map((model: any) => {
@@ -118,11 +152,13 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
             }
         });
         
+        console.log('✅ Final models count:', allModels.length);
+        
         return allModels;
         
     } catch (error) {
-        console.error('Error fetching system models:', error);
-        console.log('Using fallback models due to fetch error');
+        console.error('❌ Error fetching system models:', error);
+        console.log('🔄 Using fallback models due to fetch error');
         return fallbackModels;
     }
 };
