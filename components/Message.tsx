@@ -269,14 +269,45 @@ interface MessageProps {
   animationsDisabled: boolean;
 }
 
-// Custom CodeBlock component with copy functionality and syntax highlighting
-const CodeBlock: React.FC<{ children: string; className?: string }> = ({
+const CodeBlock: React.FC<{
+  children: string;
+  className?: string;
+  forceAscii?: boolean;
+  isInlineMultiLine?: boolean;
+}> = ({
   children,
   className,
+  forceAscii = false,
+  isInlineMultiLine = false,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [viewMode, setViewMode] = useState<"code" | "ascii">(
+    forceAscii ? "ascii" : "code"
+  );
+  const [isWrapped, setIsWrapped] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const codeRef = useRef<HTMLElement>(null);
+
+  // Check if it's a single line inline code (no newlines and no language)
+  const isSingleLineInline =
+    !className && !isInlineMultiLine && !children.includes("\n");
+
+  // Show header for everything EXCEPT single line inline code
+  const showHeader = !isSingleLineInline;
+
+  // Handle view mode changes with smooth transition
+  const handleViewModeChange = (newMode: "code" | "ascii") => {
+    if (newMode === viewMode) return;
+
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setViewMode(newMode);
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 150);
+    }, 150);
+  };
 
   // Dynamically load highlight.js theme based on isDark
   useEffect(() => {
@@ -324,18 +355,20 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({
   // Highlight code using highlight.js
   const [highlighted, setHighlighted] = useState<string>("");
   useEffect(() => {
-    let lang = className?.replace("language-", "") || "";
-    if (!hljs.getLanguage(lang)) lang = "plaintext";
-    try {
-      const result =
-        lang === "plaintext"
-          ? hljs.highlightAuto(children)
-          : hljs.highlight(children, { language: lang });
-      setHighlighted(result.value);
-    } catch {
-      setHighlighted(children);
+    if (viewMode === "code") {
+      let lang = className?.replace("language-", "") || "";
+      if (!hljs.getLanguage(lang)) lang = "plaintext";
+      try {
+        const result =
+          lang === "plaintext"
+            ? hljs.highlightAuto(children)
+            : hljs.highlight(children, { language: lang });
+        setHighlighted(result.value);
+      } catch {
+        setHighlighted(children);
+      }
     }
-  }, [children, className]);
+  }, [children, className, viewMode]);
 
   const copyToClipboard = async () => {
     try {
@@ -347,20 +380,51 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({
     }
   };
 
-  return (
-    <div className="relative group mb-4 w-full max-w-full overflow-hidden">
-      {/* Force container constraints */}
+  // Check if content has ASCII patterns for showing ASCII option
+  const hasAsciiPatterns =
+    /[+\-|═│┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬]/.test(children) ||
+    /^\s*[+\-|]+\s*$/.test(children.split("\n")[0]) ||
+    /\+[-=]+\+/.test(children) ||
+    /\|.*\|/.test(children);
+
+  const renderContent = () => {
+    if (viewMode === "ascii") {
+      return (
+        <div
+          className={`${showHeader ? "p-4" : "px-1.5 py-0.5"} ${
+            showHeader ? "" : "rounded"
+          }`}
+          style={{
+            backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
+          }}
+        >
+          <code
+            className="text-zinc-800 dark:text-zinc-200 text-xs font-mono block"
+            style={{
+              lineHeight: "1.2",
+              fontSize: "0.85em",
+              fontFamily:
+                'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+              whiteSpace: isWrapped ? "pre-wrap" : "pre",
+            }}
+          >
+            {children}
+          </code>
+        </div>
+      );
+    }
+
+    return (
       <div
-        className="relative w-full bg-zinc-50 dark:bg-zinc-900 rounded-lg"
+        className={`${showHeader ? "" : "rounded-lg"} overflow-hidden`}
         style={{
-          maxWidth: "100%",
-          width: "100%",
-          overflow: "hidden",
+          backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
         }}
       >
-        {/* Scrollable wrapper */}
         <div
-          className="overflow-x-auto thin-scrollbar"
+          className={`${
+            isWrapped ? "overflow-x-visible" : "overflow-x-auto"
+          } thin-scrollbar`}
           style={{
             maxWidth: "100%",
             width: "100%",
@@ -370,53 +434,147 @@ const CodeBlock: React.FC<{ children: string; className?: string }> = ({
             ref={codeRef}
             className={`${
               className ? className + " hljs" : "hljs"
-            } block p-4 text-sm leading-relaxed whitespace-pre`}
+            } block p-4 text-sm leading-relaxed ${
+              isWrapped ? "whitespace-pre-wrap" : "whitespace-pre"
+            }`}
             style={{
               margin: 0,
-              width: "max-content",
-              minWidth: "100%",
-              maxWidth: "none",
+              width: isWrapped ? "100%" : "max-content",
+              minWidth: isWrapped ? "auto" : "100%",
+              maxWidth: isWrapped ? "100%" : "none",
             }}
             dangerouslySetInnerHTML={{ __html: highlighted }}
           />
         </div>
+      </div>
+    );
+  };
 
-        {/* Copy button */}
-        <button
-          onClick={copyToClipboard}
-          className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-zinc-800/90 hover:bg-white dark:hover:bg-zinc-800 rounded transition-colors opacity-0 group-hover:opacity-100 z-10 shadow-sm"
-          title={copied ? "Copied!" : "Copy to clipboard"}
+  if (!showHeader) {
+    // Simple inline code without header (only for single-line inline)
+    return (
+      <code className="bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-xs font-mono">
+        {children}
+      </code>
+    );
+  }
+
+  // Code block or multi-line with header
+  return (
+    <div className="relative group mb-4 w-full max-w-full overflow-hidden">
+      <div
+        className="relative w-full rounded-lg"
+        style={{
+          maxWidth: "100%",
+          width: "100%",
+          overflow: "hidden",
+          backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
+        }}
+      >
+        {/* Header with controls */}
+        <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
+          {/* Left side: View mode selector (only show if has ASCII patterns or forced) */}
+          <div className="flex items-center">
+            <div className="inline-flex rounded-md bg-zinc-200 dark:bg-zinc-700 p-0.5">
+              <button
+                onClick={() => handleViewModeChange("code")}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
+                  viewMode === "code"
+                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                Code
+              </button>
+              <button
+                onClick={() => handleViewModeChange("ascii")}
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
+                  viewMode === "ascii"
+                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                Raw Format
+              </button>
+            </div>
+          </div>
+
+          {/* Right side: Controls */}
+          <div className="flex items-center space-x-2">
+            {/* Text wrap toggle */}
+            <button
+              onClick={() => setIsWrapped(!isWrapped)}
+              className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+              title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
+            >
+              <svg
+                className={`w-4 h-4 transition-colors duration-150 ${
+                  isWrapped
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-zinc-600 dark:text-zinc-400"
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h8m-8 6h16"
+                />
+              </svg>
+            </button>
+
+            {/* Copy button */}
+            <button
+              onClick={copyToClipboard}
+              className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+              title={copied ? "Copied!" : "Copy to clipboard"}
+            >
+              {copied ? (
+                <svg
+                  className="w-4 h-4 text-green-600 dark:text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Content container with proper flex layout */}
+        <div
+          className="flex-1 min-h-0"
+          style={{
+            opacity: isTransitioning ? 0 : 1,
+            transition: "opacity 150ms ease-in-out",
+          }}
         >
-          {copied ? (
-            <svg
-              className="w-4 h-4 text-green-600 dark:text-green-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-              />
-            </svg>
-          )}
-        </button>
+          {renderContent()}
+        </div>
       </div>
     </div>
   );
@@ -491,32 +649,21 @@ const MarkdownComponents = {
   code: ({ children, className, ...props }: any) => {
     const text = String(children);
 
-    // Detect ASCII diagrams (multi-line OR contains box-drawing chars)
-    const isAscii = text.includes("\n") || /[+|\-]{2,}/.test(text);
-
-    if (isAscii) {
-      // Render ASCII diagrams in a block
+    // If there's a className (language specified), always render as code block
+    if (className) {
       return (
-        <div className="mb-2 flex justify-center bg-zinc-200 dark:bg-zinc-700 rounded py-3">
-          <code
-            className="bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 px-1.5 py-0.5 text-xs font-mono block align-baseline"
-            style={{
-              lineHeight: "1.2",
-              fontSize: "0.85em",
-              fontFamily:
-                'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-              whiteSpace: "pre", // preserve ASCII spacing
-            }}
-            {...props}
-          >
-            {children}
-          </code>
-        </div>
+        <CodeBlock className={className} {...props}>
+          {children}
+        </CodeBlock>
       );
     }
 
-    // Inline code
-    if (!className) {
+    // For inline code without language specification
+    // Check if it's single line first
+    const hasNewlines = text.includes("\n");
+
+    if (!hasNewlines) {
+      // Single-line inline code -> render as regular inline code
       return (
         <code
           className="bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-xs font-mono"
@@ -527,9 +674,25 @@ const MarkdownComponents = {
       );
     }
 
-    // Block code with copy functionality
+    // Multi-line code - check if it's ASCII art/table
+    const isAsciiArt =
+      /[+\-|═│┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬]/.test(text) || // Box drawing chars
+      /^\s*[+\-|]+\s*$/.test(text.split("\n")[0]) || // ASCII table headers
+      /\+[-=]+\+/.test(text) || // Table borders like +---+
+      /\|.*\|/.test(text); // Content between pipes
+
+    if (isAsciiArt) {
+      // Multi-line ASCII art -> render with header and view options
+      return (
+        <CodeBlock forceAscii={true} isInlineMultiLine={true} {...props}>
+          {children}
+        </CodeBlock>
+      );
+    }
+
+    // Multi-line regular code -> render as code block with header
     return (
-      <CodeBlock className={className} {...props}>
+      <CodeBlock isInlineMultiLine={true} {...props}>
         {children}
       </CodeBlock>
     );
