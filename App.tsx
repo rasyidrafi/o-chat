@@ -1,27 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Sidebar from "./components/Sidebar";
 import ChatView from "./components/ChatView";
 import SettingsPage, { Tab as SettingsTab } from "./components/SettingsPage";
 import AuthModal from "./components/auth/AuthModal";
 import ConfirmationDialog from "./components/ui/ConfirmationDialog";
 import SearchCenter from "./components/SearchCenter";
-import { app, auth, db } from "./firebase.ts";
-import { onAuthStateChanged, User, signOut } from "firebase/auth";
-import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore";
 import { useChat } from "./hooks/useChat";
-
-export type Theme = "light" | "dark" | "system";
-
-export interface AppSettings {
-  theme: Theme;
-  mainFont: string;
-  codeFont: string;
-  fontSize: number;
-  animationsDisabled: boolean;
-  customInstruction: string;
-  hidePersonalInfo: boolean;
-  disableLinkWarning: boolean;
-}
+import { useAuth } from "./hooks/useAuth";
+import { useSettings } from "./hooks/useSettings";
 
 const defaultConfirmDialogProps = {
   title: "",
@@ -34,6 +20,7 @@ const defaultConfirmDialogProps = {
 };
 
 const App: React.FC = () => {
+  // UI state
   const [ui, setUi] = useState({
     isMobileMenuOpen: false,
     isSidebarCollapsed: false,
@@ -43,188 +30,33 @@ const App: React.FC = () => {
     isSearchCenterOpen: false
   });
 
+  // Modal state
   const [modal, setModal] = useState({
     initialSettingsTab: "Customization" as SettingsTab,
     confirmDialogProps: defaultConfirmDialogProps
   });
-  
-  const [user, setUser] = useState<User | null>(null);
-  const [settingsUnsubscribe, setSettingsUnsubscribe] = useState<
-    (() => void) | null
-  >(null);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
   const sidebarRef = useRef<HTMLElement>(null);
 
-  const loadGuestSettings = (): AppSettings => ({
-    theme: (localStorage.getItem("theme") as Theme) || "system",
-    mainFont: localStorage.getItem("mainFont") || "Montserrat",
-    codeFont: localStorage.getItem("codeFont") || "JetBrains Mono (default)",
-    fontSize: parseFloat(localStorage.getItem("fontSize") || "1"),
-    animationsDisabled: localStorage.getItem("animationsDisabled") === "true",
-    customInstruction: localStorage.getItem("customInstruction") || "",
-    hidePersonalInfo: localStorage.getItem("hidePersonalInfo") === "true",
-    disableLinkWarning: localStorage.getItem("disableLinkWarning") === "true",
-  });
+  // Custom hooks
+  const { user, signOut } = useAuth();
+  
+  const openConfirmationDialog = useCallback((
+    props: Partial<typeof modal.confirmDialogProps>
+  ) => {
+    setModal(prev => ({ 
+      ...prev, 
+      confirmDialogProps: { ...defaultConfirmDialogProps, ...props }
+    }));
+    setUi(prev => ({ ...prev, isConfirmDialogOpen: true }));
+  }, []);
 
-  const [settings, setSettings] = useState<AppSettings>(() => {
-    const initialSettings = loadGuestSettings();
-    return initialSettings;
-  });
+  const { settings, settingsLoaded, updateSettings, toggleTheme } = useSettings(
+    user,
+    openConfirmationDialog
+  );
 
   const chat = useChat(settingsLoaded ? settings : undefined);
-
-  const clearLocalSettings = () => {
-    const guestSettingsKeys: Array<keyof AppSettings> = [
-      "theme",
-      "mainFont",
-      "codeFont",
-      "fontSize",
-      "animationsDisabled",
-      "customInstruction",
-      "hidePersonalInfo",
-      "disableLinkWarning",
-    ];
-    guestSettingsKeys.forEach((key) => localStorage.removeItem(key));
-  };
-
-  const updateSettings = async (newSettings: Partial<AppSettings>) => {
-    const updatedSettings = { ...settings, ...newSettings };
-    setSettings(updatedSettings);
-
-    if (auth.currentUser) {
-      const settingsRef = doc(db, "settings", auth.currentUser.uid);
-      await setDoc(settingsRef, newSettings, { merge: true });
-    } else {
-      Object.entries(newSettings).forEach(([key, value]) => {
-        localStorage.setItem(key, String(value));
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (settingsUnsubscribe) {
-      settingsUnsubscribe();
-      setSettingsUnsubscribe(null);
-    }
-
-    const authUnsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-
-      if (settingsUnsubscribe) {
-        settingsUnsubscribe();
-        setSettingsUnsubscribe(null);
-      }
-
-      if (currentUser) {
-        setUi(prev => ({ ...prev, isAuthModalOpen: false }));
-
-        const localSettings = loadGuestSettings();
-        const guestSettingsKeys: Array<keyof AppSettings> = [
-          "theme",
-          "mainFont",
-          "codeFont",
-          "fontSize",
-          "animationsDisabled",
-          "customInstruction",
-          "hidePersonalInfo",
-          "disableLinkWarning",
-        ];
-        const hasLocalSettings = guestSettingsKeys.some(
-          (key) => localStorage.getItem(key) !== null
-        );
-
-        const settingsRef = doc(db, "settings", currentUser.uid);
-
-        const setupFirestoreListener = () => {
-          const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
-            if (snapshot.exists()) {
-              const firestoreSettings = snapshot.data() as Partial<AppSettings>;
-              setSettings((prev) => ({ ...prev, ...firestoreSettings }));
-              setSettingsLoaded(true);
-            }
-          });
-          setSettingsUnsubscribe(() => unsubscribe);
-        };
-
-        try {
-          const docSnap = await getDoc(settingsRef);
-
-          if (docSnap.exists() && hasLocalSettings) {
-            const cloudSettings = {
-              ...loadGuestSettings(),
-              ...(docSnap.data() as Partial<AppSettings>),
-            };
-
-            if (
-              JSON.stringify(localSettings) !== JSON.stringify(cloudSettings)
-            ) {
-              openConfirmationDialog({
-                title: "Choose Your Settings",
-                description:
-                  "You have settings saved on this device and in the cloud. Which version would you like to use?",
-                onConfirm: () => {
-                  // Use Cloud
-                  setSettings(cloudSettings);
-                  setSettingsLoaded(true);
-                  clearLocalSettings();
-                  setUi(prev => ({ ...prev, isConfirmDialogOpen: false }));
-                  setupFirestoreListener();
-                },
-                confirmText: "Use Cloud",
-                confirmVariant: "primary",
-                cancelText: "Use Local",
-                onCancel: async () => {
-                  // Use Local
-                  setSettings(localSettings);
-                  setSettingsLoaded(true);
-                  await setDoc(settingsRef, localSettings);
-                  clearLocalSettings();
-                  setUi(prev => ({ ...prev, isConfirmDialogOpen: false }));
-                  setupFirestoreListener();
-                },
-              });
-            } else {
-              setSettings(localSettings);
-              setSettingsLoaded(true);
-              setupFirestoreListener();
-            }
-          } else if (docSnap.exists()) {
-            const cloudSettings = {
-              ...loadGuestSettings(),
-              ...(docSnap.data() as Partial<AppSettings>),
-            };
-            setSettings(cloudSettings);
-            setSettingsLoaded(true);
-            setupFirestoreListener();
-          } else if (hasLocalSettings) {
-            await setDoc(settingsRef, localSettings);
-            setSettings(localSettings);
-            setSettingsLoaded(true);
-            clearLocalSettings();
-            setupFirestoreListener();
-          } else {
-            setSettings(loadGuestSettings());
-            setSettingsLoaded(true);
-            setupFirestoreListener();
-          }
-        } catch (error) {
-          console.error("Error handling user settings sync:", error);
-          setSettings(loadGuestSettings());
-          setSettingsLoaded(true);
-        }
-      } else {
-        setSettings(loadGuestSettings());
-        setSettingsLoaded(true);
-      }
-    });
-
-    return () => {
-      authUnsubscribe();
-      if (settingsUnsubscribe) {
-        settingsUnsubscribe();
-      }
-    };
-  }, []);
 
   const openSettings = (tab: SettingsTab = "Customization") => {
     setModal(prev => ({ ...prev, initialSettingsTab: tab }));
@@ -235,12 +67,12 @@ const App: React.FC = () => {
     setUi(prev => ({ ...prev, isSettingsOpen: false }));
   };
 
-  const toggleTheme = () => {
-    const themes: Theme[] = ["light", "dark", "system"];
-    const currentIndex = themes.indexOf(settings.theme);
-    const nextTheme = themes[(currentIndex + 1) % themes.length];
-    updateSettings({ theme: nextTheme });
-  };
+  // Close auth modal when user logs in
+  useEffect(() => {
+    if (user) {
+      setUi(prev => ({ ...prev, isAuthModalOpen: false }));
+    }
+  }, [user]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -266,7 +98,7 @@ const App: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      await signOut();
       // Clear current conversation to show welcome page
       chat.selectConversation(null);
       setUi(prev => ({ ...prev, isConfirmDialogOpen: false }));
@@ -274,16 +106,6 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Error signing out:", error);
     }
-  };
-
-  const openConfirmationDialog = (
-    props: Partial<typeof modal.confirmDialogProps>
-  ) => {
-    setModal(prev => ({ 
-      ...prev, 
-      confirmDialogProps: { ...defaultConfirmDialogProps, ...props }
-    }));
-    setUi(prev => ({ ...prev, isConfirmDialogOpen: true }));
   };
 
   const onSignOutClick = () => {
