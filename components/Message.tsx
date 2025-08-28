@@ -9,6 +9,7 @@ import * as prod from "react/jsx-runtime";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
 import LoadingIndicator from "./ui/LoadingIndicator";
+import "katex/dist/katex.min.css"; // Import KaTeX CSS
 
 // Lazy load heavy dependencies only when needed
 let mermaidPromise: Promise<any> | null = null;
@@ -677,19 +678,36 @@ const createMarkdownProcessor = () =>
     import("unified"),
     import("remark-parse"),
     import("remark-gfm"),
+    import("remark-math"),
     import("remark-rehype"),
+    import("rehype-katex"),
     import("rehype-react"),
-  ]).then(([unified, remarkParse, remarkGfm, remarkRehype, rehypeReact]) => ({
-    processor: unified
-      .unified()
-      .use(remarkParse.default)
-      .use(remarkGfm.default)
-      .use(remarkRehype.default, { allowDangerousHtml: true })
-      .use(rehypeReact.default, {
-        ...prod,
-        components: MarkdownComponents,
-      }),
-  }));
+  ]).then(
+    ([
+      unified,
+      remarkParse,
+      remarkGfm,
+      remarkMath,
+      remarkRehype,
+      rehypeKatex,
+      rehypeReactModule,
+    ]) => {
+      console.log("Creating processor with math support");
+      return {
+        processor: unified
+          .unified()
+          .use(remarkParse.default)
+          .use(remarkGfm.default)
+          .use(remarkMath.default) // This processes $...$ and $$...$$
+          .use(remarkRehype.default, { allowDangerousHtml: true })
+          .use(rehypeKatex.default) // This renders the math
+          .use(rehypeReactModule.default, {
+            ...prod,
+            components: MarkdownComponents,
+          }),
+      };
+    }
+  );
 
 const Message: React.FC<MessageProps> = ({
   message,
@@ -801,14 +819,52 @@ const Message: React.FC<MessageProps> = ({
       return null;
     }
 
-    try {
-      // Handle string content (assistant messages are always strings)
-      if (typeof message.content === "string") {
-        const result = processor.processSync(message.content);
-        return result.result as React.ReactElement;
+    const preProcessLatex = (text: string) => {
+      // Step 1: Unicode sanitization
+      let processedText = text
+        .replace(/[\u00A0\u200B-\u200F\u202F\u205F\u3000]/g, " ")
+        .replace(/[\u2010-\u2015\u2212]/g, "-")
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"');
+
+      // Step 2: Handle LaTeX delimiters properly - FIXED VERSION
+      // Convert display math \[...\] to $$...$$ (non-greedy match)
+      processedText = processedText.replace(
+        /\\\[([\s\S]*?)\\\]/g,
+        (match, content) => {
+          console.log("Converting display math:", match);
+          return `$$${content}$$`;
+        }
+      );
+
+      // Convert inline math \(...\) to $...$ (non-greedy match)
+      processedText = processedText.replace(
+        /\\\(([\s\S]*?)\\\)/g,
+        (match, content) => {
+          console.log("Converting inline math:", match);
+          return `$${content}$`;
+        }
+      );
+
+      // Debug: Check the final result
+      const finalMathMatches = processedText.match(
+        /\$\$[\s\S]*?\$\$|\$[^$\n]*?\$/g
+      );
+      if (finalMathMatches) {
+        console.log("Final math expressions:", finalMathMatches.slice(0, 5)); // Show first 5 only
+      } else {
+        console.log("No valid math expressions found after conversion");
       }
 
-      // This shouldn't happen for assistant messages, but handle just in case
+      return processedText;
+    };
+
+    try {
+      if (typeof message.content === "string") {
+        const preProcessedContent = preProcessLatex(message.content);
+        const result = processor.processSync(preProcessedContent);
+        return result.result as React.ReactElement;
+      }
       return null;
     } catch (error) {
       console.error("Markdown processing error:", error);

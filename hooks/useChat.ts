@@ -1029,9 +1029,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
       // LOADING PHASE: Create new messages
       const messageId = generateId();
       
-      console.log('DEBUG: isLoadingCall, jobData:', jobData);
-      console.log('DEBUG: params:', params);
-
       // Build user message content - for image editing, include the image attachment
       let userAttachments: MessageAttachment[] | undefined = undefined;
 
@@ -1093,8 +1090,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
         }
       };
       
-      console.log('DEBUG: Created loadingAiMessage with job:', loadingAiMessage.imageGenerationJob);
-
       // Get or create conversation - for image generation, prefer using existing conversation
       let conversation = currentConversation;
       if (!conversation) {
@@ -1124,15 +1119,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
       // Save to storage
       try {
-        console.log('DEBUG: Saving conversation to DB with job data:', loadingAiMessage.imageGenerationJob);
-        console.log('DEBUG: Message being saved:', {
-          id: loadingAiMessage.id,
-          isAsyncImageGeneration: loadingAiMessage.isAsyncImageGeneration,
-          isGeneratingImage: loadingAiMessage.isGeneratingImage,
-          jobData: loadingAiMessage.imageGenerationJob
-        });
         await ChatStorageService.saveConversation(conversationWithLoading, user);
-        console.log('DEBUG: Successfully saved conversation to DB');
       } catch (error) {
         console.error('Error saving loading conversation:', error);
       }
@@ -1316,32 +1303,13 @@ export const useChat = (settings?: AppSettings | undefined) => {
     if (!user) return;
 
     try {
-      console.log('DEBUG: Checking for active jobs in conversation:', conversation.id);
       let foundActiveJobs = 0;
       
       // Find active jobs only in the current conversation
       conversation.messages.forEach(msg => {
-        console.log('DEBUG: Checking message:', {
-          id: msg.id,
-          messageType: msg.messageType,
-          isAsyncImageGeneration: msg.isAsyncImageGeneration,
-          isGeneratingImage: msg.isGeneratingImage,
-          hasJob: !!msg.imageGenerationJob,
-          jobStatus: msg.imageGenerationJob?.status,
-          hasAttachments: !!msg.attachments?.length
-        });
-        
         // Look for messages that are image generation jobs
         if (msg.messageType === 'image_generation' && msg.imageGenerationJob) {
           const job = msg.imageGenerationJob;
-          
-          console.log('DEBUG: Found image generation message with job:', {
-            jobId: job.id,
-            status: job.status,
-            hasAttachments: !!msg.attachments?.length,
-            isAsyncJob: msg.isAsyncImageGeneration,
-            hasJobData: !!job.data?.length
-          });
           
           // Resume polling if job is not completed and doesn't have final result
           const shouldResume = (
@@ -1366,16 +1334,12 @@ export const useChat = (settings?: AppSettings | undefined) => {
               resumeReason = `status is ${job.status}`;
             }
             
-            console.log('DEBUG: Resuming job for:', job.id, 'status:', job.status, 'reason:', resumeReason);
-            
             // Get original provider info from imageGenerationParams
             const originalSource = msg.imageGenerationParams?.originalSource || 'system';
             const originalProviderId = msg.imageGenerationParams?.originalProviderId;
             
             // Handle SUCCESS jobs that are stuck in generating state with attachments already present
             if (job.status === 'SUCCESS' && msg.attachments && msg.attachments.length > 0 && (msg.isGeneratingImage || msg.isAsyncImageGeneration)) {
-              console.log('DEBUG: Fixing stuck completed job immediately:', job.id);
-              
               // Simply update the message state to mark it as completed (no need to download again)
               setConversations(prevConversations => {
                 const updatedConversations = prevConversations.map(conv => {
@@ -1419,8 +1383,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
             
             // For SUCCESS jobs without attachments, directly handle completion without polling
             if (job.status === 'SUCCESS' && job.data && job.data.length > 0 && (!msg.attachments || msg.attachments.length === 0)) {
-              console.log('DEBUG: Handling completed job immediately without polling:', job.id);
-              
               // Handle job completion directly
               (async () => {
                 try {
@@ -1431,8 +1393,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                     user?.uid || null,
                     msg.imageGenerationParams!.response_format
                   );
-
-                  console.log('DEBUG: Successfully downloaded and uploaded image for job:', job.id);
 
                   // Update the message with the completed image
                   setConversations(prevConversations => {
