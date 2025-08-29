@@ -19,6 +19,7 @@
     "openai": "^5.9.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-router-dom": "^7.8.2",
     "rehype-katex": "^7.0.1",
     "rehype-react": "^8.0.0",
     "remark-gfm": "^4.0.1",
@@ -32,6 +33,7 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@types/react-router-dom": "^5.3.3",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }
