@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Routes, Route, useParams, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import ChatView from "./components/ChatView";
 import SettingsPage, { Tab as SettingsTab } from "./components/SettingsPage";
@@ -19,7 +20,26 @@ const defaultConfirmDialogProps = {
   onCancel: undefined as (() => void) | undefined,
 };
 
-const App: React.FC = () => {
+// Component to handle conversation routing
+const ConversationRoute: React.FC<{
+  chat: ReturnType<typeof useChat>;
+}> = ({ chat }) => {
+  const { conversationId } = useParams<{ conversationId: string }>();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (conversationId && conversationId !== chat.currentConversation?.id) {
+      chat.selectConversation(conversationId);
+    } else if (!conversationId && chat.currentConversation) {
+      // If we're at root but have a current conversation, redirect to it
+      navigate(`/c/${chat.currentConversation.id}`, { replace: true });
+    }
+  }, [conversationId, chat, navigate]);
+
+  return null; // This component just handles routing logic
+};
+
+const AppContent: React.FC = () => {
   // UI state
   const [ui, setUi] = useState({
     isMobileMenuOpen: false,
@@ -37,6 +57,7 @@ const App: React.FC = () => {
   });
 
   const sidebarRef = useRef<HTMLElement>(null);
+  const navigate = useNavigate();
 
   // Custom hooks
   const { user, signOut } = useAuth();
@@ -56,7 +77,7 @@ const App: React.FC = () => {
     openConfirmationDialog
   );
 
-  const chat = useChat(settingsLoaded ? settings : undefined);
+  const chat = useChat(settingsLoaded ? settings : undefined, navigate);
 
   const openSettings = (tab: SettingsTab = "Customization") => {
     setModal(prev => ({ ...prev, initialSettingsTab: tab }));
@@ -133,17 +154,41 @@ const App: React.FC = () => {
           onOpenSearchCenter={() => setUi(prev => ({ ...prev, isSearchCenterOpen: true }))}
           chat={chat}
         />
-        <ChatView
-          onMenuClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: true }))}
-          toggleSidebar={() => setUi(prev => ({ ...prev, isSidebarCollapsed: !prev.isSidebarCollapsed }))}
-          isSidebarCollapsed={ui.isSidebarCollapsed}
-          onOpenSettings={openSettings}
-          theme={settings.theme}
-          toggleTheme={toggleTheme}
-          user={user}
-          animationsDisabled={settings.animationsDisabled}
-          chat={chat}
-        />
+        
+        <Routes>
+          <Route path="/" element={
+            <ChatView
+              onMenuClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: true }))}
+              toggleSidebar={() => setUi(prev => ({ ...prev, isSidebarCollapsed: !prev.isSidebarCollapsed }))}
+              isSidebarCollapsed={ui.isSidebarCollapsed}
+              onOpenSettings={openSettings}
+              theme={settings.theme}
+              toggleTheme={toggleTheme}
+              user={user}
+              animationsDisabled={settings.animationsDisabled}
+              chat={chat}
+            />
+          } />
+          <Route path="/c/:conversationId" element={
+            <>
+              <ConversationRoute 
+                chat={chat} 
+              />
+              <ChatView
+                onMenuClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: true }))}
+                toggleSidebar={() => setUi(prev => ({ ...prev, isSidebarCollapsed: !prev.isSidebarCollapsed }))}
+                isSidebarCollapsed={ui.isSidebarCollapsed}
+                onOpenSettings={openSettings}
+                theme={settings.theme}
+                toggleTheme={toggleTheme}
+                user={user}
+                animationsDisabled={settings.animationsDisabled}
+                chat={chat}
+              />
+            </>
+          } />
+        </Routes>
+
         {ui.isMobileMenuOpen && (
           <div
             className="fixed inset-0 bg-black/60 z-30 md:hidden"
@@ -152,6 +197,7 @@ const App: React.FC = () => {
           ></div>
         )}
       </div>
+      
       {ui.isSettingsOpen && (
         <SettingsPage
           onClose={closeSettings}
@@ -189,6 +235,10 @@ const App: React.FC = () => {
       />
     </>
   );
+};
+
+const App: React.FC = () => {
+  return <AppContent />;
 };
 
 export default App;
