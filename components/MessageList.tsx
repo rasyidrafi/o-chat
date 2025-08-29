@@ -1,5 +1,5 @@
-// Improved MessageList with fixed scroll behavior and performance optimizations
-import React, { useEffect, useRef, useCallback, useState } from "react";
+// Improved MessageList with performance optimizations
+import React, { useEffect, useRef, useState } from "react";
 import { ChatMessage } from "../types/chat";
 import Message from "./Message";
 import { AnimatePresence } from "framer-motion";
@@ -12,7 +12,6 @@ interface MessageListProps {
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
   onLoadMoreMessages: () => void;
-  onShowScrollToBottom: (show: boolean) => void;
 }
 
 function usePrevious<T>(value: T): T | null {
@@ -28,13 +27,9 @@ const MessageList: React.FC<MessageListProps> = ({
   streamingMessageId,
   animationsDisabled,
   isLoadingMessages,
-  onShowScrollToBottom,
 }) => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const SCROLL_THRESHOLD = 100;
 
   const prevMessages = usePrevious(messages);
   const isConversationSwitch =
@@ -53,59 +48,6 @@ const MessageList: React.FC<MessageListProps> = ({
       setIsTransitioning(false);
     }
   }, [messages.length, prevMessages, isTransitioning]);
-
-  const scrollToBottom = useCallback(
-    (behavior: "smooth" | "auto" = "smooth") => {
-      messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
-    },
-    []
-  );
-
-  useEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    if (isConversationSwitch) {
-      requestAnimationFrame(() => {
-        scrollToBottom("auto");
-      });
-      return;
-    }
-
-    if (prevMessages && messages.length > prevMessages.length && isAtBottom) {
-      scrollToBottom("smooth");
-    }
-  }, [
-    messages,
-    prevMessages,
-    isAtBottom,
-    isConversationSwitch,
-    scrollToBottom,
-  ]);
-
-  useEffect(() => {
-    const handler = () => scrollToBottom("smooth");
-    window.addEventListener("scrollToBottom", handler);
-    return () => window.removeEventListener("scrollToBottom", handler);
-  }, [scrollToBottom]);
-
-  useEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const atBottom =
-        scrollHeight - scrollTop - clientHeight <= SCROLL_THRESHOLD;
-      setIsAtBottom(atBottom);
-      onShowScrollToBottom(!atBottom);
-    };
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Initial check
-
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [onShowScrollToBottom]);
 
   if (messages.length === 0) {
     if (isLoadingMessages || isTransitioning) {
@@ -139,7 +81,6 @@ const MessageList: React.FC<MessageListProps> = ({
         </AnimatePresence>
         {/* Bottom padding to account for the overlay chat input */}
         <div className="h-32 md:h-36"></div>
-        <div ref={messagesEndRef} />
       </div>
     </div>
   );
