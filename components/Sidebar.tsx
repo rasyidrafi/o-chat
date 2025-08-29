@@ -169,7 +169,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
   };
 
   const handleConversationSelect = (conversation: any) => {
-    selectConversation(conversation);
+    selectConversation(conversation.id);
     setIsMobileMenuOpen(false);
   };
 

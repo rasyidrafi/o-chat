@@ -9,13 +9,13 @@ import { ImageGenerationJobService } from '../services/imageGenerationJobService
 import { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
-import { AppSettings } from '../App';
+import { AppSettings } from '../hooks/useSettings';
 import { getSystemModels } from '../services/modelService';
 import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from '../constants/models';
 
 export const useChat = (settings?: AppSettings | undefined) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
-  const [currentConversation, setCurrentConversation] = useState<ChatConversation | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreConversations, setHasMoreConversations] = useState(true);
@@ -44,6 +44,11 @@ export const useChat = (settings?: AppSettings | undefined) => {
   // State to track system model IDs
   const [systemModelIds, setSystemModelIds] = useState<string[]>(DEFAULT_SYSTEM_MODELS.map(model => model.id));
 
+  const currentConversation = React.useMemo(() => {
+    if (!currentConversationId) return null;
+    return conversations.find(c => c.id === currentConversationId) ?? null;
+  }, [conversations, currentConversationId]);
+
   // Load system models and cache their IDs
   React.useEffect(() => {
     const loadSystemModelIds = async () => {
@@ -69,7 +74,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       setUser(currentUser);
       // If user signs out, clear current conversation to show welcome page
       if (!currentUser && user) {
-        setCurrentConversation(null);
+        setCurrentConversationId(null);
       }
     });
     return unsubscribe;
@@ -135,8 +140,8 @@ export const useChat = (settings?: AppSettings | undefined) => {
 
   // Load messages for a conversation
   const loadConversationMessages = useCallback(async (conversationId: string) => {
+    setIsLoadingMessages(true);
     try {
-      setIsLoadingMessages(true);
       const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 100);
 
       // Update conversations array
@@ -147,14 +152,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
             : conv
         );
         return updated;
-      });
-
-      setCurrentConversation(prev => {
-        if (prev && prev.id === conversationId) {
-          const updatedCurrent = { ...prev, messages: result.messages };
-          return updatedCurrent;
-        }
-        return prev;
       });
 
       setHasMoreMessages(result.hasMore);
@@ -184,11 +181,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
           ? { ...conv, messages: [...result.messages, ...conv.messages] }
           : conv
       ));
-
-      setCurrentConversation(prev => prev ? {
-        ...prev,
-        messages: [...result.messages, ...prev.messages]
-      } : null);
 
       setHasMoreMessages(result.hasMore);
       setMessagesLastDoc(result.lastDoc);
@@ -294,7 +286,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
       if (exists) return prev;
       return [newConversation, ...prev];
     });
-    setCurrentConversation(newConversation);
+    setCurrentConversationId(newConversation.id);
 
     // Save to storage
     ChatStorageService.saveConversation(newConversation, user).catch(error => {
@@ -309,71 +301,55 @@ export const useChat = (settings?: AppSettings | undefined) => {
   const updateMessage = useCallback((conversationId: string, messageId: string, content: string) => {
     let updatedConversation: ChatConversation | null = null;
 
-    setConversations(prev => prev.map(conv =>
-      conv.id === conversationId
-        ? (updatedConversation = {
-          ...conv,
-          messages: conv.messages.map(msg =>
-            msg.id === messageId ? { ...msg, content } : msg
-          ),
-          updatedAt: new Date()
-        })
-        : conv
-    ));
-
-    setCurrentConversation(prev =>
-      prev && prev.id === conversationId
-        ? (updatedConversation = {
-          ...prev,
-          messages: prev.messages.map(msg =>
-            msg.id === messageId ? { ...msg, content } : msg
-          ),
-          updatedAt: new Date()
-        })
-        : prev
-    );
-
-    // Save updated conversation to storage
-    if (updatedConversation) {
-      ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
-        console.error('Error saving updated conversation:', error);
+    setConversations(prev => {
+      const newConversations = prev.map(conv => {
+        if (conv.id === conversationId) {
+          updatedConversation = {
+            ...conv,
+            messages: conv.messages.map(msg =>
+              msg.id === messageId ? { ...msg, content } : msg
+            ),
+            updatedAt: new Date()
+          };
+          return updatedConversation;
+        }
+        return conv;
       });
-    }
+
+      if (updatedConversation) {
+        ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
+          console.error('Error saving updated conversation:', error);
+        });
+      }
+      return newConversations;
+    });
   }, [user]);
 
   const updateMessageReasoning = useCallback((conversationId: string, messageId: string, reasoning: string) => {
     let updatedConversation: ChatConversation | null = null;
 
-    setConversations(prev => prev.map(conv =>
-      conv.id === conversationId
-        ? (updatedConversation = {
-          ...conv,
-          messages: conv.messages.map(msg =>
-            msg.id === messageId ? { ...msg, reasoning } : msg
-          ),
-          updatedAt: new Date()
-        })
-        : conv
-    ));
-
-    setCurrentConversation(prev =>
-      prev && prev.id === conversationId
-        ? (updatedConversation = {
-          ...prev,
-          messages: prev.messages.map(msg =>
-            msg.id === messageId ? { ...msg, reasoning } : msg
-          ),
-          updatedAt: new Date()
-        })
-        : prev
-    );
-
-    // Save updated conversation with reasoning to storage
-    if (updatedConversation) {
-      ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
-        console.error('Error saving conversation with reasoning:', error);
+    setConversations(prev => {
+      const newConversations = prev.map(conv => {
+        if (conv.id === conversationId) {
+          updatedConversation = {
+            ...conv,
+            messages: conv.messages.map(msg =>
+              msg.id === messageId ? { ...msg, reasoning } : msg
+            ),
+            updatedAt: new Date()
+          };
+          return updatedConversation;
+        }
+        return conv;
       });
-    }
+
+      if (updatedConversation) {
+        ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
+          console.error('Error saving conversation with reasoning:', error);
+        });
+      }
+      return newConversations;
+    });
   }, [user]);
 
   // Helper function to extract text from MessageContent for title generation
@@ -490,7 +466,7 @@ export const useChat = (settings?: AppSettings | undefined) => {
         model,
         source: getModelSource(model)
       };
-      setCurrentConversation(conversation);
+      setCurrentConversationId(conversation.id);
     } else if (conversation.messages.length === 0 && conversation.title === 'New Chat') {
       // Update existing empty conversation title with the message content
       const messageTitle = createSmartTitle(extractTextFromContent(messageContent));
@@ -501,7 +477,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
       };
 
       // Update the conversation in state immediately
-      setCurrentConversation(conversation);
       setConversations(prev => prev.map(conv =>
         conv.id === conversation!.id ? conversation! : conv
       ));
@@ -551,7 +526,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
         return [updatedConversation, ...prev];
       }
     });
-    setCurrentConversation(updatedConversation);
 
     // Save conversation with user message immediately
     try {
@@ -622,21 +596,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
             : conv
         ));
 
-        setCurrentConversation(prev =>
-          prev && prev.id === updatedConversation.id
-            ? {
-              ...prev,
-              messages: prev.messages.map(msg =>
-                msg.id === aiMessage.id ? {
-                  ...msg,
-                  isStreaming: false,
-                  isReasoningComplete: true
-                } : msg
-              )
-            }
-            : prev
-        );
-
         // Save final conversation with complete AI message including reasoning
         setConversations(current => {
           const finalConv = current.find(conv => conv.id === updatedConversation.id);
@@ -672,17 +631,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
             }
             : conv
         ));
-
-        setCurrentConversation(prev =>
-          prev && prev.id === updatedConversation.id
-            ? {
-              ...prev,
-              messages: prev.messages.map(msg =>
-                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-              )
-            }
-            : prev
-        );
 
         // Save error conversation
         setConversations(current => {
@@ -730,17 +678,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
           }
           : conv
       ));
-
-      setCurrentConversation(prev =>
-        prev && prev.id === updatedConversation.id
-          ? {
-            ...prev,
-            messages: prev.messages.map(msg =>
-              msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-            )
-          }
-          : prev
-      );
 
       // Save error conversation
       setConversations(current => {
@@ -813,11 +750,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
               updatedAt: new Date(),
             };
 
-            // Update current conversation if it's the same one
-            setCurrentConversation(prevCurrent =>
-              prevCurrent && prevCurrent.id === conv.id ? updatedConv : prevCurrent
-            );
-
             // Save updated conversation
             if (user) {
               ChatStorageService.saveConversation(updatedConv, user).catch(error => {
@@ -859,11 +791,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                           }),
                           updatedAt: new Date(),
                         };
-                        
-                        // Update currentConversation if it's the same conversation
-                        setCurrentConversation(prevCurrent =>
-                          prevCurrent && prevCurrent.id === conversationId ? updatedConv : prevCurrent
-                        );
                         
                         // Save updated conversation - job data is stored in the message
                         if (user) {
@@ -914,11 +841,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                               updatedAt: new Date(),
                             };
                             
-                            // Update currentConversation if it's the same conversation
-                            setCurrentConversation(prevCurrent =>
-                              prevCurrent && prevCurrent.id === conversationId ? updatedConv : prevCurrent
-                            );
-                            
                             // Save updated conversation
                             if (user) {
                               ChatStorageService.saveConversation(updatedConv, user).catch(error => {
@@ -956,10 +878,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                               updatedAt: new Date(),
                             };
                             
-                            setCurrentConversation(prevCurrent =>
-                              prevCurrent && prevCurrent.id === conversationId ? updatedConv : prevCurrent
-                            );
-                            
                             return updatedConv;
                           }
                           return conv;
@@ -989,10 +907,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                             }),
                             updatedAt: new Date(),
                           };
-                          
-                          setCurrentConversation(prevCurrent =>
-                            prevCurrent && prevCurrent.id === conversationId ? updatedConv : prevCurrent
-                          );
                           
                           if (user) {
                             ChatStorageService.saveConversation(updatedConv, user).catch(error => {
@@ -1114,8 +1028,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
           return [conversationWithLoading, ...prev];
         }
       });
-
-      setCurrentConversation(conversationWithLoading);
 
       // Save to storage
       try {
@@ -1249,13 +1161,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
               updatedAt: new Date(),
             };
 
-            // Update current conversation if it's the same one
-            setCurrentConversation(prevCurrent =>
-              prevCurrent && prevCurrent.id === targetConversation!.id
-                ? updatedConversation
-                : prevCurrent
-            );
-
             // Save to storage
             ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
               console.error('Error saving finalized conversation:', error);
@@ -1360,11 +1265,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                       updatedAt: new Date(),
                     };
                     
-                    // Update currentConversation if it's the same conversation
-                    setCurrentConversation(prevCurrent =>
-                      prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
-                    );
-                    
                     // Save updated conversation
                     ChatStorageService.saveConversation(updatedConv, user).catch(error => {
                       console.error('Error saving fixed stuck job:', error);
@@ -1416,11 +1316,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                           updatedAt: new Date(),
                         };
                         
-                        // Update currentConversation if it's the same conversation
-                        setCurrentConversation(prevCurrent =>
-                          prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
-                        );
-                        
                         // Save updated conversation with completed job
                         ChatStorageService.saveConversation(updatedConv, user).catch(error => {
                           console.error('Error saving resumed job completion:', error);
@@ -1455,10 +1350,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                           }),
                           updatedAt: new Date(),
                         };
-                        
-                        setCurrentConversation(prevCurrent =>
-                          prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
-                        );
                         
                         // Save error state
                         ChatStorageService.saveConversation(updatedConv, user).catch(error => {
@@ -1502,11 +1393,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                       }),
                       updatedAt: new Date(),
                     };
-                    
-                    // Update currentConversation if it's the same conversation
-                    setCurrentConversation(prevCurrent =>
-                      prevCurrent && prevCurrent.id === conv.id ? updatedConv : prevCurrent
-                    );
                     
                     // Save updated conversation with job status
                     ChatStorageService.saveConversation(updatedConv, user).catch(error => {
@@ -1555,11 +1441,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                           updatedAt: new Date(),
                         };
                         
-                        // Update currentConversation if it's the same conversation
-                        setCurrentConversation(prevCurrent =>
-                          prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
-                        );
-                        
                         // Save updated conversation with completed job
                         ChatStorageService.saveConversation(updatedConv, user).catch(error => {
                           console.error('Error saving resumed job completion:', error);
@@ -1594,10 +1475,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                           }),
                           updatedAt: new Date(),
                         };
-                        
-                        setCurrentConversation(prevCurrent =>
-                          prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
-                        );
                         
                         // Save error state
                         ChatStorageService.saveConversation(updatedConv, user).catch(error => {
@@ -1634,10 +1511,6 @@ export const useChat = (settings?: AppSettings | undefined) => {
                         updatedAt: new Date(),
                       };
                       
-                      setCurrentConversation(prevCurrent =>
-                        prevCurrent && prevCurrent.id === conversation.id ? updatedConv : prevCurrent
-                      );
-                      
                       // Save failed state
                       ChatStorageService.saveConversation(updatedConv, user).catch(error => {
                         console.error('Error saving failed resumed job:', error);
@@ -1666,53 +1539,56 @@ export const useChat = (settings?: AppSettings | undefined) => {
     } catch (error) {
       console.error('Error resuming active jobs for conversation:', error);
     }
-  }, [user, setConversations, setCurrentConversation]);
+  }, [user]);
 
-  const selectConversation = useCallback(async (conversation: ChatConversation | null) => {
-    // STOP ALL POLLING when switching conversations
-    console.log('Stopping ALL job polling before switching conversation');
+  React.useEffect(() => {
+    // This effect runs when currentConversation changes, and its messages are populated.
+    if (currentConversation && currentConversation.messages && currentConversation.messages.length > 0 && !isLoadingMessages) {
+      // Check if this conversation has active jobs to resume.
+      const hasActiveJobs = currentConversation.messages.some(m => m.isGeneratingImage || m.isAsyncImageGeneration);
+      if (hasActiveJobs) {
+        resumeActiveJobsForConversation(currentConversation);
+      }
+    }
+  }, [currentConversation, isLoadingMessages, resumeActiveJobsForConversation]);
+
+  const selectConversation = useCallback(async (conversationId: string | null) => {
+    if (currentConversationId === conversationId) {
+        return;
+    }
+
     ImageGenerationJobService.stopAllPolling();
 
-    // Always set the current conversation first so UI updates immediately
-    setCurrentConversation(conversation);
+    if (!conversationId) {
+        setCurrentConversationId(null);
+        return;
+    }
 
-    // Reset message pagination state when selecting a new conversation
+    // Set current conversation to the partial one from the list for immediate UI feedback
+    setCurrentConversationId(conversationId);
     setHasMoreMessages(true);
     setMessagesLastDoc(null);
 
-    if (conversation) {
-      // Set loading state immediately when selecting a conversation
-      setIsLoadingMessages(true);
+    const fullConversationInState = conversations.find(c => c.id === conversationId);
 
-      // Load messages for this conversation and then resume jobs
-      try {
-        const loadResult = await loadConversationMessages(conversation.id);
-        if (loadResult) {
-          // Resume jobs after messages are loaded with small delay
-          setTimeout(() => {
-            const updatedConversation = { ...conversation, messages: loadResult.messages };
-            resumeActiveJobsForConversation(updatedConversation);
-          }, 100);
-        }
-      } catch (error) {
-        console.error('Error in selectConversation:', error);
-      }
+    if (!fullConversationInState?.messages || fullConversationInState.messages.length === 0) {
+        await loadConversationMessages(conversationId);
     }
-  }, [loadConversationMessages, resumeActiveJobsForConversation]);
+  }, [currentConversationId, conversations, loadConversationMessages]);
 
   const deleteConversation = useCallback((conversationId: string) => {
     setConversations(prev => prev.filter(conv => conv.id !== conversationId));
     setFilteredConversations(prev => prev.filter(conv => conv.id !== conversationId));
     setAllConversationsForSearch(prev => prev.filter(conv => conv.id !== conversationId));
-    if (currentConversation?.id === conversationId) {
-      setCurrentConversation(null);
+    if (currentConversationId === conversationId) {
+      setCurrentConversationId(null);
     }
 
     // Delete from storage
     ChatStorageService.deleteConversation(conversationId, user).catch(error => {
       console.error('Error deleting conversation:', error);
     });
-  }, [currentConversation, user]);
+  }, [currentConversationId, user]);
 
   // Search functionality
   const searchConversations = useCallback(async (query: string) => {

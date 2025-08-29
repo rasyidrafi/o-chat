@@ -277,7 +277,6 @@ ImageContentComponent.displayName = "ImageContentComponent";
 interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
-  onLoaded: () => void;
   animationsDisabled: boolean;
 }
 
@@ -876,7 +875,7 @@ const createMarkdownProcessor = () =>
   );
 
 const Message: React.FC<MessageProps> = memo(
-  ({ message, isStreaming = false, onLoaded, animationsDisabled }) => {
+  ({ message, isStreaming = false, animationsDisabled }) => {
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [processor, setProcessor] = useState<any>(null);
@@ -908,13 +907,8 @@ const Message: React.FC<MessageProps> = memo(
           setIsContentReady(true);
         }, 50);
 
-        const timer2 = setTimeout(() => {
-          onLoaded();
-        }, 300);
-
         return () => {
           clearTimeout(timer);
-          clearTimeout(timer2);
         };
       }
     }, [isProcessorReady]);
