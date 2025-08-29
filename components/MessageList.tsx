@@ -33,6 +33,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const SCROLL_THRESHOLD = 100;
 
   const prevMessages = usePrevious(messages);
@@ -42,9 +43,23 @@ const MessageList: React.FC<MessageListProps> = ({
       prevMessages.length > 0 &&
       messages[0].id !== prevMessages[0].id);
 
-  const scrollToBottom = useCallback((behavior: "smooth" | "auto" = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
-  }, []);
+  // Detect when we're transitioning between conversations (empty -> filled)
+  useEffect(() => {
+    if (prevMessages && prevMessages.length > 0 && messages.length === 0) {
+      // Starting transition (had messages, now empty)
+      setIsTransitioning(true);
+    } else if (isTransitioning && messages.length > 0) {
+      // Ending transition (was empty, now has messages)
+      setIsTransitioning(false);
+    }
+  }, [messages.length, prevMessages, isTransitioning]);
+
+  const scrollToBottom = useCallback(
+    (behavior: "smooth" | "auto" = "smooth") => {
+      messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+    },
+    []
+  );
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -60,7 +75,13 @@ const MessageList: React.FC<MessageListProps> = ({
     if (prevMessages && messages.length > prevMessages.length && isAtBottom) {
       scrollToBottom("smooth");
     }
-  }, [messages, prevMessages, isAtBottom, isConversationSwitch, scrollToBottom]);
+  }, [
+    messages,
+    prevMessages,
+    isAtBottom,
+    isConversationSwitch,
+    scrollToBottom,
+  ]);
 
   useEffect(() => {
     const handler = () => scrollToBottom("smooth");
@@ -74,7 +95,8 @@ const MessageList: React.FC<MessageListProps> = ({
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      const atBottom = scrollHeight - scrollTop - clientHeight <= SCROLL_THRESHOLD;
+      const atBottom =
+        scrollHeight - scrollTop - clientHeight <= SCROLL_THRESHOLD;
       setIsAtBottom(atBottom);
       onShowScrollToBottom(!atBottom);
     };
@@ -85,9 +107,8 @@ const MessageList: React.FC<MessageListProps> = ({
     return () => container.removeEventListener("scroll", handleScroll);
   }, [onShowScrollToBottom]);
 
-
   if (messages.length === 0) {
-    if (isLoadingMessages) {
+    if (isLoadingMessages || isTransitioning) {
       return (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="flex flex-col items-center text-zinc-500 dark:text-zinc-400">

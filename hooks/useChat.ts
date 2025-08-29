@@ -1489,7 +1489,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                       return updatedConversations;
                     });
                   }
-                } else if (completedJob.status === 'FAILED') {
+                } else if (completedJob.status !== 'SUCCESS') {
                   // Job failed, update message with error
                   setConversations(prevConversations => {
                     const updatedConversations = prevConversations.map(conv => {
@@ -1526,7 +1526,39 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                 }
               },
               (error) => {
-                console.error('Job polling error during resume:', error);
+                console.error('Error polling job status:', error);
+                // Update the message with error state
+                setConversations(prevConversations => {
+                  const updatedConversations = prevConversations.map(conv => {
+                    if (conv.id === conversation.id) {
+                      const updatedConv = {
+                        ...conv,
+                        messages: conv.messages.map(convMsg => {
+                          if (convMsg.id === msg.id) {
+                            return {
+                              ...convMsg,
+                              content: 'Error checking image generation status',
+                              isAsyncImageGeneration: false,
+                              isGeneratingImage: false,
+                            } as ChatMessage;
+                          }
+                          return convMsg;
+                        }),
+                        updatedAt: new Date(),
+                      };
+
+                      // Save error state
+                      ChatStorageService.saveConversation(updatedConv, user).catch(error => {
+                        console.error('Error saving error state:', error);
+                      });
+
+                      return updatedConv;
+                    }
+                    return conv;
+                  });
+
+                  return updatedConversations;
+                });
               }
             );
           }
@@ -1661,6 +1693,34 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       return;
     }
 
+    // First, clear the current conversation messages for smoother transition
+    setCurrentConversationId(conversationId);
+    
+    // Clear messages immediately to show empty state
+    setConversations(prev => {
+      const existingIndex = prev.findIndex(c => c.id === conversationId);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        // Temporarily clear messages for smooth transition
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          messages: []
+        };
+        return updated;
+      }
+      return prev;
+    });
+
+    setHasMoreMessages(true);
+    setMessagesLastDoc(null);
+
+    if (navigate) {
+      navigate(`/c/${conversationId}`, { replace: true });
+    }
+
+    // Small delay to ensure UI updates, then load the conversation
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     // Check cache first
     const cachedConversation = getFromCache(conversationId);
     if (cachedConversation) {
@@ -1676,27 +1736,9 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         }
       });
 
-      setCurrentConversationId(conversationId);
-      setHasMoreMessages(true);
-      setMessagesLastDoc(null);
-
-      if (navigate) {
-        navigate(`/c/${conversationId}`, { replace: true });
-      }
-
       // Resume any active jobs in this newly selected conversation
       resumeActiveJobsForConversation(cachedConversation);
-
       return;
-    }
-
-    // Set current conversation to the partial one from the list for immediate UI feedback
-    setCurrentConversationId(conversationId);
-    setHasMoreMessages(true);
-    setMessagesLastDoc(null);
-
-    if (navigate) {
-      navigate(`/c/${conversationId}`, { replace: true });
     }
 
     // Find the conversation stub from the list
@@ -1718,6 +1760,17 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         });
       }
     } else {
+      // Restore the existing full conversation
+      setConversations(prev => {
+        const existingIndex = prev.findIndex(c => c.id === conversationId);
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = conversationStub;
+          return updated;
+        }
+        return prev;
+      });
+      
       // Add existing full conversation to cache
       addToCache(conversationStub);
       resumeActiveJobsForConversation(conversationStub);
