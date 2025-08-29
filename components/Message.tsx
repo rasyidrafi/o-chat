@@ -703,9 +703,9 @@ const MarkdownComponents = {
 
   // Table components for GFM
   table: ({ children, ...props }: any) => (
-    <div className="overflow-x-auto my-4">
+    <div className="overflow-x-auto my-4 border-collapse border border-zinc-300 dark:border-zinc-600 rounded-lg">
       <table
-        className="min-w-full border-collapse border border-zinc-300 dark:border-zinc-600"
+        className="min-w-full"
         {...props}
       >
         {children}
