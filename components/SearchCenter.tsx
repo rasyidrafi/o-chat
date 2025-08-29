@@ -103,7 +103,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat, anim
 
   // Handle conversation selection
   const handleConversationSelect = useCallback((conversation: ChatConversation) => {
-    selectConversation(conversation);
+    selectConversation(conversation.id);
     onClose();
   }, [selectConversation, onClose]);
 
