@@ -1,5 +1,6 @@
 // Improved ChatView with better scroll handling
 import React, { useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
@@ -35,12 +36,12 @@ const ChatView: React.FC<ChatViewProps> = ({
   animationsDisabled,
   chat,
 }) => {
+  const location = useLocation();
   const {
     currentConversation,
     streamingState,
     sendMessage,
     generateImage,
-    stopStreaming,
     isLoading,
     isLoadingMessages,
     isLoadingMoreMessages,
@@ -153,10 +154,12 @@ const ChatView: React.FC<ChatViewProps> = ({
     [isSidebarCollapsed]
   );
 
-  const shouldShowWelcome = useMemo(() => 
-    !currentConversation, 
-    [currentConversation]
-  );
+  // Determine if we should show welcome based on URL and conversation state
+  const shouldShowWelcome = useMemo(() => {
+    const isRootPath = location.pathname === '/';
+    const hasNoConversation = !currentConversation;
+    return isRootPath || hasNoConversation;
+  }, [location.pathname, currentConversation]);
 
   // Memoized theme icon props to prevent recreation on every render
   const themeIconProps = useMemo(() => ({

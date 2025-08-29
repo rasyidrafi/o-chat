@@ -1,5 +1,6 @@
 import React from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, User, X, LogIn, Plus, Check } from './Icons';
 import { User as FirebaseUser } from 'firebase/auth';
 import Button from './ui/Button';
@@ -79,10 +80,11 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
   },
   ref // <-- forwarded ref
 ) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   const { 
     conversations, 
-    currentConversation, 
-    selectConversation, 
     deleteConversation, 
     isCreatingNewChat, 
     isLoading,
@@ -163,13 +165,15 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
   }, [hasMoreConversations, isLoadingMore, isLoading, loadMoreConversations, localSearchQuery]);
 
   const handleNewChat = () => {
-    // Only redirect to welcome page by clearing current conversation
-    selectConversation(null);
+    // Navigate to root path to show welcome screen
+    navigate('/', { replace: true });
+    chat.selectConversation(null);
     setIsMobileMenuOpen(false);
   };
 
   const handleConversationSelect = (conversation: any) => {
-    selectConversation(conversation.id);
+    // Navigate to conversation route
+    navigate(`/c/${conversation.id}`);
     setIsMobileMenuOpen(false);
   };
 
@@ -223,9 +227,14 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     .filter(group => groupedConversations[group] && groupedConversations[group].length > 0)
     .map(group => [group, groupedConversations[group]] as [string, typeof displayConversations]);
 
+  // Determine active conversation from URL
+  const activeConversationId = location.pathname.startsWith('/c/') 
+    ? location.pathname.split('/c/')[1]
+    : null;
+
   return (
     <aside
-      ref={ref} // <-- attach ref
+      ref={ref}
       className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-zinc-100 dark:bg-[#111111] text-zinc-600 dark:text-zinc-400 p-4 z-60
                  transition-all duration-300 ease-in-out
                  md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -339,7 +348,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
                       key={conversation.id}
                       onClick={() => handleConversationSelect(conversation)}
                       className={`py-2 px-3 text-sm rounded-md cursor-pointer transition-colors group relative ${
-                        currentConversation?.id === conversation.id
+                        activeConversationId === conversation.id
                           ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white'
                           : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50'
                       }`}
