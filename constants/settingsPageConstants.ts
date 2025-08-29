@@ -39,15 +39,13 @@ export const BAR_ANIMATION_DURATION = 0.8;
 
 // Helper function to calculate usage bar width
 export const calculateBarWidth = (
-  value: number, 
-  scale: number, 
-  metrics = USAGE_METRICS
+  value: number
 ): number => {
-  return Math.min(
-    Math.max(
-      (value / scale) * metrics.SCALE_MULTIPLIER + metrics.BASE_WIDTH,
-      metrics.MIN_BAR_WIDTH
-    ),
-    metrics.MAX_BAR_WIDTH
-  );
+  // If value is 0, show tiny progress (5%)
+  if (value === 0) {
+    return 5;
+  }
+  
+  // If value is over 0, show as max/full (100%) since it's unlimited
+  return 100;
 };

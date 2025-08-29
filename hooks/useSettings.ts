@@ -18,7 +18,7 @@ export interface AppSettings {
 
 const loadGuestSettings = (): AppSettings => ({
   theme: (localStorage.getItem("theme") as Theme) || "system",
-  mainFont: localStorage.getItem("mainFont") || "Montserrat",
+  mainFont: localStorage.getItem("mainFont") || "Outfit",
   codeFont: localStorage.getItem("codeFont") || "JetBrains Mono (default)",
   fontSize: parseFloat(localStorage.getItem("fontSize") || "1"),
   animationsDisabled: localStorage.getItem("animationsDisabled") === "true",

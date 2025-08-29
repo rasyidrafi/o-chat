@@ -22,7 +22,6 @@ import { useLocalStorageData } from "../hooks/useLocalStorageData";
 import { 
   AVATAR_COLORS, 
   TABS, 
-  USAGE_METRICS, 
   DEBOUNCE_DELAY,
   LOADING_ANIMATION_DURATION,
   CONTENT_ANIMATION_DURATION,
@@ -339,7 +338,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                               settings.animationsDisabled ? {} : { width: 0 }
                             }
                             animate={{
-                              width: `${calculateBarWidth(usageData.totalConversations, USAGE_METRICS.CONVERSATIONS_SCALE)}%`,
+                              width: `${calculateBarWidth(usageData.totalConversations)}%`,
                             }}
                             transition={{
                               duration: settings.animationsDisabled ? 0 : BAR_ANIMATION_DURATION,
@@ -370,7 +369,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                               settings.animationsDisabled ? {} : { width: 0 }
                             }
                             animate={{
-                              width: `${calculateBarWidth(usageData.backedByServerCount, USAGE_METRICS.SERVER_MESSAGES_SCALE)}%`,
+                              width: `${calculateBarWidth(usageData.backedByServerCount)}%`,
                             }}
                             transition={{
                               duration: settings.animationsDisabled ? 0 : BAR_ANIMATION_DURATION,
@@ -400,7 +399,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                               settings.animationsDisabled ? {} : { width: 0 }
                             }
                             animate={{
-                              width: `${calculateBarWidth(usageData.byokCount, USAGE_METRICS.BYOK_MESSAGES_SCALE)}%`,
+                              width: `${calculateBarWidth(usageData.byokCount)}%`,
                             }}
                             transition={{
                               duration: settings.animationsDisabled ? 0 : BAR_ANIMATION_DURATION,
@@ -440,7 +439,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               ))}
             </div>
             <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
-            <div className="hidden lg:block h-24" />
+            <div className="hidden block h-24" />
           </main>
         </div>
       </div>
