@@ -921,14 +921,14 @@ const Message: React.FC<MessageProps> = memo(
       animate: {
         opacity: 1,
         transition: {
-          duration: 0.3,
+          duration: 0.6,
           ease: "easeOut",
         },
       },
       exit: {
         opacity: 0,
         transition: {
-          duration: 0.2,
+          duration: 0.4,
         },
       },
     };
@@ -1027,7 +1027,7 @@ const Message: React.FC<MessageProps> = memo(
       }
     }, [message.content, processor, isUser, isProcessorReady]);
 
-    const renderContent = (passBotttomEl = null) => {
+    const renderContent = () => {
       // Handle image generation messages
       if (message.messageType === "image_generation") {
         if (isUser) {
@@ -1238,99 +1238,85 @@ const Message: React.FC<MessageProps> = memo(
             isStreaming={isStreaming}
           />
 
-          <AnimatePresence mode="wait">
-            {!isContentReady ? (
-              <motion.div
-                key="processing"
-                variants={fadeVariants}
-                initial={animationsDisabled ? {} : "initial"}
-                animate="animate"
-                exit={animationsDisabled ? {} : "exit"}
-                className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
-              >
-                <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
-                  <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
-                  <span>Processing...</span>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="content"
-                variants={fadeVariants}
-                initial={animationsDisabled ? {} : "initial"}
-                animate="animate"
-                className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
-              >
-                <div className="space-y-3">
-                  {processedContent}
-                  
-                  {/* Model name and timestamp for AI responses */}
-                  {(!isUser && !isStreaming) && (
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
-                      {formatTime(message.timestamp)}
-                      {(message.model || message.modelName) && isAssistant && (
-                        <span className="ml-2">
-                          • {message.modelName || message.model}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {!isContentReady ? (
+            <div className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden">
+              <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
+                <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
+                <span>Processing...</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden">
+              <div className="space-y-3">
+                {processedContent}
+                
+                {/* Model name and timestamp for AI responses */}
+                {(!isUser && !isStreaming) && (
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
+                    {formatTime(message.timestamp)}
+                    {(message.model || message.modelName) && isAssistant && (
+                      <span className="ml-2">
+                        • {message.modelName || message.model}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       );
     };
 
     return (
-      <motion.div
-        variants={fadeVariants}
-        initial={animationsDisabled ? {} : "initial"}
-        animate="animate"
-        exit={animationsDisabled ? {} : "exit"}
-        className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-      >
-        <div
-          className={`my-4 flex flex-col ${
-            isUser
-              ? "max-w-full items-end"
-              : "w-full max-w-full items-start min-w-0"
-          }`}
-        >
-          <div className={getMessageStyles()}>
-            {renderContent()}
-
-            {isStreaming && !isUser && (
-              <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
-            )}
-
-            {isStreaming && !isUser && (
-              <div className="mt-3 flex items-center justify-between">
-                <TypingIndicator />
-              </div>
-            )}
-          </div>
-
-          <div
-            className={`text-xs text-zinc-500 dark:text-zinc-400 ${
-              isUser ? "text-right mt-2" : "text-left mt-4"
+      <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`message-${message.id || message.timestamp.getTime()}`}
+            variants={fadeVariants}
+            initial={animationsDisabled ? {} : "initial"}
+            animate="animate"
+            exit={animationsDisabled ? {} : "exit"}
+            className={`my-4 flex flex-col ${
+              isUser
+                ? "max-w-full items-end"
+                : "w-full max-w-full items-start min-w-0"
             }`}
           >
-            {/* Only show timestamp and model for user messages, AI messages have it inside renderContent */}
-            {isUser && (
-              <>
-                {formatTime(message.timestamp)}
-                {(message.model || message.modelName) && isAssistant && (
-                  <span className="ml-2">
-                    • {message.modelName || message.model}
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </motion.div>
+            <div className={getMessageStyles()}>
+              {renderContent()}
+
+              {isStreaming && !isUser && (
+                <span className="inline-block w-0.5 h-4 bg-current opacity-75 animate-pulse ml-1" />
+              )}
+
+              {isStreaming && !isUser && (
+                <div className="mt-3 flex items-center justify-between">
+                  <TypingIndicator />
+                </div>
+              )}
+            </div>
+
+            <div
+              className={`text-xs text-zinc-500 dark:text-zinc-400 ${
+                isUser ? "text-right mt-2" : "text-left mt-4"
+              }`}
+            >
+              {/* Only show timestamp and model for user messages, AI messages have it inside renderContent */}
+              {isUser && (
+                <>
+                  {formatTime(message.timestamp)}
+                  {(message.model || message.modelName) && isAssistant && (
+                    <span className="ml-2">
+                      • {message.modelName || message.model}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
     );
   }
 );
