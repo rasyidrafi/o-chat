@@ -430,7 +430,7 @@ const CodeBlock: React.FC<{
               ref={codeRef}
               className={`${
                 className ? className + " hljs" : "hljs"
-              } block p-4 text-sm leading-relaxed ${
+              } block p-4 text-sm leading-[1.4] ${
                 isWrapped ? "whitespace-pre-wrap" : "whitespace-pre"
               }`}
               style={{
