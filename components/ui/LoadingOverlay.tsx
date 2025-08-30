@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import LoadingState from "./LoadingState";
 
 interface LoadingOverlayProps {
   title: string;
@@ -24,24 +25,12 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
       transition={{ duration: 0.2 }}
       className={`absolute inset-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm z-20 flex items-center justify-center rounded-lg ${className}`}
     >
-      <div className="text-center">
-        {/* Loading spinner with theme-consistent colors */}
-        <div className="mb-4">
-          <div className="animate-spin w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full mx-auto"></div>
-        </div>
-
-        {/* Text content */}
-        <div className="space-y-1">
-          <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-            {title}
-          </h3>
-          {subtitle && (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs">
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </div>
+      <LoadingState
+        message={title}
+        subtitle={subtitle}
+        size="lg"
+        centerContent={true}
+      />
     </motion.div>
   );
 };

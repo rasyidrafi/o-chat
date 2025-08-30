@@ -1,8 +1,8 @@
 import React from 'react';
-import LoadingIndicator from './LoadingIndicator';
 
 interface LoadingStateProps {
   message?: string;
+  subtitle?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   centerContent?: boolean;
@@ -10,6 +10,7 @@ interface LoadingStateProps {
 
 const LoadingState: React.FC<LoadingStateProps> = ({ 
   message = 'Loading...', 
+  subtitle,
   size = 'md',
   className = '',
   centerContent = true
@@ -24,6 +25,12 @@ const LoadingState: React.FC<LoadingStateProps> = ({
     lg: 'text-base'
   };
 
+  const spinnerSizeClasses = {
+    sm: 'w-6 h-6 border-2',
+    md: 'w-8 h-8 border-2',
+    lg: 'w-12 h-12 border-4'
+  };
+
   const spacingClasses = {
     sm: 'mb-2',
     md: 'mb-3',
@@ -31,13 +38,23 @@ const LoadingState: React.FC<LoadingStateProps> = ({
   };
 
   return (
-    <div className={`${containerClasses} text-zinc-500 dark:text-zinc-400 ${className}`}>
-      <LoadingIndicator 
-        size={size} 
-        color="primary" 
-        className={spacingClasses[size]}
-      />
-      <div className={textSizeClasses[size]}>{message}</div>
+    <div className={`${containerClasses} ${className}`}>
+      {/* Loading spinner with pink theme colors */}
+      <div className={spacingClasses[size]}>
+        <div className={`animate-spin ${spinnerSizeClasses[size]} border-pink-500 border-t-transparent rounded-full mx-auto`}></div>
+      </div>
+
+      {/* Text content */}
+      <div className="space-y-1 text-center">
+        <h3 className={`${textSizeClasses[size]} font-medium text-zinc-900 dark:text-zinc-100`}>
+          {message}
+        </h3>
+        {subtitle && (
+          <p className={`${size === 'sm' ? 'text-xs' : 'text-sm'} text-zinc-500 dark:text-zinc-400 max-w-xs`}>
+            {subtitle}
+          </p>
+        )}
+      </div>
     </div>
   );
 };
