@@ -60,6 +60,15 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   const streamingMessageRef = useRef<string>('');
   const streamingReasoningRef = useRef<string>('');
 
+  // Debounced save refs for stream optimization
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSaveTimeRef = useRef<number>(0);
+  const pendingConversationRef = useRef<ChatConversation | null>(null);
+
+  // Configuration for batched saves
+  const SAVE_DEBOUNCE_DELAY = 2000; // 2 seconds delay
+  const MIN_SAVE_INTERVAL = 5000; // Minimum 5 seconds between saves
+
   // State to track system model IDs
   const [systemModelIds, setSystemModelIds] = useState<string[]>(DEFAULT_SYSTEM_MODELS.map(model => model.id));
 
@@ -86,6 +95,52 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   const getModelSource = (model: string): 'server' | 'byok' => {
     return systemModelIds.includes(model) ? 'server' : 'byok';
   };
+
+  // Debounced save function for streaming optimization
+  const debouncedSaveConversation = useCallback((conversation: ChatConversation, isForceImmediate: boolean = false) => {
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    // Store the conversation to be saved
+    pendingConversationRef.current = conversation;
+
+    // If force immediate or enough time has passed since last save, save immediately
+    const now = Date.now();
+    const timeSinceLastSave = now - lastSaveTimeRef.current;
+
+    if (isForceImmediate || timeSinceLastSave >= MIN_SAVE_INTERVAL) {
+      lastSaveTimeRef.current = now;
+      ChatStorageService.saveConversation(conversation, user).catch(error => {
+        console.error('Error saving conversation during streaming:', error);
+      });
+      pendingConversationRef.current = null;
+      return;
+    }
+
+    // Otherwise, debounce the save
+    saveTimeoutRef.current = setTimeout(() => {
+      if (pendingConversationRef.current) {
+        lastSaveTimeRef.current = Date.now();
+        ChatStorageService.saveConversation(pendingConversationRef.current, user).catch(error => {
+          console.error('Error saving debounced conversation:', error);
+        });
+        pendingConversationRef.current = null;
+      }
+      saveTimeoutRef.current = null;
+    }, SAVE_DEBOUNCE_DELAY);
+  }, [user]);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Listen to auth state changes
   React.useEffect(() => {
@@ -317,14 +372,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         return conv;
       });
 
+      // Use debounced save instead of immediate save during streaming
       if (updatedConversation) {
-        ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
-          console.error('Error saving updated conversation:', error);
-        });
+        debouncedSaveConversation(updatedConversation);
       }
       return newConversations;
     });
-  }, [user]);
+  }, [user, debouncedSaveConversation]);
 
   const updateMessageReasoning = useCallback((conversationId: string, messageId: string, reasoning: string) => {
     let updatedConversation: ChatConversation | null = null;
@@ -344,14 +398,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         return conv;
       });
 
+      // Use debounced save instead of immediate save during streaming
       if (updatedConversation) {
-        ChatStorageService.saveConversation(updatedConversation, user).catch(error => {
-          console.error('Error saving conversation with reasoning:', error);
-        });
+        debouncedSaveConversation(updatedConversation);
       }
       return newConversations;
     });
-  }, [user]);
+  }, [user, debouncedSaveConversation]);
 
   // Helper function to extract text from MessageContent for title generation
   const extractTextFromContent = (content: MessageContent): string => {
@@ -385,8 +438,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     providerId?: string,
     attachments?: MessageAttachment[]
   ) => {
-    console.log("Send Message called");
-    console.log("param is: ", JSON.stringify({ content, model, source, providerId, attachments }));
     // Build the message content
     let messageContent: MessageContent;
 
@@ -592,31 +643,33 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
       const onCompleteCallback = () => {
         // Mark message as complete including reasoning
-        setConversations(prev => prev.map(conv =>
-          conv.id === updatedConversation.id
-            ? {
-              ...conv,
-              messages: conv.messages.map(msg =>
-                msg.id === aiMessage.id ? {
-                  ...msg,
-                  isStreaming: false,
-                  isReasoningComplete: true
-                } : msg
-              )
-            }
-            : conv
-        ));
-
-        // Save final conversation with complete AI message including reasoning
-        setConversations(current => {
-          const finalConv = current.find(conv => conv.id === updatedConversation.id);
-          if (finalConv) {
-            ChatStorageService.saveConversation(finalConv, user).catch(error => {
-              console.error('Error saving final conversation:', error);
-            });
-          }
-          return current;
+        let finalConversation: ChatConversation | null = null;
+        
+        setConversations(prev => {
+          const updatedConversations = prev.map(conv =>
+            conv.id === updatedConversation.id
+              ? {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id ? {
+                    ...msg,
+                    isStreaming: false,
+                    isReasoningComplete: true
+                  } : msg
+                )
+              }
+              : conv
+          );
+          
+          // Store the final conversation for immediate save
+          finalConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
+          return updatedConversations;
         });
+
+        // Force immediate save of final conversation (bypassing debounce)
+        if (finalConversation) {
+          debouncedSaveConversation(finalConversation, true);
+        }
 
         setStreamingState({
           isStreaming: false,
@@ -632,27 +685,29 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         const errorMessage = `Error: ${error.message}`;
         updateMessage(updatedConversation.id, aiMessage.id, errorMessage);
 
-        setConversations(prev => prev.map(conv =>
-          conv.id === updatedConversation.id
-            ? {
-              ...conv,
-              messages: conv.messages.map(msg =>
-                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-              )
-            }
-            : conv
-        ));
+        let errorConversation: ChatConversation | null = null;
 
-        // Save error conversation
-        setConversations(current => {
-          const errorConv = current.find(conv => conv.id === updatedConversation.id);
-          if (errorConv) {
-            ChatStorageService.saveConversation(errorConv, user).catch(error => {
-              console.error('Error saving error conversation:', error);
-            });
-          }
-          return current;
+        setConversations(prev => {
+          const updatedConversations = prev.map(conv =>
+            conv.id === updatedConversation.id
+              ? {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+                )
+              }
+              : conv
+          );
+          
+          // Store the error conversation for immediate save
+          errorConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
+          return updatedConversations;
         });
+
+        // Force immediate save of error conversation (bypassing debounce)
+        if (errorConversation) {
+          debouncedSaveConversation(errorConversation, true);
+        }
 
         setStreamingState({
           isStreaming: false,
@@ -679,27 +734,29 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       updateMessage(updatedConversation.id, aiMessage.id, `Error: ${errorMessage}`);
 
-      setConversations(prev => prev.map(conv =>
-        conv.id === updatedConversation.id
-          ? {
-            ...conv,
-            messages: conv.messages.map(msg =>
-              msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-            )
-          }
-          : conv
-      ));
+      let catchErrorConversation: ChatConversation | null = null;
 
-      // Save error conversation
-      setConversations(current => {
-        const errorConv = current.find(conv => conv.id === updatedConversation.id);
-        if (errorConv) {
-          ChatStorageService.saveConversation(errorConv, user).catch(error => {
-            console.error('Error saving error conversation:', error);
-          });
-        }
-        return current;
+      setConversations(prev => {
+        const updatedConversations = prev.map(conv =>
+          conv.id === updatedConversation.id
+            ? {
+              ...conv,
+              messages: conv.messages.map(msg =>
+                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+              )
+            }
+            : conv
+        );
+        
+        // Store the error conversation for immediate save
+        catchErrorConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
+        return updatedConversations;
       });
+
+      // Force immediate save of error conversation (bypassing debounce)
+      if (catchErrorConversation) {
+        debouncedSaveConversation(catchErrorConversation, true);
+      }
 
       setStreamingState({
         isStreaming: false,
@@ -709,7 +766,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       streamingMessageRef.current = '';
       streamingReasoningRef.current = '';
     }
-  }, [currentConversation, createNewConversation, updateMessage, updateMessageReasoning, user, settings]);
+  }, [currentConversation, createNewConversation, updateMessage, updateMessageReasoning, user, settings, debouncedSaveConversation]);
 
   const generateImage = useCallback(async (
     prompt: string,
@@ -1693,6 +1750,25 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       return;
     }
 
+    // Before switching conversations, force save any pending changes for current conversation
+    if (currentConversationId && pendingConversationRef.current && pendingConversationRef.current.id === currentConversationId) {
+      // Clear the timeout and save immediately
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      
+      try {
+        await ChatStorageService.saveConversation(pendingConversationRef.current, user);
+        console.log('Flushed pending save for conversation:', currentConversationId);
+      } catch (error) {
+        console.error('Error flushing pending save:', error);
+      }
+      
+      pendingConversationRef.current = null;
+      lastSaveTimeRef.current = Date.now();
+    }
+
     ImageGenerationJobService.stopAllPolling();
 
     if (!conversationId) {
@@ -1719,7 +1795,16 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       navigate(`/c/${conversationId}`, { replace: true });
     }
 
-    // Check cache first
+    // First, check if we have the conversation in current state with messages
+    const currentStateConversation = conversations.find(c => c.id === conversationId);
+    if (currentStateConversation && currentStateConversation.messages && currentStateConversation.messages.length > 0) {
+      // We have the full conversation in current state, use it
+      addToCache(currentStateConversation);
+      resumeActiveJobsForConversation(currentStateConversation);
+      return;
+    }
+
+    // Check cache second (only if not found in current state or if it's just a stub)
     const cachedConversation = getFromCache(conversationId);
     if (cachedConversation) {
       // Update state with cached conversation
@@ -1819,7 +1904,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       addToCache(conversationStub);
       resumeActiveJobsForConversation(conversationStub);
     }
-  }, [currentConversationId, conversations, loadConversationMessages, navigate, getFromCache, addToCache, resumeActiveJobsForConversation]);
+  }, [currentConversationId, conversations, loadConversationMessages, navigate, getFromCache, addToCache, resumeActiveJobsForConversation, user]);
 
   const deleteConversation = useCallback(async (conversationId: string) => {
     // Remove from conversations
@@ -1854,6 +1939,16 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     if (!user) {
       clearCache();
       ImageGenerationJobService.stopAllPolling();
+      
+      // Flush any pending saves before clearing
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      if (pendingConversationRef.current) {
+        // Don't save if user is logged out
+        pendingConversationRef.current = null;
+      }
     }
   }, [user, clearCache]);
 
