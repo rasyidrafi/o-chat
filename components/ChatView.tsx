@@ -7,11 +7,11 @@ import MessageList from "./MessageList";
 import { SlidersHorizontal, Sun, Moon, Desktop, Menu } from "./Icons";
 import { Theme } from "../hooks/useSettings";
 import { Tab as SettingsTab } from "./SettingsPage";
-import { User as FirebaseUser } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { DEFAULT_MODEL_ID } from "../constants/models";
 import { useChat } from "../hooks/useChat";
 import SmallButton from "./ui/SmallButton";
+import LoadingState from "./ui/LoadingState";
 
 interface ChatViewProps {
   onMenuClick: () => void;
@@ -20,7 +20,6 @@ interface ChatViewProps {
   onOpenSettings: (tab?: SettingsTab) => void;
   theme: Theme;
   toggleTheme: () => void;
-  user: FirebaseUser | null;
   animationsDisabled: boolean;
   chat: ReturnType<typeof useChat>;
 }
@@ -32,7 +31,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   onOpenSettings,
   theme,
   toggleTheme,
-  user,
   animationsDisabled,
   chat,
 }) => {
@@ -300,19 +298,18 @@ const ChatView: React.FC<ChatViewProps> = ({
       </div>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        {isLoading ? (
-          <div className="w-full flex-1 flex items-center justify-center">
-            <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16">
-              <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-2">
-                Loading conversations...
-              </p>
-            </div>
+        {(isLoading || isLoadingMessages) ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <LoadingState 
+              message={"Loading conversation..."} 
+              size="md" 
+              centerContent={true}
+            />
           </div>
         ) : shouldShowWelcome ? (
           <div className="w-full flex-1 flex items-center justify-center">
             <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16">
-              <WelcomeScreen user={user} onPromptSelect={handlePromptSelect} />
+              <WelcomeScreen onPromptSelect={handlePromptSelect} />
             </div>
           </div>
         ) : (
@@ -322,7 +319,6 @@ const ChatView: React.FC<ChatViewProps> = ({
               streamingMessageId={streamingState.currentMessageId}
               // onStopStreaming={stopStreaming}
               animationsDisabled={animationsDisabled}
-              isLoadingMessages={isLoadingMessages}
               isLoadingMoreMessages={isLoadingMoreMessages}
               hasMoreMessages={hasMoreMessages}
               onLoadMoreMessages={() => {}}
@@ -373,7 +369,6 @@ const ChatView: React.FC<ChatViewProps> = ({
             onImageGenerate={handleImageGenerate}
             onModelSelect={handleModelSelection}
             disabled={streamingState.isStreaming || isLoading}
-            user={user}
           />
         </div>
       </div>

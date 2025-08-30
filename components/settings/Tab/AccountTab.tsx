@@ -1,17 +1,17 @@
 import React from 'react';
 import { Google, LogIn } from '../../Icons';
 import Button from '../../ui/Button';
-import { User } from 'firebase/auth';
 import { auth, provider } from '../../../firebase.ts';
 import { signInWithPopup } from 'firebase/auth';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface AccountTabProps {
-    user: User | null;
     onOpenAuthModal: () => void;
     onSignOutClick: () => void;
 }
 
-const AccountTab: React.FC<AccountTabProps> = ({ user, onOpenAuthModal, onSignOutClick }) => {
+const AccountTab: React.FC<AccountTabProps> = ({ onOpenAuthModal, onSignOutClick }) => {
+    const { user, isSignedIn } = useAuth();
     const handleSignIn = async () => {
         try {
             await signInWithPopup(auth, provider);
@@ -23,9 +23,9 @@ const AccountTab: React.FC<AccountTabProps> = ({ user, onOpenAuthModal, onSignOu
     return (
         <div>
             <h2 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-white">Account</h2>
-            {user ? (
+            {isSignedIn ? (
                 <div className="space-y-4">
-                    <p>You are signed in as <span className="font-semibold">{user.email}</span>.</p>
+                    <p>You are signed in as <span className="font-semibold">{user?.email}</span>.</p>
                     <Button onClick={onSignOutClick} variant="destructive">
                         Sign Out
                     </Button>

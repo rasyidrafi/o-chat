@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, memo } from 'react';
 import { Sparkles, Newspaper, Code, GraduationCap } from './Icons';
-import { User as FirebaseUser } from 'firebase/auth';
+import { useAuth } from '../contexts/AuthContext';
 
 // Define the type for the categories to ensure type safety
 type Category = 'Create' | 'Explore' | 'Code' | 'Learn';
@@ -45,11 +45,11 @@ const PromptSuggestion: React.FC<{
 PromptSuggestion.displayName = 'PromptSuggestion';
 
 interface WelcomeScreenProps {
-  user: FirebaseUser | null;
   onPromptSelect?: (prompt: string) => void;
 }
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user, onPromptSelect }) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPromptSelect }) => {
+  const { user, isSignedIn } = useAuth();
   // State to track the currently selected category
   const [selectedCategory, setSelectedCategory] = useState<Category>('Create');
 
@@ -91,8 +91,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ user, onPromptSelect }) =
 
   // Memoized display name to prevent recalculation on every render
   const displayName = useMemo(() => 
-    user?.displayName?.split(' ')[0] || '', 
-    [user?.displayName]
+    isSignedIn ? user?.displayName?.split(' ')[0] || 'there' : 'there', 
+    [user?.displayName, isSignedIn]
   );
 
   // Memoized category selection handler

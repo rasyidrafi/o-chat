@@ -5,12 +5,13 @@ import { Search, User, X, LogIn, Plus, Check } from './Icons';
 import { User as FirebaseUser } from 'firebase/auth';
 import Button from './ui/Button';
 import { useChat } from '../hooks/useChat';
+import { useAuth } from '../contexts/AuthContext';
+import LoadingState from './ui/LoadingState';
 
 interface SidebarProps {
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (isOpen: boolean) => void;
   isCollapsed: boolean;
-  user: FirebaseUser | null;
   onLoginClick: () => void;
   onSignOutClick: () => void;
   onOpenSearchCenter: () => void;
@@ -72,7 +73,6 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     isMobileMenuOpen,
     setIsMobileMenuOpen,
     isCollapsed,
-    user,
     onLoginClick,
     onSignOutClick,
     onOpenSearchCenter,
@@ -82,6 +82,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
 ) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isSignedIn } = useAuth();
   
   const { 
     conversations, 
@@ -322,17 +323,23 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
         }}
       >
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-8 text-zinc-500 dark:text-zinc-400">
-            <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-            <div className="text-sm">Loading conversations...</div>
+          <div className="flex flex-col items-center justify-center py-8">
+            <LoadingState 
+              message="Loading conversations..." 
+              size="sm" 
+              centerContent={true}
+            />
           </div>
         ) : (
           <>
             {/* Show search loading indicator */}
             {isSearching && (
-              <div className="flex flex-col items-center justify-center py-4 text-zinc-500 dark:text-zinc-400">
-                <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                <div className="text-xs">Searching...</div>
+              <div className="flex flex-col items-center justify-center py-4">
+                <LoadingState 
+                  message="Searching..." 
+                  size="sm" 
+                  centerContent={true}
+                />
               </div>
             )}
             
@@ -438,12 +445,12 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
       </div>
 
       <div className="mt-auto pt-2">
-        {user ? (
+        {isSignedIn ? (
           <div className="flex flex-col">
             <div className="flex items-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer ayam">
-              <UserAvatar user={user} size={32} />
+              <UserAvatar user={user!} size={32} />
               <div className={`ml-3 flex-grow block overflow-hidden ${isCollapsed ? 'md:hidden' : ''}`}>
-                <div className="font-semibold text-zinc-900 dark:text-white truncate">{user.displayName || user.email}</div>
+                <div className="font-semibold text-zinc-900 dark:text-white truncate">{user!.displayName || user!.email}</div>
                 <div className="text-sm text-zinc-500 dark:text-zinc-400">Signed In</div>
               </div>
             </div>

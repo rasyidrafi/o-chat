@@ -13,7 +13,7 @@ import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
 import { ImageGenerationJobService } from "../services/imageGenerationJobService";
 import { MessageAttachment } from "../types/chat";
-import { User } from "firebase/auth";
+import { useAuth } from "../contexts/AuthContext";
 
 interface ModelOption {
   label: string;
@@ -41,7 +41,6 @@ interface ChatInputProps {
   ) => void;
   onModelSelect?: (model: string, source: string, providerId?: string) => void;
   disabled?: boolean;
-  user?: User | null;
 }
 
 const ChatInput = ({
@@ -49,8 +48,8 @@ const ChatInput = ({
   onImageGenerate,
   onModelSelect,
   disabled = false,
-  user = null,
 }: ChatInputProps) => {
+  const { user } = useAuth();
   const [message, setMessage] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");

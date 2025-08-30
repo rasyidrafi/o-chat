@@ -15,9 +15,11 @@ import AttachmentsTab from "./settings/Tab/AttachmentsTab";
 import ContactUsTab from "./settings/Tab/ContactUsTab";
 import { User } from "firebase/auth";
 import Button from "./ui/Button";
+import LoadingState from "./ui/LoadingState";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppSettings } from "../hooks/useSettings";
 import { ChatStorageService } from "../services/chatStorageService";
+import { useAuth } from "../contexts/AuthContext";
 import { useLocalStorageData } from "../hooks/useLocalStorageData";
 import { 
   AVATAR_COLORS, 
@@ -95,7 +97,6 @@ export type Tab =
 
 interface SettingsPageProps {
   onClose: () => void;
-  user: User | null;
   initialTab?: Tab;
   onOpenAuthModal: () => void;
   onSignOutClick: () => void;
@@ -105,13 +106,14 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({
   onClose,
-  user,
   initialTab,
   onOpenAuthModal,
   onSignOutClick,
   settings,
   updateSettings,
 }) => {
+  const { user } = useAuth();
+  const isSignedIn = user ? !user.isAnonymous : false;
   const [activeTab, setActiveTab] = useState<Tab>(
     initialTab || "Customization"
   );
@@ -188,7 +190,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     const contentMap = {
       Account: () => (
         <AccountTab
-          user={user}
           onOpenAuthModal={onOpenAuthModal}
           onSignOutClick={onSignOutClick}
         />
@@ -249,15 +250,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <aside className="lg:col-span-3">
             <div className="space-y-6">
-              {user ? (
+              {isSignedIn ? (
                 <div className="flex flex-col items-center p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl text-center">
-                  <UserAvatar user={user} size={96} className="mb-4" />
+                  <UserAvatar user={user!} size={96} className="mb-4" />
                   <h2 className="font-bold text-xl text-zinc-900 dark:text-white truncate max-w-full">
-                    {user.displayName || user.email}
+                    {user!.displayName || user!.email}
                   </h2>
-                  {user.displayName && (
+                  {user!.displayName && (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-full">
-                      {user.email}
+                      {user!.email}
                     </p>
                   )}
                   <span className="mt-3 text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 py-1 px-3 rounded-full">
@@ -299,7 +300,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                   </div>
                   {loadingState.isLoading ? (
                     <div className="h-50 flex items-center justify-center py-8">
-                      <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+                      <LoadingState 
+                        message="Loading usage data..." 
+                        size="sm" 
+                        centerContent={true}
+                      />
                     </div>
                   ) : loadingState.error ? (
                     <div className="flex flex-col items-center justify-center py-8">

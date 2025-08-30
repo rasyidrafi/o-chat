@@ -6,8 +6,9 @@ import SettingsPage, { Tab as SettingsTab } from "./components/SettingsPage";
 import AuthModal from "./components/auth/AuthModal";
 import ConfirmationDialog from "./components/ui/ConfirmationDialog";
 import SearchCenter from "./components/SearchCenter";
+import AuthLoadingScreen from "./components/AuthLoadingScreen";
 import { useChat } from "./hooks/useChat";
-import { useAuth } from "./hooks/useAuth";
+import { useAuth } from "./contexts/AuthContext";
 import { useSettings } from "./hooks/useSettings";
 
 const defaultConfirmDialogProps = {
@@ -23,10 +24,10 @@ const defaultConfirmDialogProps = {
 // Component to handle conversation routing
 const ConversationRoute: React.FC<{
   chat: ReturnType<typeof useChat>;
-  user: any;
-}> = ({ chat, user }) => {
+}> = ({ chat }) => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [hasAttemptedSelection, setHasAttemptedSelection] = useState(false);
   const [authStable, setAuthStable] = useState(false);
 
@@ -43,15 +44,6 @@ const ConversationRoute: React.FC<{
   }, [user]);
 
   React.useEffect(() => {
-    console.log('ConversationRoute effect:', { 
-      conversationId, 
-      currentConversationId: chat.currentConversation?.id, 
-      isLoading: chat.isLoading,
-      userLoggedIn: !!user,
-      authStable,
-      hasAttemptedSelection
-    });
-
     // Don't do anything until auth is stable
     if (!authStable) {
       console.log('Waiting for auth to stabilize...');
@@ -70,7 +62,6 @@ const ConversationRoute: React.FC<{
     }
 
     if (conversationId && conversationId !== chat.currentConversation?.id) {
-      console.log('Selecting conversation:', conversationId);
       setHasAttemptedSelection(true);
       chat.selectConversation(conversationId);
     } else if (!conversationId && chat.currentConversation) {
@@ -108,7 +99,7 @@ const AppContent: React.FC = () => {
   const navigate = useNavigate();
 
   // Custom hooks
-  const { user, signOut } = useAuth();
+  const { user, signOut, authLoaded, isLoading: authIsLoading } = useAuth();
   
   const openConfirmationDialog = useCallback((
     props: Partial<typeof modal.confirmDialogProps>
@@ -188,6 +179,11 @@ const AppContent: React.FC = () => {
     });
   };
 
+  // Show global loading screen while auth is initializing
+  if (authIsLoading || !authLoaded) {
+    return <AuthLoadingScreen />;
+  }
+
   return (
     <>
       <div className="flex h-screen w-full bg-white dark:bg-[#1c1c1c] text-zinc-900 dark:text-zinc-200 font-sans overflow-hidden">
@@ -196,7 +192,6 @@ const AppContent: React.FC = () => {
           isMobileMenuOpen={ui.isMobileMenuOpen}
           setIsMobileMenuOpen={(open) => setUi(prev => ({ ...prev, isMobileMenuOpen: open }))}
           isCollapsed={ui.isSidebarCollapsed}
-          user={user}
           onLoginClick={() => openSettings("Account")}
           onSignOutClick={onSignOutClick}
           onOpenSearchCenter={() => setUi(prev => ({ ...prev, isSearchCenterOpen: true }))}
@@ -212,7 +207,6 @@ const AppContent: React.FC = () => {
               onOpenSettings={openSettings}
               theme={settings.theme}
               toggleTheme={toggleTheme}
-              user={user}
               animationsDisabled={settings.animationsDisabled}
               chat={chat}
             />
@@ -220,8 +214,7 @@ const AppContent: React.FC = () => {
           <Route path="/c/:conversationId" element={
             <>
               <ConversationRoute 
-                chat={chat} 
-                user={user}
+                chat={chat}
               />
               <ChatView
                 onMenuClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: true }))}
@@ -230,7 +223,6 @@ const AppContent: React.FC = () => {
                 onOpenSettings={openSettings}
                 theme={settings.theme}
                 toggleTheme={toggleTheme}
-                user={user}
                 animationsDisabled={settings.animationsDisabled}
                 chat={chat}
               />
@@ -250,7 +242,6 @@ const AppContent: React.FC = () => {
       {ui.isSettingsOpen && (
         <SettingsPage
           onClose={closeSettings}
-          user={user}
           initialTab={modal.initialSettingsTab}
           settings={settings}
           updateSettings={updateSettings}

@@ -51,14 +51,11 @@ export class ChatStorageService {
   // Get conversations from localStorage
   private static getConversationsFromLocal(): ChatConversation[] {
     try {
-      console.log('Getting conversations from localStorage...');
       const stored = localStorage.getItem(this.CONVERSATIONS_KEY);
-      console.log('Raw localStorage data:', stored ? 'EXISTS' : 'NULL');
       
       if (!stored) return [];
 
       const conversations = JSON.parse(stored);
-      console.log('Parsed conversations count:', conversations.length);
       
       return conversations.map((conv: any) => ({
         ...conv,
@@ -369,27 +366,20 @@ export class ChatStorageService {
 
   // Load a single conversation with its messages
   static async loadConversation(conversationId: string, user?: User | null): Promise<ChatConversation | null> {
-    console.log('loadConversation called with:', { conversationId, hasUser: !!user });
-    
     if (user) {
-      console.log('Loading from Firestore...');
       try {
         // Load conversation metadata from Firestore
         const conversationRef = doc(db, 'users', user.uid, 'conversations', conversationId);
         const conversationSnap = await getDoc(conversationRef);
-        
-        console.log('Firestore conversation exists:', conversationSnap.exists());
         
         if (!conversationSnap.exists()) {
           return null;
         }
 
         const conversationData = conversationSnap.data();
-        console.log('Conversation data:', conversationData);
         
         // Load messages
         const messages = await this.getMessagesFromFirestore(user.uid, conversationId);
-        console.log('Loaded messages count:', messages.length);
         
         return {
           id: conversationSnap.id,
@@ -405,13 +395,9 @@ export class ChatStorageService {
         return null;
       }
     } else {
-      console.log('Loading from localStorage...');
       // Load from localStorage
       const conversations = this.getConversationsFromLocal();
-      console.log('Local conversations count:', conversations.length);
       const conversation = conversations.find(c => c.id === conversationId);
-      
-      console.log('Found local conversation:', !!conversation);
       
       if (!conversation) {
         return null;
@@ -421,7 +407,6 @@ export class ChatStorageService {
       try {
         const messagesJson = localStorage.getItem(`${this.MESSAGES_KEY_PREFIX}${conversationId}`);
         const messages = messagesJson ? JSON.parse(messagesJson) : [];
-        console.log('Loaded local messages count:', messages.length);
         
         return {
           ...conversation,
@@ -442,15 +427,10 @@ export class ChatStorageService {
 
   // Load conversations with pagination
   static async loadConversationsPaginated(user?: User | null, limit: number = 20, lastDoc?: any): Promise<{ conversations: ChatConversation[], hasMore: boolean, lastDoc: any }> {
-    console.log('loadConversationsPaginated called:', { hasUser: !!user, limit });
-    
     if (user) {
-      console.log('Loading from Firestore for user:', user.uid);
       return await this.getConversationsFromFirestorePaginated(user.uid, limit, lastDoc);
     } else {
-      console.log('Loading from localStorage...');
       const conversations = this.getConversationsFromLocal();
-      console.log('Local conversations found:', conversations.length);
       
       // For local storage, we'll simulate pagination
       const startIndex = lastDoc ? lastDoc.index + 1 : 0;
@@ -465,11 +445,6 @@ export class ChatStorageService {
         hasMore: endIndex < conversations.length,
         lastDoc: paginatedConversations.length > 0 ? { index: endIndex - 1 } : null
       };
-      
-      console.log('Returning paginated result:', { 
-        count: result.conversations.length, 
-        hasMore: result.hasMore 
-      });
       
       return result;
     }

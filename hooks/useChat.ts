@@ -101,14 +101,9 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
   // Load conversations on mount and user change
   const loadConversations = useCallback(async () => {
-    console.log('loadConversations called, user:', user ? 'logged in' : 'not logged in');
     try {
       setIsLoading(true);
       const result = await ChatStorageService.loadConversationsPaginated(user, 20);
-      console.log('loadConversations result:', { 
-        conversationsCount: result.conversations.length,
-        hasMore: result.hasMore 
-      });
       setConversations(result.conversations);
       setHasMoreConversations(result.hasMore);
       setConversationsLastDoc(result.lastDoc);
@@ -1689,17 +1684,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   }, []);
 
   const selectConversation = useCallback(async (conversationId: string | null) => {
-    console.log('selectConversation called with:', conversationId);
-    
     if (currentConversationId === conversationId) {
-      console.log('Conversation already selected, returning early');
       return;
     }
 
     ImageGenerationJobService.stopAllPolling();
 
     if (!conversationId) {
-      console.log('No conversation ID, clearing current conversation');
       setCurrentConversationId(null);
       if (navigate) {
         navigate('/', { replace: true });
@@ -1707,7 +1698,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       return;
     }
 
-    console.log('Setting current conversation ID to:', conversationId);
     // Set the conversation ID immediately for proper routing
     setCurrentConversationId(conversationId);
     
@@ -1740,8 +1730,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     // Find the conversation stub from the list
     const conversationStub = conversations.find(c => c.id === conversationId);
-    console.log('Found conversation stub:', conversationStub ? 'YES' : 'NO');
-    console.log('Total conversations in list:', conversations.length);
 
     // If we need to load messages (stub exists but no messages), set loading state
     if (conversationStub && (!conversationStub.messages || conversationStub.messages.length === 0)) {
@@ -1750,12 +1738,10 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     // If conversation doesn't exist in list (direct URL access), try to load it directly
     if (!conversationStub) {
-      console.log('Conversation not in list, trying to load directly...');
       setIsLoadingMessages(true);
       try {
         // Try to load the conversation directly from storage
         const result = await ChatStorageService.loadConversation(conversationId, user);
-        console.log('Load conversation result:', result ? 'SUCCESS' : 'NULL');
         if (result) {
           // Add the loaded conversation to the conversations list
           setConversations(prev => [result, ...prev]);
@@ -1766,7 +1752,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         } else {
           // Conversation not found, but don't redirect immediately if user is not authenticated
           if (!user) {
-            console.log('Conversation not found and user not authenticated, not redirecting yet');
             setIsLoadingMessages(false);
             return;
           }

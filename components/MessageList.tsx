@@ -8,7 +8,6 @@ interface MessageListProps {
   messages: ChatMessage[];
   streamingMessageId: string | null;
   animationsDisabled: boolean;
-  isLoadingMessages: boolean;
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
   onLoadMoreMessages: () => void;
@@ -26,17 +25,11 @@ const MessageList: React.FC<MessageListProps> = ({
   messages,
   streamingMessageId,
   animationsDisabled,
-  isLoadingMessages,
 }) => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const prevMessages = usePrevious(messages);
-  const isConversationSwitch =
-    !prevMessages ||
-    (messages.length > 0 &&
-      prevMessages.length > 0 &&
-      messages[0].id !== prevMessages[0].id);
 
   // Detect when we're transitioning between conversations (empty -> filled)
   useEffect(() => {
@@ -50,16 +43,7 @@ const MessageList: React.FC<MessageListProps> = ({
   }, [messages.length, prevMessages, isTransitioning]);
 
   if (messages.length === 0) {
-    if (isLoadingMessages || isTransitioning) {
-      return (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex flex-col items-center text-zinc-500 dark:text-zinc-400">
-            <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-            <div className="text-sm">Loading conversation...</div>
-          </div>
-        </div>
-      );
-    }
+    // Don't show loading here - let ChatView handle all loading states
     return null;
   }
 
