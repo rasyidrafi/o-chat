@@ -1684,7 +1684,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   }, []);
 
   const selectConversation = useCallback(async (conversationId: string | null) => {
-    console.log("selecting conversation value: ", conversationId)
     if (currentConversationId === conversationId) {
       return;
     }
@@ -1693,8 +1692,11 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     if (!conversationId) {
       setCurrentConversationId(null);
+      
       if (navigate) {
-        navigate('/', { replace: true });
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 0);
       }
       return;
     }

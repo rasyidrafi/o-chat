@@ -31,6 +31,7 @@ const ConversationRoute: React.FC<{
   const { user } = useAuth();
   const [hasAttemptedSelection, setHasAttemptedSelection] = useState(false);
   const [authStable, setAuthStable] = useState(false);
+  const previousIdRef = useRef<string | null>(null);
 
   // Wait for auth state to stabilize
   React.useEffect(() => {
@@ -62,23 +63,32 @@ const ConversationRoute: React.FC<{
       return;
     }
 
-    // Only act if we're actually on a conversation route AND have a conversationId
-    // Don't trigger if we're on root path (user clicked "New Chat")
-    if (conversationId && conversationId !== chat.currentConversation?.id) {
-      console.log("triggering auto select on path ", location.pathname)
-      console.log({
-        conversationId: conversationId,
-        currentConversationId: chat.currentConversation?.id
-      })
+    // If we're on the root path (/) and we just had a conversation,
+    // that means we intentionally cleared the conversation, so don't reselect
+    if (!conversationId && location.pathname === '/' && previousIdRef.current) {
+      return;
+    }
+
+    // Check if the conversation in the URL is different from current or we're coming from root
+    if (conversationId && conversationId !== chat.currentConversationId) {
       setHasAttemptedSelection(true);
       chat.selectConversation(conversationId);
     }
-  }, [conversationId, chat.currentConversation?.id, chat.isLoading, user, authStable, navigate, hasAttemptedSelection, location.pathname]);
+  }, [conversationId, chat.currentConversationId, chat.isLoading, user, authStable, 
+      navigate, hasAttemptedSelection, location.pathname, chat]);
 
-  // Reset attempt flag when conversation ID or current conversation changes
+  // Update the previous ID ref when the current conversation changes
+  // This helps us track when we've explicitly cleared a conversation
+  React.useEffect(() => {
+    if (chat.currentConversationId) {
+      previousIdRef.current = chat.currentConversationId;
+    }
+  }, [chat.currentConversationId]);
+
+  // Reset attempt flag when conversation ID changes
   React.useEffect(() => {
     setHasAttemptedSelection(false);
-  }, [conversationId, chat.currentConversation?.id]);
+  }, [conversationId]);
 
   return null; // This component just handles routing logic
 };
