@@ -1265,7 +1265,7 @@ const Message: React.FC<MessageProps> = memo(
                   {processedContent}
                   
                   {/* Model name and timestamp for AI responses */}
-                  {!isUser && (
+                  {(!isUser && !isStreaming) && (
                     <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
                       {formatTime(message.timestamp)}
                       {(message.model || message.modelName) && isAssistant && (

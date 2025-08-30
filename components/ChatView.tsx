@@ -81,7 +81,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   });
 
   // State to control scroll-to-bottom button visibility
-  const [showScrollToBottom, setShowScrollToBottom] = React.useState(false);
+  const [showScrollToBottom] = React.useState(false);
 
   // Handler to scroll to bottom - memoized to prevent recreation
   const handleScrollToBottom = useCallback(() => {
@@ -157,9 +157,12 @@ const ChatView: React.FC<ChatViewProps> = ({
   // Determine if we should show welcome based on URL and conversation state
   const shouldShowWelcome = useMemo(() => {
     const isRootPath = location.pathname === '/';
-    const hasNoConversation = !currentConversation;
-    return isRootPath || hasNoConversation;
-  }, [location.pathname, currentConversation]);
+    const isConversationPath = location.pathname.startsWith('/c/');
+    
+    // Only show welcome screen when we're on root path
+    // Don't show it on conversation paths, even if conversation is temporarily null/loading
+    return isRootPath && !isConversationPath;
+  }, [location.pathname]);
 
   // Memoized theme icon props to prevent recreation on every render
   const themeIconProps = useMemo(() => ({
@@ -323,7 +326,6 @@ const ChatView: React.FC<ChatViewProps> = ({
               isLoadingMoreMessages={isLoadingMoreMessages}
               hasMoreMessages={hasMoreMessages}
               onLoadMoreMessages={() => {}}
-              onShowScrollToBottom={setShowScrollToBottom}
             />
           </div>
         )}

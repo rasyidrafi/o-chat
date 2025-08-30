@@ -23,18 +23,66 @@ const defaultConfirmDialogProps = {
 // Component to handle conversation routing
 const ConversationRoute: React.FC<{
   chat: ReturnType<typeof useChat>;
-}> = ({ chat }) => {
+  user: any;
+}> = ({ chat, user }) => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const [hasAttemptedSelection, setHasAttemptedSelection] = useState(false);
+  const [authStable, setAuthStable] = useState(false);
+
+  // Wait for auth state to stabilize
+  React.useEffect(() => {
+    // If we already have a determined auth state (user is logged in or explicitly null), 
+    // we don't need to wait as long
+    const delay = user !== undefined ? 100 : 500;
+    const timer = setTimeout(() => {
+      setAuthStable(true);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [user]);
 
   React.useEffect(() => {
+    console.log('ConversationRoute effect:', { 
+      conversationId, 
+      currentConversationId: chat.currentConversation?.id, 
+      isLoading: chat.isLoading,
+      userLoggedIn: !!user,
+      authStable,
+      hasAttemptedSelection
+    });
+
+    // Don't do anything until auth is stable
+    if (!authStable) {
+      console.log('Waiting for auth to stabilize...');
+      return;
+    }
+
+    // Don't try to select conversation while still loading initial conversations
+    if (chat.isLoading) {
+      console.log('Still loading conversations, waiting...');
+      return;
+    }
+
+    // Don't attempt multiple times
+    if (hasAttemptedSelection) {
+      return;
+    }
+
     if (conversationId && conversationId !== chat.currentConversation?.id) {
+      console.log('Selecting conversation:', conversationId);
+      setHasAttemptedSelection(true);
       chat.selectConversation(conversationId);
     } else if (!conversationId && chat.currentConversation) {
       // If we're at root but have a current conversation, redirect to it
       navigate(`/c/${chat.currentConversation.id}`, { replace: true });
     }
-  }, [conversationId, chat, navigate]);
+  }, [conversationId, chat.currentConversation?.id, chat.isLoading, user, authStable, navigate, hasAttemptedSelection]);
+
+  // Reset attempt flag when conversation ID or current conversation changes
+  React.useEffect(() => {
+    setHasAttemptedSelection(false);
+  }, [conversationId, chat.currentConversation?.id]);
 
   return null; // This component just handles routing logic
 };
@@ -173,6 +221,7 @@ const AppContent: React.FC = () => {
             <>
               <ConversationRoute 
                 chat={chat} 
+                user={user}
               />
               <ChatView
                 onMenuClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: true }))}
