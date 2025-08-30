@@ -50,7 +50,7 @@ const ChatInput = ({
   disabled = false,
 }: ChatInputProps) => {
   const { user } = useAuth();
-  const [message, setMessage] = useState("");
+  const [prompt, setPrompt] = useState(""); // Single shared state for both chat and image prompts
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -61,7 +61,6 @@ const ChatInput = ({
   const [inputMode, setInputMode] = useState<"chat" | "image_generation">(
     "chat"
   );
-  const [imagePrompt, setImagePrompt] = useState("");
   const [selectedImageSize, setSelectedImageSize] = useState("1024x1024");
   const [isSizeDropdownOpen, setIsSizeDropdownOpen] = useState(false);
   const [isImageGenerating, setIsImageGenerating] = useState(false);
@@ -72,10 +71,21 @@ const ChatInput = ({
   const currentAttachmentsRef = useRef<MessageAttachment[]>(attachments);
   const isCheckingCapabilitiesRef = useRef(false);
 
-  // Update ref when attachments change
-  useEffect(() => {
-    currentAttachmentsRef.current = attachments;
-  }, [attachments]);
+  // Helper function to reset textarea to single line
+  const resetTextareaHeight = useCallback(() => {
+    if (textareaRef.current) {
+      // Simply clear the inline height style and reset rows to 1
+      textareaRef.current.style.height = "";
+      textareaRef.current.rows = 1;
+    }
+  }, []);
+
+  // Helper function to clear prompt and reset textarea
+  const clearPrompt = useCallback(() => {
+    setPrompt("");
+    // Reset textarea height immediately
+    resetTextareaHeight();
+  }, [resetTextareaHeight]);
 
   // Helper function to manually clear all image data
   const clearAllImages = useCallback(() => {
@@ -636,9 +646,9 @@ const ChatInput = ({
 
   // Handle image generation click
   const handleImageGenerateClick = useCallback(async () => {
-    if (!imagePrompt.trim() || disabled || isImageGenerating) return;
+    if (!prompt.trim() || disabled || isImageGenerating) return;
 
-    const localImagePrompt = imagePrompt.trim();
+    const localImagePrompt = prompt.trim();
 
     try {
       setIsImageGenerating(true);
@@ -663,7 +673,7 @@ const ChatInput = ({
       );
 
       // clear prompt input
-      setImagePrompt("");
+      clearPrompt();
 
       try {
         if (useJobBasedGeneration) {
@@ -761,7 +771,7 @@ const ChatInput = ({
         }
 
         // Clear the prompt and images after successful generation/job creation
-        setImagePrompt("");
+        clearPrompt();
         clearAllImages();
       } catch (generationError: any) {
         console.error("Image generation failed:", generationError);
@@ -796,7 +806,7 @@ const ChatInput = ({
       setIsImageGenerating(false);
     }
   }, [
-    imagePrompt,
+    prompt,
     disabled,
     isImageGenerating,
     selectedModel,
@@ -924,11 +934,23 @@ const ChatInput = ({
   }, []);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
+    setPrompt(e.target.value);
     // Auto-resize textarea
     e.target.style.height = "auto";
     e.target.style.height = `${e.target.scrollHeight}px`;
   };
+
+  // Initialize textarea to single line height on mount
+  useEffect(() => {
+    if (textareaRef.current) {
+      resetTextareaHeight();
+    }
+  }, [resetTextareaHeight]);
+
+  // Update ref when attachments change
+  useEffect(() => {
+    currentAttachmentsRef.current = attachments;
+  }, [attachments]);
 
   const handleModelSelect = (option: ModelOption) => {
     setSelectedModel(option.value);
@@ -952,19 +974,19 @@ const ChatInput = ({
       // For image generation mode
       if (capabilities?.hasImageEditing) {
         // Image editing models: need both prompt AND image
-        if (!imagePrompt.trim() || !persistentUploadedImage) return;
+        if (!prompt.trim() || !persistentUploadedImage) return;
       } else {
         // Pure image generation models: only need prompt (no image support)
-        if (!imagePrompt.trim()) return;
+        if (!prompt.trim()) return;
       }
     } else {
       // For chat mode (vision models or regular chat)
       if (capabilities?.hasVision) {
         // Vision models: need prompt or attachments
-        if (!message.trim() && attachments.length === 0) return;
+        if (!prompt.trim() && attachments.length === 0) return;
       } else {
         // Regular chat: just need prompt
-        if (!message.trim()) return;
+        if (!prompt.trim()) return;
       }
     }
 
@@ -977,7 +999,7 @@ const ChatInput = ({
     }
 
     // Handle chat mode
-    const currentMessage = message.trim();
+    const currentMessage = prompt.trim();
     const currentModel = selectedModel;
     const currentAttachments = [...attachments];
     const currentImageForEditing = persistentUploadedImage;
@@ -986,7 +1008,7 @@ const ChatInput = ({
     );
 
     // Clear the input, attachments, and all image data immediately when sending
-    setMessage("");
+    clearPrompt();
     setAttachments([]);
     setPersistentUploadedImage(""); // Clear persistent storage when sending
     setUploadedImageForEditing(""); // Clear active editing image
@@ -1067,10 +1089,8 @@ const ChatInput = ({
           )}
 
           <ImageGenerationInput
-            isGenerating={isImageGenerating}
-            prompt={imagePrompt}
-            onPromptChange={setImagePrompt}
-            disabled={disabled}
+            prompt={prompt}
+            onPromptChange={setPrompt}
             onImagePaste={handleImagePasteInGeneration} // Pass the paste handler
           />
 
@@ -1211,10 +1231,10 @@ const ChatInput = ({
                     const capabilities = getCurrentModelCapabilities();
                     if (capabilities?.hasImageEditing) {
                       // Image editing models: need both prompt and image
-                      return imagePrompt.trim() && uploadedImageForEditing && !disabled && !isImageGenerating;
+                      return prompt.trim() && uploadedImageForEditing && !disabled && !isImageGenerating;
                     } else {
                       // Pure image generation models: only need prompt
-                      return imagePrompt.trim() && !disabled && !isImageGenerating;
+                      return prompt.trim() && !disabled && !isImageGenerating;
                     }
                   })()
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
@@ -1225,10 +1245,10 @@ const ChatInput = ({
                     const capabilities = getCurrentModelCapabilities();
                     if (capabilities?.hasImageEditing) {
                       // Image editing models: need both prompt and image
-                      return !imagePrompt.trim() || !uploadedImageForEditing || disabled || isImageGenerating;
+                      return !prompt.trim() || !uploadedImageForEditing || disabled || isImageGenerating;
                     } else {
                       // Pure image generation models: only need prompt
-                      return !imagePrompt.trim() || disabled || isImageGenerating;
+                      return !prompt.trim() || disabled || isImageGenerating;
                     }
                   })()
                 }
@@ -1298,14 +1318,13 @@ const ChatInput = ({
 
             <textarea
               ref={textareaRef}
-              value={message}
+              value={prompt}
               onChange={handleTextareaChange}
               onKeyPress={handleKeyPress}
               onPaste={handlePaste}
               placeholder="Type your message here..."
               className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-32 overflow-y-auto thin-scrollbar"
               rows={1}
-              disabled={disabled}
             />
           </div>
           <HorizontalRuleDefault />
@@ -1425,10 +1444,10 @@ const ChatInput = ({
                     const capabilities = getCurrentModelCapabilities();
                     if (capabilities?.hasVision) {
                       // Vision models: need message or attachments
-                      return (message.trim() || attachments.length > 0) && !disabled && !isUploadingImage;
+                      return (prompt.trim() || attachments.length > 0) && !disabled && !isUploadingImage;
                     } else {
                       // Regular chat: just need message
-                      return message.trim() && !disabled && !isUploadingImage;
+                      return prompt.trim() && !disabled && !isUploadingImage;
                     }
                   })()
                     ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
@@ -1439,10 +1458,10 @@ const ChatInput = ({
                     const capabilities = getCurrentModelCapabilities();
                     if (capabilities?.hasVision) {
                       // Vision models: need message or attachments
-                      return (!message.trim() && attachments.length === 0) || disabled || isUploadingImage;
+                      return (!prompt.trim() && attachments.length === 0) || disabled || isUploadingImage;
                     } else {
                       // Regular chat: just need message
-                      return !message.trim() || disabled || isUploadingImage;
+                      return !prompt.trim() || disabled || isUploadingImage;
                     }
                   })()
                 }

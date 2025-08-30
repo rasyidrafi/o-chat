@@ -1,22 +1,34 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
 
 interface ImageGenerationInputProps {
-  isGenerating: boolean;
   prompt: string;
   onPromptChange: (prompt: string) => void;
-  disabled?: boolean;
   onImagePaste?: (file: File) => void; // Add paste handler prop
 }
 
 const ImageGenerationInput = ({
-  isGenerating,
   prompt,
   onPromptChange,
-  disabled = false,
   onImagePaste, // Add to props
 }: ImageGenerationInputProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Helper function to reset textarea to single line
+  const resetTextareaHeight = useCallback(() => {
+    if (textareaRef.current) {
+      // Simply clear the inline height style and reset rows to 1
+      textareaRef.current.style.height = "";
+      textareaRef.current.rows = 1;
+    }
+  }, []);
+
+  // Initialize textarea to single line height on mount
+  useEffect(() => {
+    if (textareaRef.current) {
+      resetTextareaHeight();
+    }
+  }, [resetTextareaHeight]);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onPromptChange(e.target.value);
@@ -61,7 +73,6 @@ const ImageGenerationInput = ({
           placeholder="Describe the image you want to generate..."
           className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-32 overflow-y-auto thin-scrollbar"
           rows={1}
-          disabled={disabled || isGenerating}
         />
       </div>
 
