@@ -218,3 +218,23 @@ h6 {
 .animate-shimmer {
   animation: shimmer 2s ease-in-out infinite;
 }
+
+/* Custom KaTeX styles for boxed expressions */
+.katex .fbox,
+.katex .stretchy.fbox {
+  border-style: solid !important;
+  border-width: 1px !important;
+  border-radius: 0.5rem !important;
+  border-color: rgb(212 212 216) !important; /* zinc-300 */
+}
+
+.dark .katex .fbox,
+.dark .katex .stretchy.fbox {
+  border-color: rgb(82 82 91) !important; /* zinc-600 */
+}
+
+/* Optional: adjust padding for better appearance with rounded corners */
+.katex .boxpad {
+  padding: 0.5rem 0.75rem !important; /* py-2 (8px) px-3 (12px) */
+}
+
