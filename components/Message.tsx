@@ -917,18 +917,18 @@ const Message: React.FC<MessageProps> = memo(
     const fadeVariants = {
       initial: {
         opacity: 0,
-      },
+      },  
       animate: {
         opacity: 1,
         transition: {
-          duration: 0.6,
+          duration: 0.3,
           ease: "easeOut",
         },
       },
       exit: {
         opacity: 0,
         transition: {
-          duration: 0.4,
+          duration: 0.2,
         },
       },
     };
@@ -1189,14 +1189,24 @@ const Message: React.FC<MessageProps> = memo(
         // Handle user messages with potentially complex content
         if (typeof message.content === "string") {
           return (
-            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            <motion.div
+              variants={fadeVariants}
+              initial={animationsDisabled ? {} : "initial"}
+              animate="animate"
+              className="text-sm leading-relaxed whitespace-pre-wrap"
+            >
               {message.content}
-            </div>
+            </motion.div>
           );
         } else {
           // Handle complex content with text and images
           return (
-            <div className="space-y-2 flex flex-col">
+            <motion.div
+              variants={fadeVariants}
+              initial={animationsDisabled ? {} : "initial"}
+              animate="animate"
+              className="space-y-2 flex flex-col"
+            >
               {message.content.map((item, index) => {
                 if (item.type === "text") {
                   return (
@@ -1225,28 +1235,44 @@ const Message: React.FC<MessageProps> = memo(
                 }
                 return null;
               })}
-            </div>
+            </motion.div>
           );
         }
       }
 
       return (
         <div className="space-y-3 w-full max-w-full min-w-0">
-          <ReasoningDisplay
-            reasoning={message.reasoning || ""}
-            isReasoningComplete={message.isReasoningComplete || false}
-            isStreaming={isStreaming}
-          />
+          <motion.div
+            variants={fadeVariants}
+            initial={animationsDisabled ? {} : "initial"}
+            animate="animate"
+          >
+            <ReasoningDisplay
+              reasoning={message.reasoning || ""}
+              isReasoningComplete={message.isReasoningComplete || false}
+              isStreaming={isStreaming}
+            />
+          </motion.div>
 
           {!isContentReady ? (
-            <div className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden">
+            <motion.div
+              variants={fadeVariants}
+              initial={animationsDisabled ? {} : "initial"}
+              animate="animate"
+              className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
+            >
               <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
                 <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
                 <span>Processing...</span>
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <div className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden">
+            <motion.div
+              variants={fadeVariants}
+              initial={animationsDisabled ? {} : "initial"}
+              animate="animate"
+              className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
+            >
               <div className="space-y-3">
                 {processedContent}
                 
@@ -1262,21 +1288,23 @@ const Message: React.FC<MessageProps> = memo(
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       );
     };
 
     return (
-      <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`message-${message.id || message.timestamp.getTime()}`}
-            variants={fadeVariants}
-            initial={animationsDisabled ? {} : "initial"}
-            animate="animate"
-            exit={animationsDisabled ? {} : "exit"}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`message-${message.id || message.timestamp.getTime()}`}
+          variants={fadeVariants}
+          initial={animationsDisabled ? {} : "initial"}
+          animate="animate"
+          exit={animationsDisabled ? {} : "exit"}
+          className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+        >
+          <div
             className={`my-4 flex flex-col ${
               isUser
                 ? "max-w-full items-end"
@@ -1297,7 +1325,10 @@ const Message: React.FC<MessageProps> = memo(
               )}
             </div>
 
-            <div
+            <motion.div
+              variants={fadeVariants}
+              initial={animationsDisabled ? {} : "initial"}
+              animate="animate"
               className={`text-xs text-zinc-500 dark:text-zinc-400 ${
                 isUser ? "text-right mt-2" : "text-left mt-4"
               }`}
@@ -1313,10 +1344,10 @@ const Message: React.FC<MessageProps> = memo(
                   )}
                 </>
               )}
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
+            </motion.div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
     );
   }
 );
