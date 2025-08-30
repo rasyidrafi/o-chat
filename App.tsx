@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Routes, Route, useParams, useNavigate } from "react-router-dom";
+import { Routes, Route, useParams, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import ChatView from "./components/ChatView";
 import SettingsPage, { Tab as SettingsTab } from "./components/SettingsPage";
@@ -27,6 +27,7 @@ const ConversationRoute: React.FC<{
 }> = ({ chat }) => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [hasAttemptedSelection, setHasAttemptedSelection] = useState(false);
   const [authStable, setAuthStable] = useState(false);
@@ -61,14 +62,18 @@ const ConversationRoute: React.FC<{
       return;
     }
 
+    // Only act if we're actually on a conversation route AND have a conversationId
+    // Don't trigger if we're on root path (user clicked "New Chat")
     if (conversationId && conversationId !== chat.currentConversation?.id) {
+      console.log("triggering auto select on path ", location.pathname)
+      console.log({
+        conversationId: conversationId,
+        currentConversationId: chat.currentConversation?.id
+      })
       setHasAttemptedSelection(true);
       chat.selectConversation(conversationId);
-    } else if (!conversationId && chat.currentConversation) {
-      // If we're at root but have a current conversation, redirect to it
-      navigate(`/c/${chat.currentConversation.id}`, { replace: true });
     }
-  }, [conversationId, chat.currentConversation?.id, chat.isLoading, user, authStable, navigate, hasAttemptedSelection]);
+  }, [conversationId, chat.currentConversation?.id, chat.isLoading, user, authStable, navigate, hasAttemptedSelection, location.pathname]);
 
   // Reset attempt flag when conversation ID or current conversation changes
   React.useEffect(() => {

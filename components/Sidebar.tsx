@@ -167,7 +167,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
 
   const handleNewChat = () => {
     // Navigate to root path to show welcome screen
-    navigate('/', { replace: true });
+    console.log("open empty conversation");
     chat.selectConversation(null);
     setIsMobileMenuOpen(false);
   };

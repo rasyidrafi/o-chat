@@ -1684,6 +1684,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   }, []);
 
   const selectConversation = useCallback(async (conversationId: string | null) => {
+    console.log("selecting conversation value: ", conversationId)
     if (currentConversationId === conversationId) {
       return;
     }
