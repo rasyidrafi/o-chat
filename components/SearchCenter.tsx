@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from './Icons';
 import { useChat } from '../hooks/useChat';
 import { ChatConversation } from '../types/chat';
+import { useNavigate } from 'react-router-dom';
 
 interface SearchCenterProps {
   isOpen: boolean;
@@ -19,7 +20,6 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat, anim
   const {
     conversations,
     currentConversation,
-    selectConversation,
     setSearchQuery,
     filteredConversations,
     isSearching,
@@ -27,6 +27,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat, anim
     clearSearch
   } = chat;
 
+  const navigate = useNavigate();
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -103,9 +104,9 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat, anim
 
   // Handle conversation selection
   const handleConversationSelect = useCallback((conversation: ChatConversation) => {
-    selectConversation(conversation.id);
+    navigate(`/c/${conversation.id}`);
     onClose();
-  }, [selectConversation, onClose]);
+  }, [onClose]);
 
   // Memoized date formatting function
   const formatDate = useCallback((date: Date) => {
