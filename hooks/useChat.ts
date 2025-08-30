@@ -385,6 +385,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     providerId?: string,
     attachments?: MessageAttachment[]
   ) => {
+    console.log("Send Message called");
+    console.log("param is: ", JSON.stringify({ content, model, source, providerId, attachments }));
     // Build the message content
     let messageContent: MessageContent;
 
@@ -455,7 +457,10 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     // Create or get current conversation
     let conversation = currentConversation;
-    if (!conversation) {
+
+    // If there's no currentConversationId (i.e., we're on welcome screen) or no conversation exists,
+    // create a new conversation regardless of currentConversation object state
+    if (!currentConversationId || !conversation) {
       // Create new conversation with message content as title
       const title = createSmartTitle(extractTextFromContent(messageContent));
       conversation = {
@@ -468,7 +473,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         source: getModelSource(model)
       };
       setCurrentConversationId(conversation.id);
-      
+
       // Navigate to the new conversation immediately
       if (navigate) {
         navigate(`/c/${conversation.id}`, { replace: true });
@@ -1692,7 +1697,10 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     if (!conversationId) {
       setCurrentConversationId(null);
-      
+      setTimeout(() => {
+        setCurrentConversationId(null);
+      }, 0);
+
       if (navigate) {
         setTimeout(() => {
           navigate('/', { replace: true });
@@ -1703,7 +1711,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     // Set the conversation ID immediately for proper routing
     setCurrentConversationId(conversationId);
-    
+
     setHasMoreMessages(true);
     setMessagesLastDoc(null);
 
@@ -1758,7 +1766,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
             setIsLoadingMessages(false);
             return;
           }
-          
+
           console.warn(`Conversation ${conversationId} not found`);
           if (navigate) {
             navigate('/', { replace: true });
@@ -1806,7 +1814,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         }
         return prev;
       });
-      
+
       // Add existing full conversation to cache
       addToCache(conversationStub);
       resumeActiveJobsForConversation(conversationStub);
