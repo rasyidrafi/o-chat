@@ -1027,7 +1027,7 @@ const Message: React.FC<MessageProps> = memo(
       }
     }, [message.content, processor, isUser, isProcessorReady]);
 
-    const renderContent = () => {
+    const renderContent = (passBotttomEl = null) => {
       // Handle image generation messages
       if (message.messageType === "image_generation") {
         if (isUser) {
@@ -1170,6 +1170,16 @@ const Message: React.FC<MessageProps> = memo(
                   Image will be expired after several hours.
                 </div>
               )}
+              
+              {/* Model name and timestamp for AI image generation responses */}
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
+                {formatTime(message.timestamp)}
+                {(message.model || message.modelName) && isAssistant && (
+                  <span className="ml-2">
+                    • {message.modelName || message.model}
+                  </span>
+                )}
+              </div>
             </div>
           );
         }
@@ -1251,7 +1261,21 @@ const Message: React.FC<MessageProps> = memo(
                 animate="animate"
                 className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
               >
-                {processedContent}
+                <div className="space-y-3">
+                  {processedContent}
+                  
+                  {/* Model name and timestamp for AI responses */}
+                  {!isUser && (
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
+                      {formatTime(message.timestamp)}
+                      {(message.model || message.modelName) && isAssistant && (
+                        <span className="ml-2">
+                          • {message.modelName || message.model}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -1293,11 +1317,16 @@ const Message: React.FC<MessageProps> = memo(
               isUser ? "text-right mt-2" : "text-left mt-4"
             }`}
           >
-            {formatTime(message.timestamp)}
-            {(message.model || message.modelName) && isAssistant && (
-              <span className="ml-2">
-                • {message.modelName || message.model}
-              </span>
+            {/* Only show timestamp and model for user messages, AI messages have it inside renderContent */}
+            {isUser && (
+              <>
+                {formatTime(message.timestamp)}
+                {(message.model || message.modelName) && isAssistant && (
+                  <span className="ml-2">
+                    • {message.modelName || message.model}
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
