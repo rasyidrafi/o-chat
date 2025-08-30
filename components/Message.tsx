@@ -62,7 +62,8 @@ const ImageContentComponent: React.FC<{
   alt?: string;
   gcsPath?: string;
   attachment?: MessageAttachment;
-}> = memo(({ url, alt = "Uploaded image", gcsPath, attachment }) => {
+  isUser?: boolean;
+}> = memo(({ url, alt = "Uploaded image", gcsPath, attachment, isUser = false }) => {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [isLoading, setIsLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -168,7 +169,7 @@ const ImageContentComponent: React.FC<{
       <div
         className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center"
         style={{
-          width: `${displayDimensions.containerWidth}px`,
+          width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
           height: `${displayDimensions.containerHeight}px`,
           minWidth: `${displayDimensions.containerWidth}px`,
           minHeight: `${displayDimensions.containerHeight}px`,
@@ -185,7 +186,7 @@ const ImageContentComponent: React.FC<{
       <div
         className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
         style={{
-          width: `${displayDimensions.containerWidth}px`,
+          width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
           height: `${displayDimensions.containerHeight}px`,
           minWidth: `${displayDimensions.containerWidth}px`,
           minHeight: `${displayDimensions.containerHeight}px`,
@@ -202,7 +203,7 @@ const ImageContentComponent: React.FC<{
     <div
       className="relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black"
       style={{
-        width: `${displayDimensions.containerWidth}px`,
+        width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
         height: `${displayDimensions.containerHeight}px`,
         minWidth: `${displayDimensions.containerWidth}px`,
         minHeight: `${displayDimensions.containerHeight}px`,
@@ -213,6 +214,7 @@ const ImageContentComponent: React.FC<{
         <div
           className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
           style={{
+            width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
             minWidth: `${displayDimensions.containerWidth}px`,
             minHeight: `${displayDimensions.containerHeight}px`,
           }}
@@ -235,14 +237,14 @@ const ImageContentComponent: React.FC<{
       {!imageError && !showExpiredPlaceholder ? (
         <img
           src={currentUrl}
-          alt={alt}
+          alt={""}
           className={`cursor-pointer hover:opacity-90 transition-opacity object-contain ${
             displayDimensions.fillsContainer ? "rounded-lg" : ""
           } ${imageLoading ? "opacity-0" : "opacity-100"}`}
           style={{
-            width: `${displayDimensions.width}px`,
+            width: isUser ? "100%" : `${displayDimensions.width}px`,
             height: `${displayDimensions.height}px`,
-            maxWidth: `${displayDimensions.containerWidth}px`,
+            minWidth: `${displayDimensions.containerWidth}px`,
             maxHeight: `${displayDimensions.containerHeight}px`,
             position: imageLoading ? "absolute" : "relative",
           }}
@@ -257,7 +259,7 @@ const ImageContentComponent: React.FC<{
         <div
           className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
           style={{
-            width: `${displayDimensions.containerWidth}px`,
+            width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
             height: `${displayDimensions.containerHeight}px`,
             minWidth: `${displayDimensions.containerWidth}px`,
             minHeight: `${displayDimensions.containerHeight}px`,
@@ -1055,7 +1057,8 @@ const Message: React.FC<MessageProps> = memo(
                       url={attachment.url}
                       gcsPath={attachment.gcsPath}
                       attachment={attachment}
-                      alt="Input image for editing"
+                      alt=""
+                      isUser={isUser}
                     />
                   ))}
                 </div>
@@ -1158,9 +1161,10 @@ const Message: React.FC<MessageProps> = memo(
                       message.attachments?.[0]?.url ||
                       ""
                     }
-                    alt="Generated image"
+                    alt=""
                     gcsPath={message.attachments?.[0]?.gcsPath}
                     attachment={message.attachments?.[0]}
+                    isUser={isUser}
                   />
                 </div>
               ) : null}
@@ -1229,7 +1233,8 @@ const Message: React.FC<MessageProps> = memo(
                       url={item.image_url.url}
                       gcsPath={attachment?.gcsPath}
                       attachment={attachment}
-                      alt="User uploaded image"
+                      alt=""
+                      isUser={isUser}
                     />
                   );
                 }
