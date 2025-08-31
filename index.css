@@ -247,6 +247,17 @@ h6 {
   scrollbar-color: #c1c1c1 transparent;
 }
 
+.katex-container.katex {
+  display: inline-flex;
+  padding-left: 0.25rem !important; /* px-1 (4px) */
+  padding-right: 0.25rem !important; /* px-1 (4px) */
+}
+
+.katex-container.katex-html {
+  padding-top: 0.5rem !important; /* py-2 (8px) */
+  padding-bottom: 0.5rem !important; /* py-2 (8px) */
+}
+
 .katex-container::-webkit-scrollbar {
   height: 4px;
 }

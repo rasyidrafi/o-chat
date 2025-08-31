@@ -444,7 +444,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               ))}
             </div>
             <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
-            <div className="hidden block h-24" />
+            <div className="block h-24" />
           </main>
         </div>
       </div>
