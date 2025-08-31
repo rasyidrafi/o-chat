@@ -1,5 +1,5 @@
 // Improved ChatView with better scroll handling
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
@@ -53,7 +53,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   // Throttled resize handler for better performance
   React.useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    
+
     const handleResize = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
@@ -103,7 +103,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       attachments?: any[]
     ) => {
       sendMessage(message, model, source, providerId, attachments);
-      
+
       // Use optimized scroll trigger
       triggerScrollToBottom();
     },
@@ -120,7 +120,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       params?: any
     ) => {
       generateImage(prompt, imageUrl, model, source, providerId, params);
-      
+
       // Use optimized scroll trigger
       triggerScrollToBottom();
     },
@@ -147,28 +147,31 @@ const ChatView: React.FC<ChatViewProps> = ({
   );
 
   // Calculate sidebar width based on collapsed state - memoized
-  const sidebarWidth = useMemo(() => 
-    isSidebarCollapsed ? 80 : 256, // w-20 = 80px, w-64 = 256px
+  const sidebarWidth = useMemo(
+    () => (isSidebarCollapsed ? 80 : 256), // w-20 = 80px, w-64 = 256px
     [isSidebarCollapsed]
   );
 
   // Determine if we should show welcome based on URL and conversation state
   const shouldShowWelcome = useMemo(() => {
-    const isRootPath = location.pathname === '/';
-    const isConversationPath = location.pathname.startsWith('/c/');
-    
+    const isRootPath = location.pathname === "/";
+    const isConversationPath = location.pathname.startsWith("/c/");
+
     // Only show welcome screen when we're on root path
     // Don't show it on conversation paths, even if conversation is temporarily null/loading
     return isRootPath && !isConversationPath;
   }, [location.pathname]);
 
   // Memoized theme icon props to prevent recreation on every render
-  const themeIconProps = useMemo(() => ({
-    initial: { opacity: 0, rotate: -90, scale: 0.5 },
-    animate: { opacity: 1, rotate: 0, scale: 1 },
-    exit: { opacity: 0, rotate: 90, scale: 0.5 },
-    transition: { duration: animationsDisabled ? 0 : 0.3 },
-  }), [animationsDisabled]);
+  const themeIconProps = useMemo(
+    () => ({
+      initial: { opacity: 0, rotate: -90, scale: 0.5 },
+      animate: { opacity: 1, rotate: 0, scale: 1 },
+      exit: { opacity: 0, rotate: 90, scale: 0.5 },
+      transition: { duration: animationsDisabled ? 0 : 0.3 },
+    }),
+    [animationsDisabled]
+  );
 
   const getThemeIcon = useCallback(() => {
     switch (theme) {
@@ -200,36 +203,53 @@ const ChatView: React.FC<ChatViewProps> = ({
   }, [theme, themeIconProps]);
 
   // Memoize styles to prevent object recreation on every render
-  const sidebarButtonStyle = useMemo(() => ({
-    top: "10px",
-  }), []);
+  const sidebarButtonStyle = useMemo(
+    () => ({
+      top: "10px",
+    }),
+    []
+  );
 
-  const buttonSizeStyle = useMemo(() => ({
-    width: "40px",
-    height: "40px",
-  }), []);
+  const buttonSizeStyle = useMemo(
+    () => ({
+      width: "40px",
+      height: "40px",
+    }),
+    []
+  );
 
-  const topRightButtonsStyle = useMemo(() => ({
-    top: "10px",
-    right: "18px",
-  }), []);
+  const topRightButtonsStyle = useMemo(
+    () => ({
+      top: "10px",
+      right: "18px",
+    }),
+    []
+  );
 
-  const sidebarTransition = useMemo(() => ({
-    duration: animationsDisabled ? 0 : 0.3,
-    ease: "easeOut" as const,
-  }), [animationsDisabled]);
+  const sidebarTransition = useMemo(
+    () => ({
+      duration: animationsDisabled ? 0 : 0.3,
+      ease: "easeOut" as const,
+    }),
+    [animationsDisabled]
+  );
 
   // Memoize padding styles for scroll button and chat input
-  const scrollButtonPadding = useMemo(() => ({
-    paddingLeft: isMobile ? "16px" : `${sidebarWidth + 16}px`,
-    paddingRight: "16px",
-    paddingBottom: isMobile ? "140px" : "160px",
-  }), [isMobile, sidebarWidth]);
-
-  const chatInputPadding = useMemo(() => ({
-    paddingLeft: isMobile ? "0" : `${sidebarWidth + 16}px`,
-    paddingRight: isMobile ? "0" : "16px",
-  }), [isMobile, sidebarWidth]);
+  const scrollButtonPadding = useMemo(
+    () => ({
+      paddingLeft: isMobile ? "16px" : `${sidebarWidth + 16}px`,
+      paddingRight: "16px",
+      paddingBottom: isMobile ? "140px" : "160px",
+    }),
+    [isMobile, sidebarWidth]
+  );
+  const chatInputPadding = useMemo(
+    () => ({
+      paddingLeft: isMobile ? "0" : `${sidebarWidth + 16}px`,
+      paddingRight: isMobile ? "0" : "16px",
+    }),
+    [isMobile, sidebarWidth]
+  );
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-[#1c1c1c] relative">
@@ -298,11 +318,11 @@ const ChatView: React.FC<ChatViewProps> = ({
       </div>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        {(isLoading || isLoadingMessages) ? (
+        {isLoading || isLoadingMessages ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <LoadingState 
-              message={"Loading conversation..."} 
-              size="md" 
+            <LoadingState
+              message={"Loading conversation..."}
+              size="md"
               centerContent={true}
             />
           </div>

@@ -63,199 +63,128 @@ const ImageContentComponent: React.FC<{
   gcsPath?: string;
   attachment?: MessageAttachment;
   isUser?: boolean;
-}> = memo(({ url, alt = "Uploaded image", gcsPath, attachment, isUser = false }) => {
-  const [currentUrl, setCurrentUrl] = useState(url);
-  const [isLoading, setIsLoading] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
-  const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
-  const [naturalDimensions, setNaturalDimensions] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+}> = memo(
+  ({ url, alt = "Uploaded image", gcsPath, attachment, isUser = false }) => {
+    const [currentUrl, setCurrentUrl] = useState(url);
+    const [isLoading, setIsLoading] = useState(false);
+    const [imageLoading, setImageLoading] = useState(true);
+    const [imageError, setImageError] = useState(false);
+    const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
+    const [naturalDimensions, setNaturalDimensions] = useState<{
+      width: number;
+      height: number;
+    } | null>(null);
 
-  // Max dimensions for container
-  const maxWidth = 320;
-  const maxHeight = 240;
+    // Max dimensions for container
+    const maxWidth = 320;
+    const maxHeight = 240;
 
-  // Calculate display dimensions based on natural image dimensions
-  const displayDimensions = useMemo(() => {
-    if (!naturalDimensions) {
-      // Fallback dimensions while loading - use full container size
+    // Calculate display dimensions based on natural image dimensions
+    const displayDimensions = useMemo(() => {
+      if (!naturalDimensions) {
+        // Fallback dimensions while loading - use full container size
+        return {
+          width: maxWidth,
+          height: maxHeight,
+          containerWidth: maxWidth,
+          containerHeight: maxHeight,
+          fillsContainer: true,
+        };
+      }
+
+      const { width: naturalWidth, height: naturalHeight } = naturalDimensions;
+      const aspectRatio = naturalWidth / naturalHeight;
+
+      // Calculate dimensions that fit within max constraints while maintaining aspect ratio
+      let displayWidth = naturalWidth;
+      let displayHeight = naturalHeight;
+
+      // Scale down if image is too large
+      if (displayWidth > maxWidth) {
+        displayWidth = maxWidth;
+        displayHeight = displayWidth / aspectRatio;
+      }
+
+      if (displayHeight > maxHeight) {
+        displayHeight = maxHeight;
+        displayWidth = displayHeight * aspectRatio;
+      }
+
+      const finalWidth = Math.round(displayWidth);
+      const finalHeight = Math.round(displayHeight);
+
+      // Check if image fills the entire container (no black borders)
+      const fillsContainer =
+        finalWidth === maxWidth && finalHeight === maxHeight;
+
       return {
-        width: maxWidth,
-        height: maxHeight,
+        width: finalWidth,
+        height: finalHeight,
         containerWidth: maxWidth,
         containerHeight: maxHeight,
-        fillsContainer: true,
+        fillsContainer,
       };
-    }
+    }, [naturalDimensions, maxWidth, maxHeight]);
 
-    const { width: naturalWidth, height: naturalHeight } = naturalDimensions;
-    const aspectRatio = naturalWidth / naturalHeight;
+    useEffect(() => {
+      if (gcsPath && gcsPath !== url) {
+        setIsLoading(true);
+        getImageUrlFromPath(gcsPath).then((newUrl) => {
+          if (newUrl) {
+            setCurrentUrl(newUrl);
+          }
+          setIsLoading(false);
+        });
+      }
+    }, [gcsPath, url]);
 
-    // Calculate dimensions that fit within max constraints while maintaining aspect ratio
-    let displayWidth = naturalWidth;
-    let displayHeight = naturalHeight;
+    useEffect(() => {
+      setImageLoading(true);
+      setImageError(false);
+      setShowExpiredPlaceholder(false);
+    }, [currentUrl]);
 
-    // Scale down if image is too large
-    if (displayWidth > maxWidth) {
-      displayWidth = maxWidth;
-      displayHeight = displayWidth / aspectRatio;
-    }
+    const handleImageLoad = useCallback(
+      (event: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = event.currentTarget;
+        setNaturalDimensions({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+        setImageLoading(false);
+      },
+      []
+    );
 
-    if (displayHeight > maxHeight) {
-      displayHeight = maxHeight;
-      displayWidth = displayHeight * aspectRatio;
-    }
-
-    const finalWidth = Math.round(displayWidth);
-    const finalHeight = Math.round(displayHeight);
-
-    // Check if image fills the entire container (no black borders)
-    const fillsContainer = finalWidth === maxWidth && finalHeight === maxHeight;
-
-    return {
-      width: finalWidth,
-      height: finalHeight,
-      containerWidth: maxWidth,
-      containerHeight: maxHeight,
-      fillsContainer,
-    };
-  }, [naturalDimensions, maxWidth, maxHeight]);
-
-  useEffect(() => {
-    if (gcsPath && gcsPath !== url) {
-      setIsLoading(true);
-      getImageUrlFromPath(gcsPath).then((newUrl) => {
-        if (newUrl) {
-          setCurrentUrl(newUrl);
-        }
-        setIsLoading(false);
-      });
-    }
-  }, [gcsPath, url]);
-
-  useEffect(() => {
-    setImageLoading(true);
-    setImageError(false);
-    setShowExpiredPlaceholder(false);
-  }, [currentUrl]);
-
-  const handleImageLoad = useCallback(
-    (event: React.SyntheticEvent<HTMLImageElement>) => {
-      const img = event.currentTarget;
-      setNaturalDimensions({
-        width: img.naturalWidth,
-        height: img.naturalHeight,
-      });
+    const handleImageError = useCallback(() => {
+      setImageError(true);
       setImageLoading(false);
-    },
-    []
-  );
 
-  const handleImageError = useCallback(() => {
-    setImageError(true);
-    setImageLoading(false);
+      if (attachment?.isDirectUrl) {
+        setShowExpiredPlaceholder(true);
+      }
+    }, [attachment?.isDirectUrl]);
 
-    if (attachment?.isDirectUrl) {
-      setShowExpiredPlaceholder(true);
-    }
-  }, [attachment?.isDirectUrl]);
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div
-        className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center"
-        style={{
-          width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
-          height: `${displayDimensions.containerHeight}px`,
-          minWidth: `${displayDimensions.containerWidth}px`,
-          minHeight: `${displayDimensions.containerHeight}px`,
-        }}
-      >
-        <div className="text-zinc-500 text-xs">Loading...</div>
-      </div>
-    );
-  }
-
-  // Expired placeholder
-  if (showExpiredPlaceholder) {
-    return (
-      <div
-        className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
-        style={{
-          width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
-          height: `${displayDimensions.containerHeight}px`,
-          minWidth: `${displayDimensions.containerWidth}px`,
-          minHeight: `${displayDimensions.containerHeight}px`,
-        }}
-      >
-        <div className="text-zinc-500 text-xs text-center px-2">
-          Generated image is no longer available
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black"
-      style={{
-        width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
-        height: `${displayDimensions.containerHeight}px`,
-        minWidth: `${displayDimensions.containerWidth}px`,
-        minHeight: `${displayDimensions.containerHeight}px`,
-      }}
-    >
-      {/* Loading placeholder */}
-      {imageLoading && !imageError && !showExpiredPlaceholder && (
+    // Loading state
+    if (isLoading) {
+      return (
         <div
-          className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
+          className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center"
           style={{
             width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
+            height: `${displayDimensions.containerHeight}px`,
             minWidth: `${displayDimensions.containerWidth}px`,
             minHeight: `${displayDimensions.containerHeight}px`,
           }}
         >
-          <div className="flex items-center space-x-2 text-zinc-500">
-            <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
-            <div
-              className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
-              style={{ animationDelay: "0.1s" }}
-            ></div>
-            <div
-              className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
-              style={{ animationDelay: "0.2s" }}
-            ></div>
-          </div>
+          <div className="text-zinc-500 text-xs">Loading...</div>
         </div>
-      )}
+      );
+    }
 
-      {/* Actual image */}
-      {!imageError && !showExpiredPlaceholder ? (
-        <img
-          src={currentUrl}
-          alt={""}
-          className={`cursor-pointer hover:opacity-90 transition-opacity object-contain ${
-            displayDimensions.fillsContainer ? "rounded-lg" : ""
-          } ${imageLoading ? "opacity-0" : "opacity-100"}`}
-          style={{
-            width: isUser ? "100%" : `${displayDimensions.width}px`,
-            height: `${displayDimensions.height}px`,
-            minWidth: `${displayDimensions.containerWidth}px`,
-            maxHeight: `${displayDimensions.containerHeight}px`,
-            position: imageLoading ? "absolute" : "relative",
-          }}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-          onClick={() => {
-            window.open(currentUrl, "_blank");
-          }}
-          title="Click to view full size"
-        />
-      ) : imageError && !showExpiredPlaceholder ? (
+    // Expired placeholder
+    if (showExpiredPlaceholder) {
+      return (
         <div
           className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
           style={{
@@ -266,13 +195,87 @@ const ImageContentComponent: React.FC<{
           }}
         >
           <div className="text-zinc-500 text-xs text-center px-2">
-            {gcsPath ? "Error loading image" : "Failed to load image"}
+            Generated image is no longer available
           </div>
         </div>
-      ) : null}
-    </div>
-  );
-});
+      );
+    }
+
+    return (
+      <div
+        className="relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black"
+        style={{
+          width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
+          height: `${displayDimensions.containerHeight}px`,
+          minWidth: `${displayDimensions.containerWidth}px`,
+          minHeight: `${displayDimensions.containerHeight}px`,
+        }}
+      >
+        {/* Loading placeholder */}
+        {imageLoading && !imageError && !showExpiredPlaceholder && (
+          <div
+            className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
+            style={{
+              width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
+              minWidth: `${displayDimensions.containerWidth}px`,
+              minHeight: `${displayDimensions.containerHeight}px`,
+            }}
+          >
+            <div className="flex items-center space-x-2 text-zinc-500">
+              <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
+              <div
+                className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
+            </div>
+          </div>
+        )}
+
+        {/* Actual image */}
+        {!imageError && !showExpiredPlaceholder ? (
+          <img
+            src={currentUrl}
+            alt={""}
+            className={`cursor-pointer hover:opacity-90 transition-opacity object-contain ${
+              displayDimensions.fillsContainer ? "rounded-lg" : ""
+            } ${imageLoading ? "opacity-0" : "opacity-100"}`}
+            style={{
+              width: isUser ? "100%" : `${displayDimensions.width}px`,
+              height: `${displayDimensions.height}px`,
+              minWidth: `${displayDimensions.containerWidth}px`,
+              maxHeight: `${displayDimensions.containerHeight}px`,
+              position: imageLoading ? "absolute" : "relative",
+            }}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            onClick={() => {
+              window.open(currentUrl, "_blank");
+            }}
+            title="Click to view full size"
+          />
+        ) : imageError && !showExpiredPlaceholder ? (
+          <div
+            className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
+            style={{
+              width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
+              height: `${displayDimensions.containerHeight}px`,
+              minWidth: `${displayDimensions.containerWidth}px`,
+              minHeight: `${displayDimensions.containerHeight}px`,
+            }}
+          >
+            <div className="text-zinc-500 text-xs text-center px-2">
+              {gcsPath ? "Error loading image" : "Failed to load image"}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+);
 
 ImageContentComponent.displayName = "ImageContentComponent";
 
@@ -384,7 +387,6 @@ const CodeBlock: React.FC<{
         console.error("Failed to copy:", err);
       }
     }, [children]);
-
 
     const renderContent = () => {
       // if (viewMode === "ascii") {
@@ -707,10 +709,7 @@ const MarkdownComponents = {
   // Table components for GFM
   table: ({ children, ...props }: any) => (
     <div className="overflow-x-auto my-4 border-collapse border border-zinc-300 dark:border-zinc-600 rounded-lg">
-      <table
-        className="min-w-full"
-        {...props}
-      >
+      <table className="min-w-full" {...props}>
         {children}
       </table>
     </div>
@@ -776,26 +775,41 @@ const MarkdownComponents = {
 
   // Custom span for KaTeX inline math
   span: ({ className, children, ...props }: any) => {
-    if (className && (className.includes('katex') || className.includes('math-inline'))) {
+    if (
+      className &&
+      (className.includes("katex") || className.includes("math-inline"))
+    ) {
       return (
-        <span className={`katex-container ${className || ''}`} {...props}>
+        <span className={`katex-container ${className || ""}`} {...props}>
           {children}
         </span>
       );
     }
-    return <span className={className} {...props}>{children}</span>;
+    return (
+      <span className={className} {...props}>
+        {children}
+      </span>
+    );
   },
 
   // Custom div for KaTeX display math
   div: ({ className, children, ...props }: any) => {
-    if (className && (className.includes('katex-display') || className.includes('math-display'))) {
+    if (
+      className &&
+      (className.includes("katex-display") ||
+        className.includes("math-display"))
+    ) {
       return (
-        <div className={`katex-container ${className || ''}`} {...props}>
+        <div className={`katex-container ${className || ""}`} {...props}>
           {children}
         </div>
       );
     }
-    return <div className={className} {...props}>{children}</div>;
+    return (
+      <div className={className} {...props}>
+        {children}
+      </div>
+    );
   },
 };
 
@@ -902,7 +916,12 @@ const createMarkdownProcessor = () =>
   );
 
 const Message: React.FC<MessageProps> = memo(
-  ({ message, isStreaming = false, animationsDisabled, isLastMessage = false }) => {
+  ({
+    message,
+    isStreaming = false,
+    animationsDisabled,
+    isLastMessage = false,
+  }) => {
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [processor, setProcessor] = useState<any>(null);
@@ -944,7 +963,7 @@ const Message: React.FC<MessageProps> = memo(
     const fadeVariants = {
       initial: {
         opacity: 0,
-      },  
+      },
       animate: {
         opacity: 1,
         transition: {
@@ -1199,14 +1218,17 @@ const Message: React.FC<MessageProps> = memo(
                   Image will be expired after several hours.
                 </div>
               )}
-              
+
               {/* Model name and timestamp for AI image generation responses */}
               <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
                 {formatTime(message.timestamp)}
                 {(message.model || message.modelName) && isAssistant && (
-                  <span className="ml-2">
-                    • {message.modelName || message.model}
-                  </span>
+                  <>
+                    <span className="ml-2">•</span>
+                    <span className="ml-2">
+                      {message.modelName || message.model}
+                    </span>
+                  </>
                 )}
               </div>
             </div>
@@ -1285,7 +1307,10 @@ const Message: React.FC<MessageProps> = memo(
           </motion.div>
 
           {/* Show typing indicator ONLY for new empty AI messages that aren't streaming yet */}
-          {(!isUser && !message.isError && (!message.content || message.content === '') && !isStreaming) ? (
+          {!isUser &&
+          !message.isError &&
+          (!message.content || message.content === "") &&
+          !isStreaming ? (
             <motion.div
               variants={fadeVariants}
               initial={animationsDisabled ? {} : "initial"}
@@ -1317,31 +1342,38 @@ const Message: React.FC<MessageProps> = memo(
             >
               <div className="space-y-3">
                 {processedContent}
-                
+
                 {/* Show typing indicator at the end when streaming with content */}
                 {isStreaming && !isUser && (
                   <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
                     <TypingIndicator />
                   </div>
                 )}
-                
+
                 {/* Model name and timestamp for AI responses - only show when streaming is complete and content is ready */}
-                {(!isUser && !isStreaming && isContentReady && processedContent) && (
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
-                    {formatTime(message.timestamp)}
-                    {(message.model || message.modelName) && isAssistant && (
-                      <span className="ml-2">
-                        • {message.modelName || message.model}
-                      </span>
-                    )}
-                    {/* AI disclaimer for last message */}
-                    {isLastMessage && (
-                      <div className="mt-4 text-zinc-400 dark:text-zinc-500 text-xs text-right">
-                        AI can make mistakes. Please verify important information.
-                      </div>
-                    )}
-                  </div>
-                )}
+                {!isUser &&
+                  !isStreaming &&
+                  isContentReady &&
+                  processedContent && (
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
+                      {formatTime(message.timestamp)}
+                      {(message.model || message.modelName) && isAssistant && (
+                        <>
+                          <span className="ml-2">•</span>
+                          <span className="ml-2">
+                            {message.modelName || message.model}
+                          </span>
+                        </>
+                      )}
+                      {/* AI disclaimer for last message */}
+                      {isLastMessage && (
+                        <div className="mt-4 text-zinc-400 dark:text-zinc-500 text-xs text-right">
+                          AI can make mistakes. Please verify important
+                          information.
+                        </div>
+                      )}
+                    </div>
+                  )}
               </div>
             </motion.div>
           )}
@@ -1366,9 +1398,7 @@ const Message: React.FC<MessageProps> = memo(
                 : "w-full max-w-full items-start min-w-0"
             }`}
           >
-            <div className={getMessageStyles()}>
-              {renderContent()}
-            </div>
+            <div className={getMessageStyles()}>{renderContent()}</div>
 
             <motion.div
               variants={fadeVariants}
@@ -1383,9 +1413,12 @@ const Message: React.FC<MessageProps> = memo(
                 <>
                   {formatTime(message.timestamp)}
                   {(message.model || message.modelName) && isAssistant && (
-                    <span className="ml-2">
-                      • {message.modelName || message.model}
-                    </span>
+                    <>
+                      <span className="ml-2">•</span>
+                      <span className="ml-2">
+                        {message.modelName || message.model}
+                      </span>
+                    </>
                   )}
                 </>
               )}

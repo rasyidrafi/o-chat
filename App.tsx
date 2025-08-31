@@ -210,6 +210,7 @@ const AppContent: React.FC = () => {
           onLoginClick={() => openSettings("Account")}
           onSignOutClick={onSignOutClick}
           onOpenSearchCenter={() => setUi(prev => ({ ...prev, isSearchCenterOpen: true }))}
+          onOpenSettings={openSettings}
           chat={chat}
         />
         

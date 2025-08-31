@@ -7,6 +7,7 @@ import Button from './ui/Button';
 import { useChat } from '../hooks/useChat';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingState from './ui/LoadingState';
+import { Tab as SettingsTab } from './SettingsPage';
 
 interface SidebarProps {
   isMobileMenuOpen: boolean;
@@ -15,6 +16,7 @@ interface SidebarProps {
   onLoginClick: () => void;
   onSignOutClick: () => void;
   onOpenSearchCenter: () => void;
+  onOpenSettings?: (tab?: SettingsTab) => void;
   chat: ReturnType<typeof useChat>;
 }
 
@@ -76,6 +78,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     onLoginClick,
     onSignOutClick,
     onOpenSearchCenter,
+    onOpenSettings,
     chat,
   },
   ref // <-- forwarded ref
@@ -447,7 +450,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
       <div className="mt-auto pt-2">
         {isSignedIn ? (
           <div className="flex flex-col">
-            <div className="flex items-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer ayam">
+            <div 
+              className="flex items-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer ayam"
+              onClick={() => onOpenSettings?.("Account")}
+            >
               <UserAvatar user={user!} size={32} />
               <div className={`ml-3 flex-grow block overflow-hidden ${isCollapsed ? 'md:hidden' : ''}`}>
                 <div className="font-semibold text-zinc-900 dark:text-white truncate">{user!.displayName || user!.email}</div>
