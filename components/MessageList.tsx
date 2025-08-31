@@ -50,7 +50,10 @@ const MessageList: React.FC<MessageListProps> = ({
   return (
     <div
       ref={messagesContainerRef}
-      className="absolute inset-0 overflow-y-auto custom-scrollbar pt-8"
+      className="absolute inset-0 overflow-y-auto custom-scrollbar pt-8 overflow-x-hidden"
+      style={{
+        width: "100vw",
+      }}
     >
       <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto overflow-x-hidden">
         <AnimatePresence mode="popLayout">
