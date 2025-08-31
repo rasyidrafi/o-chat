@@ -78,22 +78,6 @@ const ChatView: React.FC<ChatViewProps> = ({
     providerId: "",
   });
 
-  // State to control scroll-to-bottom button visibility
-  const [showScrollToBottom] = React.useState(false);
-
-  // Handler to scroll to bottom - memoized to prevent recreation
-  const handleScrollToBottom = useCallback(() => {
-    const event = new CustomEvent("scrollToBottom");
-    window.dispatchEvent(event);
-  }, []);
-
-  // Optimized scroll trigger with requestAnimationFrame for better performance
-  const triggerScrollToBottom = useCallback(() => {
-    requestAnimationFrame(() => {
-      handleScrollToBottom();
-    });
-  }, [handleScrollToBottom]);
-
   const handleSendMessage = useCallback(
     (
       message: string,
@@ -103,11 +87,8 @@ const ChatView: React.FC<ChatViewProps> = ({
       attachments?: any[]
     ) => {
       sendMessage(message, model, source, providerId, attachments);
-
-      // Use optimized scroll trigger
-      triggerScrollToBottom();
     },
-    [sendMessage, triggerScrollToBottom]
+    [sendMessage]
   );
 
   const handleImageGenerate = useCallback(
@@ -120,11 +101,8 @@ const ChatView: React.FC<ChatViewProps> = ({
       params?: any
     ) => {
       generateImage(prompt, imageUrl, model, source, providerId, params);
-
-      // Use optimized scroll trigger
-      triggerScrollToBottom();
     },
-    [generateImage, triggerScrollToBottom]
+    [generateImage]
   );
 
   const handlePromptSelect = useCallback(
@@ -346,37 +324,6 @@ const ChatView: React.FC<ChatViewProps> = ({
           </div>
         )}
       </main>
-
-      {showScrollToBottom && !shouldShowWelcome && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
-          <div
-            className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 flex justify-center"
-            style={scrollButtonPadding}
-          >
-            <SmallButton
-              onClick={handleScrollToBottom}
-              aria-label="Scroll to bottom"
-              animationsDisabled={animationsDisabled}
-              className="shadow-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/90 transition-all duration-200"
-            >
-              Scroll to bottom
-              <svg
-                className="w-4 h-4 ml-1"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </SmallButton>
-          </div>
-        </div>
-      )}
 
       {/* Chat Input Container - separate from scroll button */}
       <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">

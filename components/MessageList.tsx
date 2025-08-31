@@ -1,3 +1,4 @@
+// Improved MessageList with performance optimizations
 import React, { useEffect, useRef, useState } from "react";
 import { ChatMessage } from "../types/chat";
 import Message from "./Message";
@@ -29,6 +30,26 @@ const MessageList: React.FC<MessageListProps> = ({
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const prevMessages = usePrevious(messages);
+
+  // Smooth scroll to bottom function
+  const scrollToBottom = React.useCallback((smooth = true) => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
+  }, []);
+
+  // Listen for scroll to bottom events (triggered when user sends a message)
+  useEffect(() => {
+    const handleScrollToBottom = () => {
+      scrollToBottom(true);
+    };
+
+    window.addEventListener("scrollToBottom", handleScrollToBottom);
+    return () => window.removeEventListener("scrollToBottom", handleScrollToBottom);
+  }, [scrollToBottom]);
 
   // Detect when we're transitioning between conversations (empty -> filled)
   useEffect(() => {
@@ -64,7 +85,6 @@ const MessageList: React.FC<MessageListProps> = ({
           ))}
         </AnimatePresence>
         {/* Bottom padding to account for the overlay chat input */}
-
         <div className="h-32 md:h-36"></div>
       </div>
     </div>
