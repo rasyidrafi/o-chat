@@ -370,6 +370,7 @@ const ChatView: React.FC<ChatViewProps> = ({
             onModelSelect={handleModelSelection}
             disabled={streamingState.isStreaming || isLoading}
             animationsDisabled={animationsDisabled}
+            currentConversation={currentConversation}
           />
         </div>
       </div>

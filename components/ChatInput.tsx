@@ -13,7 +13,6 @@ import {
 import LoadingIndicator from "./ui/LoadingIndicator";
 import { motion, AnimatePresence } from "framer-motion";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
-import ImageGenerationInput from "./ImageGenerationInput";
 import {
   getSystemModelsSync,
   getModelCapabilities,
@@ -22,7 +21,7 @@ import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from "../constants/models";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
 import { ImageGenerationJobService } from "../services/imageGenerationJobService";
-import { MessageAttachment } from "../types/chat";
+import { MessageAttachment, ChatConversation } from "../types/chat";
 import { useAuth } from "../contexts/AuthContext";
 
 interface ModelOption {
@@ -52,6 +51,7 @@ interface ChatInputProps {
   onModelSelect?: (model: string, source: string, providerId?: string) => void;
   disabled?: boolean;
   animationsDisabled?: boolean;
+  currentConversation?: ChatConversation | null; // Conversation object to get last message model
 }
 
 const ChatInput = ({
@@ -60,6 +60,7 @@ const ChatInput = ({
   onModelSelect,
   disabled = false,
   animationsDisabled = false,
+  currentConversation,
 }: ChatInputProps) => {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
@@ -69,6 +70,7 @@ const ChatInput = ({
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
+  const [isLoadingModelFromConversation, setIsLoadingModelFromConversation] = useState(false);
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [inputMode, setInputMode] = useState<"chat" | "image_generation">(
@@ -86,6 +88,82 @@ const ChatInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const currentAttachmentsRef = useRef<MessageAttachment[]>(attachments);
   const isCheckingCapabilitiesRef = useRef(false);
+  
+  // Track if model selection should be automatic or manual
+  const hasAutoSelectedModelRef = useRef(false);
+  const userHasManuallySelectedModelRef = useRef(false);
+  const lastProcessedConversationIdRef = useRef<string | null>(null);
+
+  // Function to get the last message's model information from conversation
+  const getLastMessageModel = useCallback(() => {
+    if (!currentConversation || !currentConversation.messages || currentConversation.messages.length === 0) {
+      return null;
+    }
+
+    // Find the last assistant message that has model info
+    for (let i = currentConversation.messages.length - 1; i >= 0; i--) {
+      const message = currentConversation.messages[i];
+      
+      // Check assistant messages first
+      if (message.role === 'assistant' && message.model) {
+        // Determine source and providerId based on available information
+        let source = 'system';
+        let providerId = '';
+        
+        // Check if it has image generation params (which stores original source info)
+        if (message.imageGenerationParams) {
+          source = message.imageGenerationParams.originalSource || 'system';
+          providerId = message.imageGenerationParams.originalProviderId || '';
+        } else {
+          // For regular chat messages, use source field or deduce from model name
+          if (message.source) {
+            source = message.source === 'server' ? 'system' : 'custom';
+          }
+          // If has modelName, it's likely a custom model
+          if (message.modelName && message.modelName !== message.model) {
+            source = 'custom';
+            providerId = message.modelName; // Use modelName as providerId for custom models
+          }
+        }
+        
+        return {
+          model: message.model,
+          source,
+          providerId,
+        };
+      }
+      
+      // Check user messages for image generation params
+      if (message.role === 'user' && message.imageGenerationParams) {
+        const params = message.imageGenerationParams;
+        if (params.originalSource) {
+          // Get the model from the corresponding assistant message or conversation
+          const assistantMessage = currentConversation.messages.find(m => 
+            m.role === 'assistant' && 
+            m.messageType === 'image_generation' &&
+            m.imageGenerationParams?.prompt === params.prompt
+          );
+          
+          return {
+            model: assistantMessage?.model || currentConversation.model,
+            source: params.originalSource,
+            providerId: params.originalProviderId || '',
+          };
+        }
+      }
+    }
+
+    // If no model info found in messages, check conversation model as fallback
+    if (currentConversation.model) {
+      return {
+        model: currentConversation.model,
+        source: currentConversation.source === 'server' ? 'system' : 'custom',
+        providerId: '',
+      };
+    }
+
+    return null;
+  }, [currentConversation]);
 
   // Helper function to reset textarea to single line
   const resetTextareaHeight = useCallback(() => {
@@ -500,6 +578,97 @@ const ChatInput = ({
     loadAvailableModels();
   }, [loadAvailableModels]);
 
+  // Effect to update model selection when conversation changes
+  useEffect(() => {
+    if (!currentConversation || modelOptions.length === 0) return;
+
+    const conversationId = currentConversation.id;
+    
+    // Check if this is a new conversation or if we haven't auto-selected for this conversation yet
+    const isNewConversation = lastProcessedConversationIdRef.current !== conversationId;
+    
+    // Only auto-select model if:
+    // 1. It's a new conversation AND 
+    // 2. User hasn't manually selected a model for this conversation yet
+    if (!isNewConversation && userHasManuallySelectedModelRef.current) {
+      // User has manually selected a model for this conversation, don't override
+      return;
+    }
+
+    const lastMessageModelInfo = getLastMessageModel();
+    if (!lastMessageModelInfo) {
+      // Update the processed conversation ID even if no model info found
+      lastProcessedConversationIdRef.current = conversationId;
+      return;
+    }
+
+    const { model, source, providerId } = lastMessageModelInfo;
+    
+    // Check if the model from the conversation is different from currently selected
+    const isDifferentModel = selectedModel !== model || 
+                            selectedProviderId !== (providerId || '');
+
+    // console.log('Model auto-selection check:', {
+    //   conversation: conversationId,
+    //   isNewConversation,
+    //   userManuallySelected: userHasManuallySelectedModelRef.current,
+    //   lastModel: { model, source, providerId },
+    //   currentModel: { selectedModel, selectedProviderId },
+    //   isDifferent: isDifferentModel
+    // });
+
+    if (isDifferentModel) {
+      // Set loading state
+      setIsLoadingModelFromConversation(true);
+
+      // Check if the model exists in our available models
+      const modelExists = modelOptions.some(option => 
+        option.value === model && 
+        (option.providerId || '') === (providerId || '') &&
+        option.source === source
+      );
+
+      // console.log('Model exists in options:', modelExists);
+
+      if (modelExists) {
+        // Model exists, select it
+        setSelectedModel(model);
+        setSelectedProviderId(providerId || '');
+        
+        // Mark that we've auto-selected for this conversation
+        hasAutoSelectedModelRef.current = true;
+        
+        // Notify parent component
+        if (onModelSelect) {
+          onModelSelect(model, source, providerId);
+        }
+      } else {
+        // Model doesn't exist, fallback to default
+        const fallbackModel = DEFAULT_MODEL_ID;
+        // console.log('Model not found, falling back to:', fallbackModel);
+        setSelectedModel(fallbackModel);
+        setSelectedProviderId('');
+        
+        if (onModelSelect) {
+          onModelSelect(fallbackModel, 'system', '');
+        }
+      }
+
+      // Clear loading state
+      setTimeout(() => {
+        setIsLoadingModelFromConversation(false);
+      }, 300); // Small delay to show loading state
+    }
+
+    // Update the processed conversation ID
+    lastProcessedConversationIdRef.current = conversationId;
+    
+    // Reset manual selection flag for new conversations
+    if (isNewConversation) {
+      userHasManuallySelectedModelRef.current = false;
+    }
+  }, [currentConversation, modelOptions, selectedModel, selectedProviderId, getLastMessageModel, onModelSelect]);
+
   // Handle image upload
   const handleImageUpload = useCallback(
     async (file: File) => {
@@ -587,35 +756,6 @@ const ChatInput = ({
     ]
   );
 
-  // Handle paste events for images
-  const handlePaste = useCallback(
-    async (e: React.ClipboardEvent) => {
-      const items = Array.from(e.clipboardData.items);
-      const imageItem = items.find((item) => item.type.startsWith("image/"));
-
-      if (imageItem) {
-        // Check current model capabilities before allowing paste
-        const capabilities = getCurrentModelCapabilities();
-
-        // Only allow paste for models that support image input (vision or image editing, NOT generation only)
-        if (
-          !capabilities ||
-          (!capabilities.hasVision && !capabilities.hasImageEditing)
-        ) {
-          // Don't show alert, just silently ignore paste for non-supported models
-          return;
-        }
-
-        e.preventDefault();
-        const file = imageItem.getAsFile();
-        if (file) {
-          await handleImageUpload(file);
-        }
-      }
-    },
-    [handleImageUpload, getCurrentModelCapabilities]
-  );
-
   // Handle paste events for images in image generation mode
   const handleImagePasteInGeneration = useCallback(
     async (file: File) => {
@@ -631,6 +771,34 @@ const ChatInput = ({
       await handleImageUpload(file);
     },
     [handleImageUpload, getCurrentModelCapabilities]
+  );
+
+  // Unified paste handler for both modes
+  const handleUnifiedPaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      const items = Array.from(e.clipboardData.items);
+      const imageItem = items.find((item) => item.type.startsWith("image/"));
+
+      if (imageItem) {
+        const file = imageItem.getAsFile();
+        if (file) {
+          if (inputMode === "chat") {
+            // Use chat mode logic
+            const capabilities = getCurrentModelCapabilities();
+            if (!capabilities || (!capabilities.hasVision && !capabilities.hasImageEditing)) {
+              return; // Silently ignore
+            }
+            e.preventDefault();
+            await handleImageUpload(file);
+          } else {
+            // Use image generation mode logic
+            e.preventDefault();
+            await handleImagePasteInGeneration(file);
+          }
+        }
+      }
+    },
+    [inputMode, getCurrentModelCapabilities, handleImageUpload, handleImagePasteInGeneration]
   );
 
   // Handle image generation click
@@ -913,9 +1081,9 @@ const ChatInput = ({
     };
   }, [inputMode, handleImageGenerateClick]);
 
-  const selectedModelLabel =
-    modelOptions.find((model) => model.value === selectedModel)?.label ||
-    "Gemini 1.5 Flash";
+  const selectedModelLabel = isLoadingModelFromConversation 
+    ? "Loading model..."
+    : (modelOptions.find((model) => model.value === selectedModel)?.label || "Gemini 1.5 Flash");
 
   // Animation transition class helper
   const transitionClass = animationsDisabled
@@ -968,6 +1136,9 @@ const ChatInput = ({
     setSelectedProviderId(option.providerId || "");
     setIsModelDropdownOpen(false);
     setModelSearchQuery(""); // Clear search when selecting
+
+    // Mark that user has manually selected a model
+    userHasManuallySelectedModelRef.current = true;
 
     // Check capabilities of the new model
     checkCurrentModelCapabilities(modelOptions);
@@ -1076,589 +1247,357 @@ const ChatInput = ({
         dark:shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.3),0_-4px_16px_-2px_rgba(0,0,0,0.2)]
       "
     >
-      {inputMode === "image_generation" ? (
-        <>
-          {/* Show uploaded image preview if available */}
-          {uploadedImageForEditing && (
-            <div className="mb-3">
-              <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-                <span>Image ready for editing:</span>
+      {/* Image Preview Section */}
+      {inputMode === "image_generation" && uploadedImageForEditing && (
+        <div className="mb-3">
+          <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+            <span>Image ready for editing:</span>
+          </div>
+          <div className="relative group inline-block">
+            <img
+              src={uploadedImageForEditing}
+              alt="Image for editing"
+              className="w-20 h-20 object-cover rounded-lg border border-zinc-200 dark:border-zinc-700"
+            />
+            <button
+              onClick={clearAllImages}
+              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {inputMode === "chat" && attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {attachments.map((attachment) => (
+            <div
+              key={attachment.id}
+              className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24"
+            >
+              <img
+                src={attachment.url}
+                alt={attachment.filename}
+                className="w-16 h-16 object-cover rounded"
+              />
+              <button
+                onClick={() => removeAttachment(attachment.id)}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {inputMode === "chat" &&
+        persistentUploadedImage &&
+        attachments.length === 0 &&
+        (() => {
+          const capabilities = getCurrentModelCapabilities();
+          return capabilities?.hasVision && !capabilities?.hasImageEditing;
+        })() && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1 w-full">
+              <span>Image ready for vision analysis:</span>
+            </div>
+            <div className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24">
+              <img
+                src={persistentUploadedImage}
+                alt="Image for vision"
+                className="w-16 h-16 object-cover rounded"
+              />
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
+                <span className="text-[8px]">👁️</span>
               </div>
-              <div className="relative group inline-block">
-                <img
-                  src={uploadedImageForEditing}
-                  alt="Image for editing"
-                  className="w-20 h-20 object-cover rounded-lg border border-zinc-200 dark:border-zinc-700"
+              <button
+                onClick={clearAllImages}
+                className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
+      {/* Text Input */}
+      <div className="relative">
+        <textarea
+          ref={textareaRef}
+          value={prompt}
+          onChange={handleTextareaChange}
+          onKeyPress={handleKeyPress}
+          onPaste={handleUnifiedPaste}
+          placeholder={
+            inputMode === "image_generation"
+              ? "Describe the image you want to generate..."
+              : "Type your message here..."
+          }
+          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-32 overflow-y-auto thin-scrollbar"
+          rows={1}
+        />
+      </div>
+
+      <HorizontalRuleDefault />
+
+      {/* Controls Section */}
+      <div className="flex items-stretch justify-between flex-wrap gap-2 mt-2">
+        <div className="flex items-stretch flex-wrap gap-2">
+          {/* Model Selector */}
+          <div ref={dropdownRef} className="relative">
+            <button
+              onClick={() => {
+                if (isLoadingSystemModels || isLoadingModelFromConversation) return;
+                setIsModelDropdownOpen(!isModelDropdownOpen);
+              }}
+              className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48`}
+            >
+              <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
+                {selectedModelLabel}
+              </span>
+              {isLoadingSystemModels || isLoadingModelFromConversation ? (
+                <LoadingIndicator size="sm" color="primary" />
+              ) : (
+                <ChevronDown
+                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
+                    isModelDropdownOpen ? "rotate-180" : ""
+                  }`}
                 />
-                <button
-                  onClick={clearAllImages}
-                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              )}
+            </button>
+            <AnimatePresence>
+              {isModelDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: animationsDisabled ? 0 : 0.15 }}
+                  className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                 >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
+                  {/* Search Input */}
+                  <div className="p-3 border-b border-zinc-200 dark:border-zinc-700">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <input
+                        type="text"
+                        placeholder="Search models..."
+                        value={modelSearchQuery}
+                        onChange={(e) => setModelSearchQuery(e.target.value)}
+                        className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Model Options */}
+                  <div
+                    className="max-h-64 overflow-y-auto thin-scrollbar"
+                    style={{
+                      maskImage:
+                        "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
+                      WebkitMaskImage:
+                        "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
+                    }}
+                  >
+                    <div className="py-1">
+                      {isLoadingSystemModels &&
+                        modelOptions.filter((opt) => opt.source === "system").length === 0 && (
+                          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                            <LoadingIndicator size="sm" color="primary" />
+                            Loading models...
+                          </div>
+                        )}
+                      {modelOptions
+                        .filter((option) =>
+                          option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                        )
+                        .map((option) => {
+                          const isSelected =
+                            selectedModel === option.value &&
+                            selectedProviderId === (option.providerId || "");
+                          return (
+                            <button
+                              key={`${option.value}-${option.providerId || "system"}`}
+                              onClick={() => handleModelSelect(option)}
+                              className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                                isSelected
+                                  ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
+                                  : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
+                              }`}
+                              title={option.label}
+                            >
+                              <span className="truncate flex-1 mr-2">{option.label}</span>
+                              <div className="flex items-center gap-2">
+                                {getCapabilityIcons(option)}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      {modelOptions.filter((option) =>
+                        option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                      ).length === 0 &&
+                        modelSearchQuery && (
+                          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
+                            No models found matching "{modelSearchQuery}"
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="flex items-stretch gap-1">
+          {/* Upload button - show for image editing in generation mode or vision in chat mode */}
+          {(() => {
+            const capabilities = getCurrentModelCapabilities();
+            return (
+              capabilities &&
+              ((inputMode === "image_generation" && capabilities.hasImageEditing) ||
+                (inputMode === "chat" && capabilities.hasVision && !capabilities.hasImageEditing))
+            );
+          })() && (
+            <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2.5 rounded-lg">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleImageUpload(file);
+                    e.target.value = "";
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                disabled={isUploadingImage}
+              />
+              <button
+                className="transition-colors relative flex items-center"
+                aria-label="Upload image"
+                disabled={isUploadingImage}
+              >
+                {isUploadingImage ? (
+                  <LoadingIndicator size="sm" color="primary" />
+                ) : (
+                  <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                )}
+              </button>
             </div>
           )}
 
-          <ImageGenerationInput
-            prompt={prompt}
-            onPromptChange={setPrompt}
-            onImagePaste={handleImagePasteInGeneration} // Pass the paste handler
-          />
-
-          {/* Model selector row - exactly like chat mode layout */}
-          <div className="flex items-stretch justify-between flex-wrap gap-2 mt-2">
-            <div className="flex items-stretch flex-wrap gap-2">
-              <div ref={dropdownRef} className="relative">
-                <button
-                  onClick={() => {
-                    if (isLoadingSystemModels) return;
-                    setIsModelDropdownOpen(!isModelDropdownOpen);
-                  }}
-                  className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48`}
-                >
-                  <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
-                    {selectedModelLabel}
-                  </span>
-                  {isLoadingSystemModels ? (
-                    <LoadingIndicator size="sm" color="primary" />
-                  ) : (
-                    <ChevronDown
-                      className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
-                        isModelDropdownOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  )}
-                </button>
-                <AnimatePresence>
-                  {isModelDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
-                    >
-                      {/* Search Input */}
-                      <div className="p-3 border-b border-zinc-200 dark:border-zinc-700">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                          <input
-                            type="text"
-                            placeholder="Search models..."
-                            value={modelSearchQuery}
-                            onChange={(e) =>
-                              setModelSearchQuery(e.target.value)
-                            }
-                            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Model Options */}
-                      <div
-                        className="max-h-64 overflow-y-auto thin-scrollbar"
-                        style={{
-                          maskImage:
-                            "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-                          WebkitMaskImage:
-                            "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-                        }}
-                      >
-                        <div className="py-1">
-                          {isLoadingSystemModels &&
-                            modelOptions.filter(
-                              (opt) => opt.source === "system"
-                            ).length === 0 && (
-                              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                                <LoadingIndicator size="sm" color="primary" />
-                                Loading models...
-                              </div>
-                            )}
-                          {modelOptions
-                            .filter((option) =>
-                              option.label
-                                .toLowerCase()
-                                .includes(modelSearchQuery.toLowerCase())
-                            )
-                            .map((option) => {
-                              const isSelected =
-                                selectedModel === option.value &&
-                                selectedProviderId ===
-                                  (option.providerId || "");
-                              return (
-                                <button
-                                  key={`${option.value}-${
-                                    option.providerId || "system"
-                                  }`}
-                                  onClick={() => handleModelSelect(option)}
-                                  className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                                    isSelected
-                                      ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
-                                      : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                                  }`}
-                                  title={option.label}
-                                >
-                                  <span className="truncate flex-1 mr-2">
-                                    {option.label}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    {getCapabilityIcons(option)}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          {modelOptions.filter((option) =>
-                            option.label
-                              .toLowerCase()
-                              .includes(modelSearchQuery.toLowerCase())
-                          ).length === 0 &&
-                            modelSearchQuery && (
-                              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
-                                No models found matching "{modelSearchQuery}"
-                              </div>
-                            )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-            <div className="flex items-stretch gap-1">
-              {/* Upload button for image editing models only (generation-only models don't support image input) */}
-              {(() => {
-                const capabilities = getCurrentModelCapabilities();
-                return capabilities && capabilities.hasImageEditing;
-              })() && (
-                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-stretch py-2 px-2.5 rounded-lg h-full">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleImageUpload(file);
-                        e.target.value = ""; // Reset input
-                      }
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    disabled={isUploadingImage || isImageGenerating}
-                  />
-                  <button
-                    className="transition-colors relative flex items-center"
-                    aria-label="Upload image for editing"
-                    disabled={isUploadingImage || isImageGenerating}
-                  >
-                    {isUploadingImage ? (
-                      <LoadingIndicator size="sm" color="primary" />
-                    ) : (
-                      <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* Size Selector */}
-              <div ref={sizeDropdownRef} className="flex items-stretch relative">
-                <button
-                  onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                  className="flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px]"
-                  disabled={disabled || isImageGenerating}
-                  title={selectedImageSize}
-                >
-                  {/* Icon for mobile, text for larger screens */}
-                  <FullScreen className="w-4 h-4 text-zinc-500 dark:text-zinc-400 sm:hidden flex-shrink-0" />
-                  <span className="text-zinc-900 dark:text-white truncate flex-1 text-left hidden sm:block">
-                    {selectedImageSize}
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
-                      isSizeDropdownOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-                <AnimatePresence>
-                  {isSizeDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
-                    >
-                      <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
-                        {ImageGenerationService.getImageSizeOptions().map(
-                          (option) => {
-                            const isSelected =
-                              selectedImageSize === option.value;
-                            return (
-                              <button
-                                key={option.value}
-                                onClick={() => {
-                                  setSelectedImageSize(option.value);
-                                  setIsSizeDropdownOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                                  isSelected
-                                    ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
-                                    : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                                }`}
-                              >
-                                {option.label}
-                              </button>
-                            );
-                          }
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Generate Button - Different conditions based on model capabilities */}
+          {/* Size Selector - only show in image generation mode */}
+          {inputMode === "image_generation" && (
+            <div ref={sizeDropdownRef} className="flex items-stretch relative">
               <button
-                onClick={handleImageGenerateClick}
-                className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors ${
-                  (() => {
-                    const capabilities = getCurrentModelCapabilities();
-                    if (capabilities?.hasImageEditing) {
-                      // Image editing models: need both prompt and image
-                      return (
-                        prompt.trim() &&
-                        uploadedImageForEditing &&
-                        !disabled &&
-                        !isImageGenerating
-                      );
-                    } else {
-                      // Pure image generation models: only need prompt
-                      return prompt.trim() && !disabled && !isImageGenerating;
-                    }
-                  })()
-                    ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
-                    : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
-                }`}
-                disabled={(() => {
-                  const capabilities = getCurrentModelCapabilities();
-                  if (capabilities?.hasImageEditing) {
-                    // Image editing models: need both prompt and image
-                    return (
-                      !prompt.trim() ||
-                      !uploadedImageForEditing ||
-                      disabled ||
-                      isImageGenerating
-                    );
-                  } else {
-                    // Pure image generation models: only need prompt
-                    return !prompt.trim() || disabled || isImageGenerating;
-                  }
-                })()}
-                aria-label={
-                  isImageGenerating ? "Generating..." : "Generate image"
-                }
+                onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
+                className="flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px]"
+                disabled={disabled || isImageGenerating}
+                title={selectedImageSize}
               >
-                <ArrowUp className="w-4 h-4" />
+                <FullScreen className="w-4 h-4 text-zinc-500 dark:text-zinc-400 sm:hidden flex-shrink-0" />
+                <span className="text-zinc-900 dark:text-white truncate flex-1 text-left hidden sm:block">
+                  {selectedImageSize}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
+                    isSizeDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
               </button>
-            </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="relative">
-            {/* Image attachments preview */}
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24"
+              <AnimatePresence>
+                {isSizeDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: animationsDisabled ? 0 : 0.15 }}
+                    className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                   >
-                    <img
-                      src={attachment.url}
-                      alt={attachment.filename}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                    <button
-                      onClick={() => removeAttachment(attachment.id)}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                    <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
+                      {ImageGenerationService.getImageSizeOptions().map((option) => {
+                        const isSelected = selectedImageSize === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            onClick={() => {
+                              setSelectedImageSize(option.value);
+                              setIsSizeDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                              isSelected
+                                ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
+                                : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
-            {/* Show persistent image preview for vision models when no attachments but persistent image exists */}
-            {inputMode === "chat" &&
-              persistentUploadedImage &&
-              attachments.length === 0 &&
+          {/* Send/Generate Button */}
+          <button
+            onClick={handleSendMessage}
+            className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors ${
               (() => {
                 const capabilities = getCurrentModelCapabilities();
-                return (
-                  capabilities?.hasVision && !capabilities?.hasImageEditing
-                );
-              })() && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1 w-full">
-                    <span>Image ready for vision analysis:</span>
-                  </div>
-                  <div className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24">
-                    <img
-                      src={persistentUploadedImage}
-                      alt="Image for vision"
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
-                      <span className="text-[8px]">👁️</span>
-                    </div>
-                    <button
-                      onClick={clearAllImages}
-                      className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-            <textarea
-              ref={textareaRef}
-              value={prompt}
-              onChange={handleTextareaChange}
-              onKeyPress={handleKeyPress}
-              onPaste={handlePaste}
-              placeholder="Type your message here..."
-              className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-32 overflow-y-auto thin-scrollbar"
-              rows={1}
-            />
-          </div>
-          <HorizontalRuleDefault />
-          <div className="flex items-stretch justify-between flex-wrap gap-2 mt-2">
-            <div className="flex items-stretch flex-wrap gap-2">
-              <div ref={dropdownRef} className="relative">
-                <button
-                  onClick={() => {
-                    if (isLoadingSystemModels) return;
-                    setIsModelDropdownOpen(!isModelDropdownOpen);
-                  }}
-                  className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48`}
-                >
-                  <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
-                    {selectedModelLabel}
-                  </span>
-                  {isLoadingSystemModels ? (
-                    <LoadingIndicator size="sm" color="primary" />
-                  ) : (
-                    <ChevronDown
-                      className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
-                        isModelDropdownOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  )}
-                </button>
-                <AnimatePresence>
-                  {isModelDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
-                    >
-                      {/* Search Input */}
-                      <div className="p-3 border-b border-zinc-200 dark:border-zinc-700">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                          <input
-                            type="text"
-                            placeholder="Search models..."
-                            value={modelSearchQuery}
-                            onChange={(e) =>
-                              setModelSearchQuery(e.target.value)
-                            }
-                            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Model Options */}
-                      <div
-                        className="max-h-64 overflow-y-auto thin-scrollbar"
-                        style={{
-                          maskImage:
-                            "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-                          WebkitMaskImage:
-                            "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-                        }}
-                      >
-                        <div className="py-1">
-                          {isLoadingSystemModels &&
-                            modelOptions.filter(
-                              (opt) => opt.source === "system"
-                            ).length === 0 && (
-                              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                                <LoadingIndicator size="sm" color="primary" />
-                                Loading models...
-                              </div>
-                            )}
-                          {modelOptions
-                            .filter((option) =>
-                              option.label
-                                .toLowerCase()
-                                .includes(modelSearchQuery.toLowerCase())
-                            )
-                            .map((option) => {
-                              const isSelected =
-                                selectedModel === option.value &&
-                                selectedProviderId ===
-                                  (option.providerId || "");
-                              return (
-                                <button
-                                  key={`${option.value}-${
-                                    option.providerId || "system"
-                                  }`}
-                                  onClick={() => handleModelSelect(option)}
-                                  className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                                    isSelected
-                                      ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
-                                      : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                                  }`}
-                                  title={option.label}
-                                >
-                                  <span className="truncate flex-1 mr-2">
-                                    {option.label}
-                                  </span>
-                                  <div className="flex items-center gap-3">
-                                    {getCapabilityIcons(option)}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          {modelOptions.filter((option) =>
-                            option.label
-                              .toLowerCase()
-                              .includes(modelSearchQuery.toLowerCase())
-                          ).length === 0 &&
-                            modelSearchQuery && (
-                              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
-                                No models found matching "{modelSearchQuery}"
-                              </div>
-                            )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-            <div className="flex items-stretch gap-1">
-              {/* Conditionally show upload button only when model supports vision (in chat mode) */}
-              {(() => {
-                const capabilities = getCurrentModelCapabilities();
-                return (
-                  capabilities &&
-                  capabilities.hasVision &&
-                  !capabilities.hasImageEditing
-                );
-              })() && (
-                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2.5 rounded-lg">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        // Check model capabilities before processing
-                        const selectedModelOption = modelOptions.find(
-                          (model) =>
-                            model.value === selectedModel &&
-                            (model.providerId || "") === selectedProviderId
-                        );
-
-                        if (
-                          selectedModelOption &&
-                          selectedModelOption.supportedParameters
-                        ) {
-                          const capabilities = getModelCapabilities(
-                            selectedModelOption.supportedParameters
-                          );
-
-                          // Only allow file upload in chat mode if model supports vision (not image editing, those are in generation mode)
-                          if (
-                            !capabilities.hasVision ||
-                            capabilities.hasImageEditing
-                          ) {
-                            alert(
-                              "Selected model doesn't support image input in chat mode. Please choose a model with vision capabilities only."
-                            );
-                            e.target.value = ""; // Reset input
-                            return;
-                          }
-                        }
-
-                        handleImageUpload(file);
-                        e.target.value = ""; // Reset input
-                      }
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    disabled={isUploadingImage}
-                  />
-                  <button
-                    className="transition-colors relative flex items-center"
-                    aria-label="Attach image"
-                    disabled={isUploadingImage}
-                  >
-                    {isUploadingImage ? (
-                      <LoadingIndicator size="sm" color="primary" />
-                    ) : (
-                      <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                    )}
-                  </button>
-                </div>
-              )}
-              <button
-                onClick={handleSendMessage}
-                className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors ${
-                  (() => {
-                    const capabilities = getCurrentModelCapabilities();
-                    if (capabilities?.hasVision) {
-                      // Vision models: need message or attachments
-                      return (
-                        (prompt.trim() || attachments.length > 0) &&
-                        !disabled &&
-                        !isUploadingImage
-                      );
-                    } else {
-                      // Regular chat: just need message
-                      return prompt.trim() && !disabled && !isUploadingImage;
-                    }
-                  })()
-                    ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
-                    : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
-                }`}
-                disabled={(() => {
-                  const capabilities = getCurrentModelCapabilities();
-                  if (capabilities?.hasVision) {
-                    // Vision models: need message or attachments
-                    return (
-                      (!prompt.trim() && attachments.length === 0) ||
-                      disabled ||
-                      isUploadingImage
-                    );
+                if (inputMode === "image_generation") {
+                  if (capabilities?.hasImageEditing) {
+                    return prompt.trim() && uploadedImageForEditing && !disabled && !isImageGenerating;
                   } else {
-                    // Regular chat: just need message
-                    return !prompt.trim() || disabled || isUploadingImage;
+                    return prompt.trim() && !disabled && !isImageGenerating;
                   }
-                })()}
-                aria-label={disabled ? "Sending..." : "Send message"}
-              >
-                <ArrowUp className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+                } else {
+                  if (capabilities?.hasVision) {
+                    return (prompt.trim() || attachments.length > 0) && !disabled && !isUploadingImage;
+                  } else {
+                    return prompt.trim() && !disabled && !isUploadingImage;
+                  }
+                }
+              })()
+                ? inputMode === "image_generation"
+                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+                  : "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
+                : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
+            }`}
+            disabled={(() => {
+              const capabilities = getCurrentModelCapabilities();
+              if (inputMode === "image_generation") {
+                if (capabilities?.hasImageEditing) {
+                  return !prompt.trim() || !uploadedImageForEditing || disabled || isImageGenerating;
+                } else {
+                  return !prompt.trim() || disabled || isImageGenerating;
+                }
+              } else {
+                if (capabilities?.hasVision) {
+                  return (!prompt.trim() && attachments.length === 0) || disabled || isUploadingImage;
+                } else {
+                  return !prompt.trim() || disabled || isUploadingImage;
+                }
+              }
+            })()}
+            aria-label={
+              inputMode === "image_generation"
+                ? isImageGenerating
+                  ? "Generating..."
+                  : "Generate image"
+                : disabled
+                ? "Sending..."
+                : "Send message"
+            }
+          >
+            <ArrowUp className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
