@@ -1,5 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { ChevronDown, Paperclip, ArrowUp, X, Search, Eye, Edit, Palette, FullScreen } from "./Icons";
+import {
+  ChevronDown,
+  Paperclip,
+  ArrowUp,
+  X,
+  Search,
+  Eye,
+  Edit,
+  Palette,
+  FullScreen,
+} from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import { motion, AnimatePresence } from "framer-motion";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
@@ -67,8 +77,10 @@ const ChatInput = ({
   const [selectedImageSize, setSelectedImageSize] = useState("1024x1024");
   const [isSizeDropdownOpen, setIsSizeDropdownOpen] = useState(false);
   const [isImageGenerating, setIsImageGenerating] = useState(false);
-  const [uploadedImageForEditing, setUploadedImageForEditing] = useState<string>("");
-  const [persistentUploadedImage, setPersistentUploadedImage] = useState<string>(""); // Persists across model switches
+  const [uploadedImageForEditing, setUploadedImageForEditing] =
+    useState<string>("");
+  const [persistentUploadedImage, setPersistentUploadedImage] =
+    useState<string>(""); // Persists across model switches
   const dropdownRef = useRef<HTMLDivElement>(null);
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -115,7 +127,7 @@ const ChatInput = ({
   // Get capability icons for a model (can return multiple icons)
   const getCapabilityIcons = useCallback((option: ModelOption) => {
     if (!option.supportedParameters) return [];
-    
+
     const capabilities = getModelCapabilities(option.supportedParameters);
     const icons = [];
 
@@ -126,15 +138,18 @@ const ChatInput = ({
         </div>
       );
     }
-    
-    if (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) {
+
+    if (
+      capabilities.hasImageGeneration ||
+      capabilities.hasImageGenerationJobs
+    ) {
       icons.push(
         <div key="generation" title="Image Generation">
           <Palette className="w-4 h-4 text-purple-500" />
         </div>
       );
     }
-    
+
     if (capabilities.hasVision) {
       icons.push(
         <div key="vision" title="Vision">
@@ -169,7 +184,10 @@ const ChatInput = ({
           if (capabilities.hasImageEditing) {
             setInputMode("image_generation");
             // Convert attachments to persistent image for image editing models
-            if (currentAttachmentsRef.current.length > 0 && !persistentUploadedImage) {
+            if (
+              currentAttachmentsRef.current.length > 0 &&
+              !persistentUploadedImage
+            ) {
               const firstAttachment = currentAttachmentsRef.current[0];
               setPersistentUploadedImage(firstAttachment.url);
               setUploadedImageForEditing(firstAttachment.url);
@@ -182,7 +200,10 @@ const ChatInput = ({
             }
           }
           // Priority 2: If model has image generation (including jobs), switch to image_generation mode
-          else if (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) {
+          else if (
+            capabilities.hasImageGeneration ||
+            capabilities.hasImageGenerationJobs
+          ) {
             setInputMode("image_generation");
             // Hide any uploaded images for generation-only models (they don't support image input)
             setUploadedImageForEditing("");
@@ -195,7 +216,10 @@ const ChatInput = ({
           else if (capabilities.hasVision) {
             setInputMode("chat");
             // Convert persistent image to attachments for vision models
-            if (persistentUploadedImage && currentAttachmentsRef.current.length === 0) {
+            if (
+              persistentUploadedImage &&
+              currentAttachmentsRef.current.length === 0
+            ) {
               const visionAttachment: MessageAttachment = {
                 id: Date.now().toString(),
                 url: persistentUploadedImage,
@@ -227,7 +251,12 @@ const ChatInput = ({
         isCheckingCapabilitiesRef.current = false;
       }
     },
-    [selectedModel, selectedProviderId, persistentUploadedImage, uploadedImageForEditing]
+    [
+      selectedModel,
+      selectedProviderId,
+      persistentUploadedImage,
+      uploadedImageForEditing,
+    ]
   );
 
   // Check capabilities when selected model changes - but debounce to avoid loops
@@ -236,7 +265,7 @@ const ChatInput = ({
       const timeoutId = setTimeout(() => {
         checkCurrentModelCapabilities(modelOptions);
       }, 0); // Use setTimeout to break potential synchronous loops
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [
@@ -499,7 +528,9 @@ const ChatInput = ({
           // Only allow image upload if model supports image input (vision or image editing)
           // Image generation only models don't support image input
           if (!capabilities.hasVision && !capabilities.hasImageEditing) {
-            alert("Selected model doesn't support image input. Please choose a model with vision or image editing capabilities.");
+            alert(
+              "Selected model doesn't support image input. Please choose a model with vision or image editing capabilities."
+            );
             return;
           }
 
@@ -519,7 +550,7 @@ const ChatInput = ({
             setUploadedImageForEditing(attachment.url);
             // Clear any existing attachments since we're using image editing mode
             setAttachments([]);
-          } 
+          }
           // Priority 2: If model has vision (but not image editing), add to attachments (chat mode)
           else if (capabilities.hasVision) {
             setAttachments((prev) => [...prev, attachment]);
@@ -535,7 +566,7 @@ const ChatInput = ({
             file.name
           );
           setAttachments((prev) => [...prev, attachment]);
-          
+
           // Also store in persistent image in case user switches to image editing model later
           setPersistentUploadedImage(attachment.url);
         }
@@ -546,7 +577,14 @@ const ChatInput = ({
         setIsUploadingImage(false);
       }
     },
-    [user, modelOptions, selectedModel, selectedProviderId, inputMode, persistentUploadedImage]
+    [
+      user,
+      modelOptions,
+      selectedModel,
+      selectedProviderId,
+      inputMode,
+      persistentUploadedImage,
+    ]
   );
 
   // Handle paste events for images
@@ -558,9 +596,12 @@ const ChatInput = ({
       if (imageItem) {
         // Check current model capabilities before allowing paste
         const capabilities = getCurrentModelCapabilities();
-        
+
         // Only allow paste for models that support image input (vision or image editing, NOT generation only)
-        if (!capabilities || (!capabilities.hasVision && !capabilities.hasImageEditing)) {
+        if (
+          !capabilities ||
+          (!capabilities.hasVision && !capabilities.hasImageEditing)
+        ) {
           // Don't show alert, just silently ignore paste for non-supported models
           return;
         }
@@ -580,7 +621,7 @@ const ChatInput = ({
     async (file: File) => {
       // Check current model capabilities before allowing paste
       const capabilities = getCurrentModelCapabilities();
-      
+
       // Only allow paste for image editing models (generation-only models don't support image input)
       if (!capabilities || !capabilities.hasImageEditing) {
         // Don't show alert, just silently ignore paste for non-supported models
@@ -615,10 +656,12 @@ const ChatInput = ({
 
       // Check if model supports job-based generation or editing
       const capabilities = getCurrentModelCapabilities();
-      const useJobBasedGeneration = capabilities && (
-        capabilities.hasImageGenerationJobs || 
-        (capabilities.hasImageEditing && capabilities.hasImageGenerationJobs && uploadedImageForEditing)
-      );
+      const useJobBasedGeneration =
+        capabilities &&
+        (capabilities.hasImageGenerationJobs ||
+          (capabilities.hasImageEditing &&
+            capabilities.hasImageGenerationJobs &&
+            uploadedImageForEditing));
 
       // clear prompt input
       clearPrompt();
@@ -694,11 +737,12 @@ const ChatInput = ({
           );
 
           // Download and upload the image to Firebase Storage
-          const attachment = await ImageGenerationService.downloadAndUploadImage(
-            imageUrl,
-            localImagePrompt,
-            user?.uid || null,
-          );
+          const attachment =
+            await ImageGenerationService.downloadAndUploadImage(
+              imageUrl,
+              localImagePrompt,
+              user?.uid || null
+            );
 
           // Call the parent callback again with the final image
           if (onImageGenerate) {
@@ -768,20 +812,27 @@ const ChatInput = ({
   ]);
 
   // Remove attachment
-  const removeAttachment = useCallback((attachmentId: string) => {
-    setAttachments((prev) => {
-      const newAttachments = prev.filter((att) => att.id !== attachmentId);
-      
-      // If this was the last attachment and it matches our persistent image, clear everything
-      const removedAttachment = prev.find((att) => att.id === attachmentId);
-      if (removedAttachment && removedAttachment.url === persistentUploadedImage && newAttachments.length === 0) {
-        setPersistentUploadedImage("");
-        setUploadedImageForEditing("");
-      }
-      
-      return newAttachments;
-    });
-  }, [persistentUploadedImage]);
+  const removeAttachment = useCallback(
+    (attachmentId: string) => {
+      setAttachments((prev) => {
+        const newAttachments = prev.filter((att) => att.id !== attachmentId);
+
+        // If this was the last attachment and it matches our persistent image, clear everything
+        const removedAttachment = prev.find((att) => att.id === attachmentId);
+        if (
+          removedAttachment &&
+          removedAttachment.url === persistentUploadedImage &&
+          newAttachments.length === 0
+        ) {
+          setPersistentUploadedImage("");
+          setUploadedImageForEditing("");
+        }
+
+        return newAttachments;
+      });
+    },
+    [persistentUploadedImage]
+  );
 
   // Notify parent of initial model selection
   useEffect(() => {
@@ -867,7 +918,9 @@ const ChatInput = ({
     "Gemini 1.5 Flash";
 
   // Animation transition class helper
-  const transitionClass = animationsDisabled ? '' : 'transition-transform duration-200';
+  const transitionClass = animationsDisabled
+    ? ""
+    : "transition-transform duration-200";
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -927,7 +980,7 @@ const ChatInput = ({
 
   const handleSendMessage = async () => {
     const capabilities = getCurrentModelCapabilities();
-    
+
     // Different send conditions based on mode and capabilities
     if (inputMode === "image_generation") {
       // For image generation mode
@@ -986,7 +1039,7 @@ const ChatInput = ({
           mimeType: "image/png", // Default mime type for uploaded images
           isForEditing: true, // Special flag to distinguish from regular attachments
         };
-        
+
         onMessageSend(
           currentMessage,
           currentModel,
@@ -1064,8 +1117,11 @@ const ChatInput = ({
                   }}
                   className={`flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors ${(() => {
                     const capabilities = getCurrentModelCapabilities();
-                    return capabilities && (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) && capabilities.hasImageEditing 
-                      ? "w-32 sm:w-48" 
+                    return capabilities &&
+                      (capabilities.hasImageGeneration ||
+                        capabilities.hasImageGenerationJobs) &&
+                      capabilities.hasImageEditing
+                      ? "w-32 sm:w-48"
                       : "w-48";
                   })()}`}
                 >
@@ -1089,53 +1145,65 @@ const ChatInput = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
+                      className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                     >
                       {/* Search Input */}
-                      <div className="p-3 border-b border-zinc-200/50 dark:border-zinc-700/50">
+                      <div className="p-3 border-b border-zinc-200 dark:border-zinc-700">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
                           <input
                             type="text"
                             placeholder="Search models..."
                             value={modelSearchQuery}
-                            onChange={(e) => setModelSearchQuery(e.target.value)}
-                            className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-300/50 dark:border-zinc-600/50 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                            onChange={(e) =>
+                              setModelSearchQuery(e.target.value)
+                            }
+                            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
                             autoFocus
                           />
                         </div>
                       </div>
 
                       {/* Model Options */}
-                      <div 
+                      <div
                         className="max-h-64 overflow-y-auto thin-scrollbar"
                         style={{
-                          maskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-                          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)'
+                          maskImage:
+                            "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
+                          WebkitMaskImage:
+                            "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
                         }}
                       >
                         <div className="py-1">
                           {isLoadingSystemModels &&
-                            modelOptions.filter((opt) => opt.source === "system")
-                              .length === 0 && (
+                            modelOptions.filter(
+                              (opt) => opt.source === "system"
+                            ).length === 0 && (
                               <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
                                 <LoadingIndicator size="sm" color="primary" />
                                 Loading models...
                               </div>
                             )}
                           {modelOptions
-                            .filter((option) => 
-                              option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                            .filter((option) =>
+                              option.label
+                                .toLowerCase()
+                                .includes(modelSearchQuery.toLowerCase())
                             )
                             .map((option) => {
-                              const isSelected = selectedModel === option.value && selectedProviderId === (option.providerId || "");
+                              const isSelected =
+                                selectedModel === option.value &&
+                                selectedProviderId ===
+                                  (option.providerId || "");
                               return (
                                 <button
-                                  key={`${option.value}-${option.providerId || "system"}`}
+                                  key={`${option.value}-${
+                                    option.providerId || "system"
+                                  }`}
                                   onClick={() => handleModelSelect(option)}
                                   className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                                    isSelected 
-                                      ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300" 
+                                    isSelected
+                                      ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
                                       : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
                                   }`}
                                   title={option.label}
@@ -1149,13 +1217,16 @@ const ChatInput = ({
                                 </button>
                               );
                             })}
-                          {modelOptions.filter((option) => 
-                            option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
-                          ).length === 0 && modelSearchQuery && (
-                            <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
-                              No models found matching "{modelSearchQuery}"
-                            </div>
-                          )}
+                          {modelOptions.filter((option) =>
+                            option.label
+                              .toLowerCase()
+                              .includes(modelSearchQuery.toLowerCase())
+                          ).length === 0 &&
+                            modelSearchQuery && (
+                              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
+                                No models found matching "{modelSearchQuery}"
+                              </div>
+                            )}
                         </div>
                       </div>
                     </motion.div>
@@ -1169,7 +1240,7 @@ const ChatInput = ({
                 const capabilities = getCurrentModelCapabilities();
                 return capabilities && capabilities.hasImageEditing;
               })() && (
-                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2 rounded-lg">
+                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-3 rounded-lg">
                   <input
                     type="file"
                     accept="image/*"
@@ -1184,7 +1255,7 @@ const ChatInput = ({
                     disabled={isUploadingImage || isImageGenerating}
                   />
                   <button
-                    className="transition-colors relative"
+                    className="transition-colors relative flex items-center"
                     aria-label="Upload image for editing"
                     disabled={isUploadingImage || isImageGenerating}
                   >
@@ -1193,6 +1264,7 @@ const ChatInput = ({
                     ) : (
                       <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     )}
+                    <span>ㅤ</span>
                   </button>
                 </div>
               )}
@@ -1207,6 +1279,7 @@ const ChatInput = ({
                 >
                   {/* Icon for mobile, text for larger screens */}
                   <FullScreen className="w-4 h-4 text-zinc-500 dark:text-zinc-400 sm:hidden flex-shrink-0" />
+                  <span>ㅤ</span>
                   <span className="text-zinc-900 dark:text-white truncate flex-1 text-left hidden sm:block">
                     {selectedImageSize}
                   </span>
@@ -1223,12 +1296,13 @@ const ChatInput = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 left-0 w-32 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
+                      className="absolute bottom-full mb-2 left-0 w-40 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                     >
                       <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
                         {ImageGenerationService.getImageSizeOptions().map(
                           (option) => {
-                            const isSelected = selectedImageSize === option.value;
+                            const isSelected =
+                              selectedImageSize === option.value;
                             return (
                               <button
                                 key={option.value}
@@ -1237,8 +1311,8 @@ const ChatInput = ({
                                   setIsSizeDropdownOpen(false);
                                 }}
                                 className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                                  isSelected 
-                                    ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300" 
+                                  isSelected
+                                    ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
                                     : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
                                 }`}
                               >
@@ -1256,12 +1330,17 @@ const ChatInput = ({
               {/* Generate Button - Different conditions based on model capabilities */}
               <button
                 onClick={handleImageGenerateClick}
-                className={`p-1.5 rounded-full transition-colors ${
+                className={`py-1.5 px-2 ml-2 rounded-lg flex items-center transition-colors ${
                   (() => {
                     const capabilities = getCurrentModelCapabilities();
                     if (capabilities?.hasImageEditing) {
                       // Image editing models: need both prompt and image
-                      return prompt.trim() && uploadedImageForEditing && !disabled && !isImageGenerating;
+                      return (
+                        prompt.trim() &&
+                        uploadedImageForEditing &&
+                        !disabled &&
+                        !isImageGenerating
+                      );
                     } else {
                       // Pure image generation models: only need prompt
                       return prompt.trim() && !disabled && !isImageGenerating;
@@ -1270,23 +1349,27 @@ const ChatInput = ({
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
                     : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
                 }`}
-                disabled={
-                  (() => {
-                    const capabilities = getCurrentModelCapabilities();
-                    if (capabilities?.hasImageEditing) {
-                      // Image editing models: need both prompt and image
-                      return !prompt.trim() || !uploadedImageForEditing || disabled || isImageGenerating;
-                    } else {
-                      // Pure image generation models: only need prompt
-                      return !prompt.trim() || disabled || isImageGenerating;
-                    }
-                  })()
-                }
+                disabled={(() => {
+                  const capabilities = getCurrentModelCapabilities();
+                  if (capabilities?.hasImageEditing) {
+                    // Image editing models: need both prompt and image
+                    return (
+                      !prompt.trim() ||
+                      !uploadedImageForEditing ||
+                      disabled ||
+                      isImageGenerating
+                    );
+                  } else {
+                    // Pure image generation models: only need prompt
+                    return !prompt.trim() || disabled || isImageGenerating;
+                  }
+                })()}
                 aria-label={
                   isImageGenerating ? "Generating..." : "Generate image"
                 }
               >
                 <ArrowUp className="w-4 h-4" />
+                <span>ㅤ</span>
               </button>
             </div>
           </div>
@@ -1319,32 +1402,37 @@ const ChatInput = ({
             )}
 
             {/* Show persistent image preview for vision models when no attachments but persistent image exists */}
-            {inputMode === "chat" && persistentUploadedImage && attachments.length === 0 && (() => {
-              const capabilities = getCurrentModelCapabilities();
-              return capabilities?.hasVision && !capabilities?.hasImageEditing;
-            })() && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1 w-full">
-                  <span>Image ready for vision analysis:</span>
-                </div>
-                <div className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24">
-                  <img
-                    src={persistentUploadedImage}
-                    alt="Image for vision"
-                    className="w-16 h-16 object-cover rounded"
-                  />
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
-                    <span className="text-[8px]">👁️</span>
+            {inputMode === "chat" &&
+              persistentUploadedImage &&
+              attachments.length === 0 &&
+              (() => {
+                const capabilities = getCurrentModelCapabilities();
+                return (
+                  capabilities?.hasVision && !capabilities?.hasImageEditing
+                );
+              })() && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1 w-full">
+                    <span>Image ready for vision analysis:</span>
                   </div>
-                  <button
-                    onClick={clearAllImages}
-                    className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  <div className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24">
+                    <img
+                      src={persistentUploadedImage}
+                      alt="Image for vision"
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
+                      <span className="text-[8px]">👁️</span>
+                    </div>
+                    <button
+                      onClick={clearAllImages}
+                      className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <textarea
               ref={textareaRef}
@@ -1368,8 +1456,10 @@ const ChatInput = ({
                   }}
                   className={`flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors ${(() => {
                     const capabilities = getCurrentModelCapabilities();
-                    return capabilities && (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) 
-                      ? "w-32 sm:w-48" 
+                    return capabilities &&
+                      (capabilities.hasImageGeneration ||
+                        capabilities.hasImageGenerationJobs)
+                      ? "w-32 sm:w-48"
                       : "w-48";
                   })()}`}
                 >
@@ -1393,53 +1483,65 @@ const ChatInput = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
+                      className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                     >
                       {/* Search Input */}
-                      <div className="p-3 border-b border-zinc-200/50 dark:border-zinc-700/50">
+                      <div className="p-3 border-b border-zinc-200 dark:border-zinc-700">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
                           <input
                             type="text"
                             placeholder="Search models..."
                             value={modelSearchQuery}
-                            onChange={(e) => setModelSearchQuery(e.target.value)}
-                            className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-300/50 dark:border-zinc-600/50 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                            onChange={(e) =>
+                              setModelSearchQuery(e.target.value)
+                            }
+                            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
                             autoFocus
                           />
                         </div>
                       </div>
 
                       {/* Model Options */}
-                      <div 
+                      <div
                         className="max-h-64 overflow-y-auto thin-scrollbar"
                         style={{
-                          maskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-                          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)'
+                          maskImage:
+                            "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
+                          WebkitMaskImage:
+                            "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
                         }}
                       >
                         <div className="py-1">
                           {isLoadingSystemModels &&
-                            modelOptions.filter((opt) => opt.source === "system")
-                              .length === 0 && (
+                            modelOptions.filter(
+                              (opt) => opt.source === "system"
+                            ).length === 0 && (
                               <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
                                 <LoadingIndicator size="sm" color="primary" />
                                 Loading models...
                               </div>
                             )}
                           {modelOptions
-                            .filter((option) => 
-                              option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                            .filter((option) =>
+                              option.label
+                                .toLowerCase()
+                                .includes(modelSearchQuery.toLowerCase())
                             )
                             .map((option) => {
-                              const isSelected = selectedModel === option.value && selectedProviderId === (option.providerId || "");
+                              const isSelected =
+                                selectedModel === option.value &&
+                                selectedProviderId ===
+                                  (option.providerId || "");
                               return (
                                 <button
-                                  key={`${option.value}-${option.providerId || "system"}`}
+                                  key={`${option.value}-${
+                                    option.providerId || "system"
+                                  }`}
                                   onClick={() => handleModelSelect(option)}
                                   className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                                    isSelected 
-                                      ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300" 
+                                    isSelected
+                                      ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
                                       : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
                                   }`}
                                   title={option.label}
@@ -1453,13 +1555,16 @@ const ChatInput = ({
                                 </button>
                               );
                             })}
-                          {modelOptions.filter((option) => 
-                            option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
-                          ).length === 0 && modelSearchQuery && (
-                            <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
-                              No models found matching "{modelSearchQuery}"
-                            </div>
-                          )}
+                          {modelOptions.filter((option) =>
+                            option.label
+                              .toLowerCase()
+                              .includes(modelSearchQuery.toLowerCase())
+                          ).length === 0 &&
+                            modelSearchQuery && (
+                              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
+                                No models found matching "{modelSearchQuery}"
+                              </div>
+                            )}
                         </div>
                       </div>
                     </motion.div>
@@ -1471,9 +1576,13 @@ const ChatInput = ({
               {/* Conditionally show upload button only when model supports vision (in chat mode) */}
               {(() => {
                 const capabilities = getCurrentModelCapabilities();
-                return capabilities && capabilities.hasVision && !capabilities.hasImageEditing;
+                return (
+                  capabilities &&
+                  capabilities.hasVision &&
+                  !capabilities.hasImageEditing
+                );
               })() && (
-                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2 rounded-lg">
+                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-3 rounded-lg">
                   <input
                     type="file"
                     accept="image/*"
@@ -1487,14 +1596,22 @@ const ChatInput = ({
                             (model.providerId || "") === selectedProviderId
                         );
 
-                        if (selectedModelOption && selectedModelOption.supportedParameters) {
+                        if (
+                          selectedModelOption &&
+                          selectedModelOption.supportedParameters
+                        ) {
                           const capabilities = getModelCapabilities(
                             selectedModelOption.supportedParameters
                           );
 
                           // Only allow file upload in chat mode if model supports vision (not image editing, those are in generation mode)
-                          if (!capabilities.hasVision || capabilities.hasImageEditing) {
-                            alert("Selected model doesn't support image input in chat mode. Please choose a model with vision capabilities only.");
+                          if (
+                            !capabilities.hasVision ||
+                            capabilities.hasImageEditing
+                          ) {
+                            alert(
+                              "Selected model doesn't support image input in chat mode. Please choose a model with vision capabilities only."
+                            );
                             e.target.value = ""; // Reset input
                             return;
                           }
@@ -1508,7 +1625,7 @@ const ChatInput = ({
                     disabled={isUploadingImage}
                   />
                   <button
-                    className="transition-colors relative"
+                    className="transition-colors relative flex items-center"
                     aria-label="Attach image"
                     disabled={isUploadingImage}
                   >
@@ -1517,17 +1634,22 @@ const ChatInput = ({
                     ) : (
                       <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     )}
+                    <span>ㅤ</span>
                   </button>
                 </div>
               )}
               <button
                 onClick={handleSendMessage}
-                className={`p-1.5 rounded-full transition-colors ${
+                className={`py-1.5 px-2 ml-2 rounded-lg transition-colors flex items-center ${
                   (() => {
                     const capabilities = getCurrentModelCapabilities();
                     if (capabilities?.hasVision) {
                       // Vision models: need message or attachments
-                      return (prompt.trim() || attachments.length > 0) && !disabled && !isUploadingImage;
+                      return (
+                        (prompt.trim() || attachments.length > 0) &&
+                        !disabled &&
+                        !isUploadingImage
+                      );
                     } else {
                       // Regular chat: just need message
                       return prompt.trim() && !disabled && !isUploadingImage;
@@ -1536,21 +1658,24 @@ const ChatInput = ({
                     ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
                     : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
                 }`}
-                disabled={
-                  (() => {
-                    const capabilities = getCurrentModelCapabilities();
-                    if (capabilities?.hasVision) {
-                      // Vision models: need message or attachments
-                      return (!prompt.trim() && attachments.length === 0) || disabled || isUploadingImage;
-                    } else {
-                      // Regular chat: just need message
-                      return !prompt.trim() || disabled || isUploadingImage;
-                    }
-                  })()
-                }
+                disabled={(() => {
+                  const capabilities = getCurrentModelCapabilities();
+                  if (capabilities?.hasVision) {
+                    // Vision models: need message or attachments
+                    return (
+                      (!prompt.trim() && attachments.length === 0) ||
+                      disabled ||
+                      isUploadingImage
+                    );
+                  } else {
+                    // Regular chat: just need message
+                    return !prompt.trim() || disabled || isUploadingImage;
+                  }
+                })()}
                 aria-label={disabled ? "Sending..." : "Send message"}
               >
                 <ArrowUp className="w-4 h-4" />
+                <span>ㅤ</span>
               </button>
             </div>
           </div>
