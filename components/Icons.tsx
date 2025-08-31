@@ -3,6 +3,7 @@ import React from 'react';
 type IconProps = {
   className?: string;
   'aria-label'?: string;
+  title?: string;
 };
 
 export const ArrowLeft: React.FC<IconProps> = (props) => (

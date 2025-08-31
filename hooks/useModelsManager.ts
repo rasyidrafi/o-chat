@@ -11,11 +11,12 @@ interface ModelsState {
   fetchedModels: Model[];
   isLoadingModels: boolean;
   modelsError: string | null;
+  isRefreshing: boolean; // Track if we're in the middle of a refresh
 }
 
 interface SelectedModelsState {
-  selectedModels: Array<{ id: string; name: string; supported_parameters?: string[] }>;
-  selectedServerModels: Array<{ id: string; name: string; supported_parameters?: string[] }>;
+  selectedModels: Array<{ id: string; name: string; supported_parameters?: string[], category?: string; }>;
+  selectedServerModels: Array<{ id: string; name: string; supported_parameters?: string[], category?: string; }>;
 }
 
 // Cache keys
@@ -42,6 +43,7 @@ export const useModelsManager = () => {
     fetchedModels: [],
     isLoadingModels: false,
     modelsError: null,
+    isRefreshing: false,
   });
 
   // Selected models state
@@ -136,7 +138,12 @@ export const useModelsManager = () => {
 
   // Fetch system models with caching
   const fetchSystemModelsWithCache = useCallback(async (forceRefresh = false) => {
-    setModelsState(prev => ({ ...prev, isLoadingSystemModels: true, systemModelsError: null }));
+    // Prevent double fetching
+    if (modelsState.isRefreshing) {
+      return;
+    }
+
+    setModelsState(prev => ({ ...prev, isLoadingSystemModels: true, systemModelsError: null, isRefreshing: true }));
 
     try {
       // Skip cache if force refresh is requested
@@ -144,7 +151,7 @@ export const useModelsManager = () => {
         // Try cache first
         const cached = storageOperations.loadSystemModelsFromCache();
         if (cached) {
-          setModelsState(prev => ({ ...prev, systemModels: cached, isLoadingSystemModels: false }));
+          setModelsState(prev => ({ ...prev, systemModels: cached, isLoadingSystemModels: false, isRefreshing: false }));
           return;
         }
       }
@@ -164,9 +171,9 @@ export const useModelsManager = () => {
         systemModels: DEFAULT_SYSTEM_MODELS 
       }));
     } finally {
-      setModelsState(prev => ({ ...prev, isLoadingSystemModels: false }));
+      setModelsState(prev => ({ ...prev, isLoadingSystemModels: false, isRefreshing: false }));
     }
-  }, [storageOperations]);
+  }, [storageOperations, modelsState.isRefreshing]);
 
   // Fetch provider models with error handling
   const fetchProviderModels = useCallback(async (provider: Provider) => {

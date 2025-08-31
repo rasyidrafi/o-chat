@@ -11,6 +11,7 @@ import { useLocalStorageData } from "../../../hooks/useLocalStorageData";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw } from "../../Icons";
 import { MODEL_FILTER_CATEGORIES, FILTER_ID_MAPPING, REVERSE_FILTER_ID_MAPPING } from "../../../constants/modelFilters";
+import { DEFAULT_MODEL_ID } from "../../../constants/models";
 
 interface ModelsTabProps {
   settings: AppSettings;
@@ -212,7 +213,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         currentSelected.push({
           id: modelId,
           name: modelName,
-          supported_parameters: modelsManager.fetchedModels.find(m => m.id === modelId)?.supported_parameters || []
+          supported_parameters: modelsManager.fetchedModels.find(m => m.id === modelId)?.supported_parameters || [],
+          category: "byok",
         });
       }
     } else {
@@ -226,6 +228,10 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   }, [selectedProvider, modelsManager]);
 
   const handleServerModelToggle = useCallback((modelId: string, modelName: string, enabled: boolean) => {
+    if (modelId == DEFAULT_MODEL_ID) {
+      return;
+    }
+
     const currentSelected = [...modelsManager.selectedServerModels];
     
     if (enabled) {
@@ -234,7 +240,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         currentSelected.push({
           id: modelId,
           name: modelName,
-          supported_parameters: model?.supported_parameters || []
+          supported_parameters: model?.supported_parameters || [],
+          category: model?.category || "server",
         });
       }
     } else {
@@ -274,8 +281,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
   // Helper functions
   const isServerModelEnabled = useCallback((modelId: string): boolean => {
+    if (modelId === DEFAULT_MODEL_ID) return true;
     return modelsManager.selectedServerModels.some(m => m.id === modelId);
-  }, [modelsManager.selectedServerModels]);
+  }, [modelsManager.selectedServerModels, DEFAULT_MODEL_ID]);
 
   const isModelSelected = useCallback((modelId: string): boolean => {
     return modelsManager.selectedModels.some(m => m.id === modelId);
@@ -426,6 +434,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                   disabled={modelsManager.isLoadingSystemModels}
                   className="ml-4 px-3 py-1 text-sm bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
                 >
+
                   <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
                   Retry
                 </button>
@@ -456,7 +465,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     features={model.features}
                     isEnabled={isServerModelEnabled(model.id)}
                     onToggle={(enabled) => handleServerModelToggle(model.id, model.name, enabled)}
-                    disabled={modelsManager.isLoadingSystemModels}
+                    disabled={modelsManager.isLoadingSystemModels || model.id === DEFAULT_MODEL_ID}
                   />
                 </motion.div>
               ))}

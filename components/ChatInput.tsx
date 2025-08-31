@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, ChevronDown, Paperclip, ArrowUp, Check, X } from "./Icons";
+import { Sparkles, ChevronDown, Paperclip, ArrowUp, X, Search, Eye, Edit, Palette } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
+import { motion, AnimatePresence } from "framer-motion";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
 import ImageGenerationInput from "./ImageGenerationInput";
 import {
-  getSystemModels,
   getSystemModelsSync,
   getModelCapabilities,
 } from "../services/modelService";
@@ -41,6 +41,7 @@ interface ChatInputProps {
   ) => void;
   onModelSelect?: (model: string, source: string, providerId?: string) => void;
   disabled?: boolean;
+  animationsDisabled?: boolean;
 }
 
 const ChatInput = ({
@@ -48,12 +49,14 @@ const ChatInput = ({
   onImageGenerate,
   onModelSelect,
   disabled = false,
+  animationsDisabled = false,
 }: ChatInputProps) => {
   const { user } = useAuth();
-  const [prompt, setPrompt] = useState(""); // Single shared state for both chat and image prompts
+  const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
@@ -67,6 +70,7 @@ const ChatInput = ({
   const [uploadedImageForEditing, setUploadedImageForEditing] = useState<string>("");
   const [persistentUploadedImage, setPersistentUploadedImage] = useState<string>(""); // Persists across model switches
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const currentAttachmentsRef = useRef<MessageAttachment[]>(attachments);
   const isCheckingCapabilitiesRef = useRef(false);
@@ -107,6 +111,40 @@ const ChatInput = ({
     }
     return null;
   }, [modelOptions, selectedModel, selectedProviderId]);
+
+  // Get capability icons for a model (can return multiple icons)
+  const getCapabilityIcons = useCallback((option: ModelOption) => {
+    if (!option.supportedParameters) return [];
+    
+    const capabilities = getModelCapabilities(option.supportedParameters);
+    const icons = [];
+
+    if (capabilities.hasImageEditing) {
+      icons.push(
+        <div key="edit" title="Image Editing">
+          <Edit className="w-4 h-4 text-blue-500" />
+        </div>
+      );
+    }
+    
+    if (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) {
+      icons.push(
+        <div key="generation" title="Image Generation">
+          <Palette className="w-4 h-4 text-purple-500" />
+        </div>
+      );
+    }
+    
+    if (capabilities.hasVision) {
+      icons.push(
+        <div key="vision" title="Vision">
+          <Eye className="w-4 h-4 text-green-500" />
+        </div>
+      );
+    }
+
+    return icons;
+  }, []);
 
   // Check if current model supports image generation
   const checkCurrentModelCapabilities = useCallback(
@@ -208,8 +246,8 @@ const ChatInput = ({
     checkCurrentModelCapabilities,
   ]);
 
-  // Load available models from localStorage
-  const loadAvailableModels = useCallback(async () => {
+  // Load available models from localStorage only (no API calls)
+  const loadAvailableModels = useCallback(() => {
     const options: ModelOption[] = [];
 
     try {
@@ -226,7 +264,7 @@ const ChatInput = ({
         }
       })();
 
-      // First, load cached/fallback models synchronously for immediate display
+      // Load cached system models synchronously (no API call)
       const syncSystemModels = getSystemModelsSync();
 
       // Filter sync system models and add to options immediately
@@ -299,97 +337,120 @@ const ChatInput = ({
         }
       );
 
-      // Set initial options with sync models
+      // Load built-in provider models
+      try {
+        const builtInProviders = localStorage.getItem("builtin_api_providers");
+        if (builtInProviders) {
+          const providers = JSON.parse(builtInProviders);
+          const builtInOptions: ModelOption[] = [];
+
+          providers.forEach((provider: any) => {
+            if (provider.value?.trim()) {
+              // Add static models for built-in providers
+              if (provider.id === "openai") {
+                builtInOptions.push(
+                  {
+                    label: "GPT-4",
+                    value: "gpt-4",
+                    source: "builtin",
+                    providerId: provider.id,
+                  },
+                  {
+                    label: "GPT-3.5 Turbo",
+                    value: "gpt-3.5-turbo",
+                    source: "builtin",
+                    providerId: provider.id,
+                  }
+                );
+              } else if (provider.id === "anthropic") {
+                builtInOptions.push(
+                  {
+                    label: "Claude 3 Sonnet",
+                    value: "claude-3-sonnet-20240229",
+                    source: "builtin",
+                    providerId: provider.id,
+                  },
+                  {
+                    label: "Claude 3 Haiku",
+                    value: "claude-3-haiku-20240307",
+                    source: "builtin",
+                    providerId: provider.id,
+                  }
+                );
+              }
+            }
+          });
+
+          options.push(...builtInOptions);
+        }
+      } catch (error) {
+        console.error("Error loading built-in providers:", error);
+      }
+
+      // Load custom provider models
+      try {
+        const customProviders = localStorage.getItem("custom_api_providers");
+        if (customProviders) {
+          const providers = JSON.parse(customProviders);
+          const customOptions: ModelOption[] = [];
+
+          providers.forEach((provider: any) => {
+            if (
+              provider.label?.trim() &&
+              provider.value?.trim() &&
+              provider.base_url?.trim()
+            ) {
+              // Check if this provider has selected models
+              const providerModelsKey = `models_${provider.id}`;
+              const selectedModels = localStorage.getItem(providerModelsKey);
+              if (selectedModels) {
+                try {
+                  const models = JSON.parse(selectedModels);
+                  // Handle both legacy format (array of strings) and new format (array of objects)
+                  const modelArray =
+                    models.length > 0 && typeof models[0] === "string"
+                      ? models.map((id: string) => ({
+                          id,
+                          name: id,
+                          supported_parameters: [],
+                        }))
+                      : models;
+
+                  modelArray.forEach(
+                    (model: {
+                      id: string;
+                      name: string;
+                      supported_parameters?: string[];
+                    }) => {
+                      customOptions.push({
+                        label: `${provider.label} - ${model.name}`,
+                        value: model.id,
+                        source: "custom",
+                        providerId: provider.id,
+                        supportedParameters: model.supported_parameters || [],
+                      });
+                    }
+                  );
+                } catch (error) {
+                  console.error("Error parsing selected models:", error);
+                }
+              }
+            }
+          });
+
+          options.push(...customOptions);
+        }
+      } catch (error) {
+        console.error("Error loading custom providers:", error);
+      }
+
+      // Set final options with localStorage data only
       setModelOptions([...options]);
 
-      // Check capabilities for initial load
+      // Check capabilities for loaded models
       checkCurrentModelCapabilities([...options]);
-
-      // Now fetch fresh system models asynchronously
-      const systemModels = await getSystemModels();
-
-      // Filter system models to only include selected ones and fallback models
-      const filteredSystemModels = systemModels.filter((model) => {
-        const isFallbackModel = DEFAULT_SYSTEM_MODELS.some(
-          (fallback) => fallback.id === model.id
-        );
-        if (isFallbackModel) {
-          return true;
-        }
-        // More flexible matching
-        return selectedServerModels.some(
-          (selected: {
-            id: string;
-            name: string;
-            supported_parameters?: string[];
-          }) =>
-            selected.id === model.id ||
-            selected.name === model.name ||
-            selected.id === model.name
-        );
-      });
-
-      // Replace system models in options array
-      const systemModelOptions = filteredSystemModels.map((model) => {
-        // Use stored supported_parameters if available, otherwise use fresh model's parameters
-        const storedModel = selectedServerModels.find(
-          (selected: {
-            id: string;
-            name: string;
-            supported_parameters?: string[];
-          }) =>
-            selected.id === model.id ||
-            selected.name === model.name ||
-            selected.id === model.name
-        );
-        const supportedParameters =
-          storedModel?.supported_parameters || model.supported_parameters || [];
-
-        return {
-          label: model.name,
-          value: model.id,
-          source: "system",
-          supportedParameters,
-        };
-      });
-
-      // Clear existing system models and add fresh ones
-      const nonSystemOptions = options.filter((opt) => opt.source !== "system");
-
-      // Add fresh system models
-      const updatedSystemOptions = [...systemModelOptions];
-
-      // Add any selected models that weren't found in fresh system models
-      selectedServerModels.forEach(
-        (selectedModel: {
-          id: string;
-          name: string;
-          supported_parameters?: string[];
-        }) => {
-          const existsInSystemOptions = updatedSystemOptions.some(
-            (opt) =>
-              opt.value === selectedModel.id || opt.label === selectedModel.name
-          );
-
-          if (!existsInSystemOptions) {
-            updatedSystemOptions.push({
-              label: selectedModel.name,
-              value: selectedModel.id,
-              source: "system",
-              supportedParameters: selectedModel.supported_parameters || [],
-            });
-          }
-        }
-      );
-
-      const updatedOptions = [...updatedSystemOptions, ...nonSystemOptions];
-
-      setModelOptions(updatedOptions);
-
-      // Check if current model supports image generation
-      checkCurrentModelCapabilities(updatedOptions);
     } catch (error) {
-      console.error("Error loading system models:", error);
+      console.error("Error loading models from localStorage:", error);
       // Use the shared constant for fallback models
       const fallbackSystemModels = DEFAULT_SYSTEM_MODELS.map((model) => ({
         label: model.name,
@@ -398,129 +459,16 @@ const ChatInput = ({
         supportedParameters: model.supported_parameters || [],
       }));
 
-      // Only add fallback if no system models are already present
-      const nonSystemOptions = options.filter((opt) => opt.source !== "system");
-      const fallbackOptions = [...fallbackSystemModels, ...nonSystemOptions];
-      setModelOptions(fallbackOptions);
-      checkCurrentModelCapabilities(fallbackOptions);
+      setModelOptions(fallbackSystemModels);
+      checkCurrentModelCapabilities(fallbackSystemModels);
     } finally {
       setIsLoadingSystemModels(false);
-    }
-
-    // Load built-in provider models
-    try {
-      const builtInProviders = localStorage.getItem("builtin_api_providers");
-      if (builtInProviders) {
-        const providers = JSON.parse(builtInProviders);
-        const builtInOptions: ModelOption[] = [];
-
-        providers.forEach((provider: any) => {
-          if (provider.value?.trim()) {
-            // Add static models for built-in providers
-            if (provider.id === "openai") {
-              builtInOptions.push(
-                {
-                  label: "GPT-4",
-                  value: "gpt-4",
-                  source: "builtin",
-                  providerId: provider.id,
-                },
-                {
-                  label: "GPT-3.5 Turbo",
-                  value: "gpt-3.5-turbo",
-                  source: "builtin",
-                  providerId: provider.id,
-                }
-              );
-            } else if (provider.id === "anthropic") {
-              builtInOptions.push(
-                {
-                  label: "Claude 3 Sonnet",
-                  value: "claude-3-sonnet-20240229",
-                  source: "builtin",
-                  providerId: provider.id,
-                },
-                {
-                  label: "Claude 3 Haiku",
-                  value: "claude-3-haiku-20240307",
-                  source: "builtin",
-                  providerId: provider.id,
-                }
-              );
-            }
-          }
-        });
-
-        setModelOptions((prev) => [...prev, ...builtInOptions]);
-      }
-    } catch (error) {
-      console.error("Error loading built-in providers:", error);
-    }
-
-    // Load custom provider models
-    try {
-      const customProviders = localStorage.getItem("custom_api_providers");
-      if (customProviders) {
-        const providers = JSON.parse(customProviders);
-        const customOptions: ModelOption[] = [];
-
-        providers.forEach((provider: any) => {
-          if (
-            provider.label?.trim() &&
-            provider.value?.trim() &&
-            provider.base_url?.trim()
-          ) {
-            // Check if this provider has selected models
-            const providerModelsKey = `models_${provider.id}`;
-            const selectedModels = localStorage.getItem(providerModelsKey);
-            if (selectedModels) {
-              try {
-                const models = JSON.parse(selectedModels);
-                // Handle both legacy format (array of strings) and new format (array of objects)
-                const modelArray =
-                  models.length > 0 && typeof models[0] === "string"
-                    ? models.map((id: string) => ({
-                        id,
-                        name: id,
-                        supported_parameters: [],
-                      }))
-                    : models;
-
-                modelArray.forEach(
-                  (model: {
-                    id: string;
-                    name: string;
-                    supported_parameters?: string[];
-                  }) => {
-                    customOptions.push({
-                      label: `${provider.label} - ${model.name}`,
-                      value: model.id,
-                      source: "custom",
-                      providerId: provider.id,
-                      supportedParameters: model.supported_parameters || [],
-                    });
-                  }
-                );
-              } catch (error) {
-                console.error("Error parsing selected models:", error);
-              }
-            }
-          }
-        });
-
-        setModelOptions((prev) => [...prev, ...customOptions]);
-      }
-    } catch (error) {
-      console.error("Error loading custom providers:", error);
     }
   }, [checkCurrentModelCapabilities]);
 
   // Load models on mount
   useEffect(() => {
-    const loadModels = async () => {
-      await loadAvailableModels();
-    };
-    loadModels();
+    loadAvailableModels();
   }, [loadAvailableModels]);
 
   // Handle image upload
@@ -918,6 +866,9 @@ const ChatInput = ({
     modelOptions.find((model) => model.value === selectedModel)?.label ||
     "Gemini 1.5 Flash";
 
+  // Animation transition class helper
+  const transitionClass = animationsDisabled ? '' : 'transition-transform duration-200';
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -925,6 +876,13 @@ const ChatInput = ({
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsModelDropdownOpen(false);
+        setModelSearchQuery(""); // Clear search when closing
+      }
+      if (
+        sizeDropdownRef.current &&
+        !sizeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsSizeDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -956,6 +914,7 @@ const ChatInput = ({
     setSelectedModel(option.value);
     setSelectedProviderId(option.providerId || "");
     setIsModelDropdownOpen(false);
+    setModelSearchQuery(""); // Clear search when selecting
 
     // Check capabilities of the new model
     checkCurrentModelCapabilities(modelOptions);
@@ -1057,9 +1016,9 @@ const ChatInput = ({
 
   return (
     <div
-      className="bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 p-3 rounded-2xl w-full
-        sm:rounded-2xl
-        rounded-t-2xl rounded-b-none
+      className="bg-zinc-200/80 dark:bg-zinc-800/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 p-3 rounded-3xl w-full
+        sm:rounded-3xl
+        rounded-t-3xl rounded-b-none
         shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.12),0_-4px_16px_-2px_rgba(0,0,0,0.08)]
         dark:shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.3),0_-4px_16px_-2px_rgba(0,0,0,0.2)]
       "
@@ -1099,7 +1058,10 @@ const ChatInput = ({
             <div className="flex items-center flex-wrap gap-2">
               <div ref={dropdownRef} className="relative">
                 <button
-                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  onClick={() => {
+                    if (isLoadingSystemModels) return;
+                    setIsModelDropdownOpen(!isModelDropdownOpen);
+                  }}
                   className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-48"
                 >
                   <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
@@ -1110,45 +1072,91 @@ const ChatInput = ({
                     <LoadingIndicator size="sm" color="primary" />
                   ) : (
                     <ChevronDown
-                      className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${
+                      className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
                         isModelDropdownOpen ? "rotate-180" : ""
                       }`}
                     />
                   )}
                 </button>
-                {isModelDropdownOpen && (
-                  <div className="absolute bottom-full mb-2 left-0 w-64 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
-                    <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
-                      {isLoadingSystemModels &&
-                        modelOptions.filter((opt) => opt.source === "system")
-                          .length === 0 && (
-                          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                            <LoadingIndicator size="sm" color="primary" />
-                            Loading models...
-                          </div>
-                        )}
-                      {modelOptions.map((option) => (
-                        <button
-                          key={`${option.value}-${
-                            option.providerId || "system"
-                          }`}
-                          onClick={() => handleModelSelect(option)}
-                          className="w-full text-left flex items-center justify-between px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                          title={option.label}
-                        >
-                          <span className="truncate flex-1 mr-2">
-                            {option.label}
-                          </span>
-                          {selectedModel === option.value &&
-                            selectedProviderId ===
-                              (option.providerId || "") && (
-                              <Check className="w-4 h-4 text-pink-500 flex-shrink-0" />
+                <AnimatePresence>
+                  {isModelDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: animationsDisabled ? 0 : 0.15 }}
+                      className="absolute bottom-full mb-2 left-0 w-80 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
+                    >
+                      {/* Search Input */}
+                      <div className="p-3 border-b border-zinc-200/50 dark:border-zinc-700/50">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                          <input
+                            type="text"
+                            placeholder="Search models..."
+                            value={modelSearchQuery}
+                            onChange={(e) => setModelSearchQuery(e.target.value)}
+                            className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-300/50 dark:border-zinc-600/50 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+
+                      {/* Model Options */}
+                      <div 
+                        className="max-h-64 overflow-y-auto thin-scrollbar"
+                        style={{
+                          maskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)'
+                        }}
+                      >
+                        <div className="py-1">
+                          {isLoadingSystemModels &&
+                            modelOptions.filter((opt) => opt.source === "system")
+                              .length === 0 && (
+                              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                                <LoadingIndicator size="sm" color="primary" />
+                                Loading models...
+                              </div>
                             )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                          {modelOptions
+                            .filter((option) => 
+                              option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                            )
+                            .map((option) => {
+                              const isSelected = selectedModel === option.value && selectedProviderId === (option.providerId || "");
+                              return (
+                                <button
+                                  key={`${option.value}-${option.providerId || "system"}`}
+                                  onClick={() => handleModelSelect(option)}
+                                  className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                                    isSelected 
+                                      ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300" 
+                                      : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
+                                  }`}
+                                  title={option.label}
+                                >
+                                  <span className="truncate flex-1 mr-2">
+                                    {option.label}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    {getCapabilityIcons(option)}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          {modelOptions.filter((option) => 
+                            option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                          ).length === 0 && modelSearchQuery && (
+                            <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
+                              No models found matching "{modelSearchQuery}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1186,7 +1194,7 @@ const ChatInput = ({
               )}
 
               {/* Size Selector */}
-              <div className="relative">
+              <div ref={sizeDropdownRef} className="relative">
                 <button
                   onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
                   className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[120px]"
@@ -1196,31 +1204,46 @@ const ChatInput = ({
                     {selectedImageSize}
                   </span>
                   <ChevronDown
-                    className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${
+                    className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
                       isSizeDropdownOpen ? "rotate-180" : ""
                     }`}
                   />
                 </button>
-                {isSizeDropdownOpen && (
-                  <div className="absolute bottom-full mb-2 left-0 w-48 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
-                    <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
-                      {ImageGenerationService.getImageSizeOptions().map(
-                        (option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => {
-                              setSelectedImageSize(option.value);
-                              setIsSizeDropdownOpen(false);
-                            }}
-                            className="w-full text-left px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                          >
-                            {option.label}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
+                <AnimatePresence>
+                  {isSizeDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: animationsDisabled ? 0 : 0.15 }}
+                      className="absolute bottom-full mb-2 left-0 w-32 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
+                    >
+                      <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
+                        {ImageGenerationService.getImageSizeOptions().map(
+                          (option) => {
+                            const isSelected = selectedImageSize === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                onClick={() => {
+                                  setSelectedImageSize(option.value);
+                                  setIsSizeDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                                  isSelected 
+                                    ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300" 
+                                    : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Generate Button - Different conditions based on model capabilities */}
@@ -1332,7 +1355,10 @@ const ChatInput = ({
             <div className="flex items-center flex-wrap gap-2">
               <div ref={dropdownRef} className="relative">
                 <button
-                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  onClick={() => {
+                    if (isLoadingSystemModels) return;
+                    setIsModelDropdownOpen(!isModelDropdownOpen);
+                  }}
                   className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-48"
                 >
                   <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
@@ -1343,45 +1369,91 @@ const ChatInput = ({
                     <LoadingIndicator size="sm" color="primary" />
                   ) : (
                     <ChevronDown
-                      className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 flex-shrink-0 ${
+                      className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
                         isModelDropdownOpen ? "rotate-180" : ""
                       }`}
                     />
                   )}
                 </button>
-                {isModelDropdownOpen && (
-                  <div className="absolute bottom-full mb-2 left-0 w-64 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10">
-                    <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
-                      {isLoadingSystemModels &&
-                        modelOptions.filter((opt) => opt.source === "system")
-                          .length === 0 && (
-                          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                            <LoadingIndicator size="sm" color="primary" />
-                            Loading models...
-                          </div>
-                        )}
-                      {modelOptions.map((option) => (
-                        <button
-                          key={`${option.value}-${
-                            option.providerId || "system"
-                          }`}
-                          onClick={() => handleModelSelect(option)}
-                          className="w-full text-left flex items-center justify-between px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                          title={option.label}
-                        >
-                          <span className="truncate flex-1 mr-2">
-                            {option.label}
-                          </span>
-                          {selectedModel === option.value &&
-                            selectedProviderId ===
-                              (option.providerId || "") && (
-                              <Check className="w-4 h-4 text-pink-500 flex-shrink-0" />
+                <AnimatePresence>
+                  {isModelDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: animationsDisabled ? 0 : 0.15 }}
+                      className="absolute bottom-full mb-2 left-0 w-80 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
+                    >
+                      {/* Search Input */}
+                      <div className="p-3 border-b border-zinc-200/50 dark:border-zinc-700/50">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                          <input
+                            type="text"
+                            placeholder="Search models..."
+                            value={modelSearchQuery}
+                            onChange={(e) => setModelSearchQuery(e.target.value)}
+                            className="w-full bg-zinc-100/50 dark:bg-zinc-800/50 border border-zinc-300/50 dark:border-zinc-600/50 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+
+                      {/* Model Options */}
+                      <div 
+                        className="max-h-64 overflow-y-auto thin-scrollbar"
+                        style={{
+                          maskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)'
+                        }}
+                      >
+                        <div className="py-1">
+                          {isLoadingSystemModels &&
+                            modelOptions.filter((opt) => opt.source === "system")
+                              .length === 0 && (
+                              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                                <LoadingIndicator size="sm" color="primary" />
+                                Loading models...
+                              </div>
                             )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                          {modelOptions
+                            .filter((option) => 
+                              option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                            )
+                            .map((option) => {
+                              const isSelected = selectedModel === option.value && selectedProviderId === (option.providerId || "");
+                              return (
+                                <button
+                                  key={`${option.value}-${option.providerId || "system"}`}
+                                  onClick={() => handleModelSelect(option)}
+                                  className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                                    isSelected 
+                                      ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300" 
+                                      : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
+                                  }`}
+                                  title={option.label}
+                                >
+                                  <span className="truncate flex-1 mr-2">
+                                    {option.label}
+                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    {getCapabilityIcons(option)}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          {modelOptions.filter((option) => 
+                            option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                          ).length === 0 && modelSearchQuery && (
+                            <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
+                              No models found matching "{modelSearchQuery}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
             <div className="flex items-center gap-2">
