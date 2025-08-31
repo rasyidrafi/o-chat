@@ -1107,23 +1107,15 @@ const ChatInput = ({
           />
 
           {/* Model selector row - exactly like chat mode layout */}
-          <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
-            <div className="flex items-center flex-wrap gap-2">
+          <div className="flex items-stretch justify-between flex-wrap gap-2 mt-2">
+            <div className="flex items-stretch flex-wrap gap-2">
               <div ref={dropdownRef} className="relative">
                 <button
                   onClick={() => {
                     if (isLoadingSystemModels) return;
                     setIsModelDropdownOpen(!isModelDropdownOpen);
                   }}
-                  className={`flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors ${(() => {
-                    const capabilities = getCurrentModelCapabilities();
-                    return capabilities &&
-                      (capabilities.hasImageGeneration ||
-                        capabilities.hasImageGenerationJobs) &&
-                      capabilities.hasImageEditing
-                      ? "w-32 sm:w-48"
-                      : "w-48";
-                  })()}`}
+                  className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48`}
                 >
                   <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
                     {selectedModelLabel}
@@ -1159,7 +1151,6 @@ const ChatInput = ({
                               setModelSearchQuery(e.target.value)
                             }
                             className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
-                            autoFocus
                           />
                         </div>
                       </div>
@@ -1234,13 +1225,13 @@ const ChatInput = ({
                 </AnimatePresence>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-stretch gap-1">
               {/* Upload button for image editing models only (generation-only models don't support image input) */}
               {(() => {
                 const capabilities = getCurrentModelCapabilities();
                 return capabilities && capabilities.hasImageEditing;
               })() && (
-                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-3 rounded-lg">
+                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-stretch py-2 px-2.5 rounded-lg h-full">
                   <input
                     type="file"
                     accept="image/*"
@@ -1264,22 +1255,20 @@ const ChatInput = ({
                     ) : (
                       <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     )}
-                    <span>ㅤ</span>
                   </button>
                 </div>
               )}
 
               {/* Size Selector */}
-              <div ref={sizeDropdownRef} className="relative">
+              <div ref={sizeDropdownRef} className="flex items-stretch relative">
                 <button
                   onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                  className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px]"
+                  className="flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px]"
                   disabled={disabled || isImageGenerating}
                   title={selectedImageSize}
                 >
                   {/* Icon for mobile, text for larger screens */}
                   <FullScreen className="w-4 h-4 text-zinc-500 dark:text-zinc-400 sm:hidden flex-shrink-0" />
-                  <span>ㅤ</span>
                   <span className="text-zinc-900 dark:text-white truncate flex-1 text-left hidden sm:block">
                     {selectedImageSize}
                   </span>
@@ -1330,7 +1319,7 @@ const ChatInput = ({
               {/* Generate Button - Different conditions based on model capabilities */}
               <button
                 onClick={handleImageGenerateClick}
-                className={`py-1.5 px-2 ml-2 rounded-lg flex items-center transition-colors ${
+                className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors ${
                   (() => {
                     const capabilities = getCurrentModelCapabilities();
                     if (capabilities?.hasImageEditing) {
@@ -1369,7 +1358,6 @@ const ChatInput = ({
                 }
               >
                 <ArrowUp className="w-4 h-4" />
-                <span>ㅤ</span>
               </button>
             </div>
           </div>
@@ -1446,22 +1434,15 @@ const ChatInput = ({
             />
           </div>
           <HorizontalRuleDefault />
-          <div className="flex items-center justify-between flex-wrap gap-2 mt-2">
-            <div className="flex items-center flex-wrap gap-2">
+          <div className="flex items-stretch justify-between flex-wrap gap-2 mt-2">
+            <div className="flex items-stretch flex-wrap gap-2">
               <div ref={dropdownRef} className="relative">
                 <button
                   onClick={() => {
                     if (isLoadingSystemModels) return;
                     setIsModelDropdownOpen(!isModelDropdownOpen);
                   }}
-                  className={`flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors ${(() => {
-                    const capabilities = getCurrentModelCapabilities();
-                    return capabilities &&
-                      (capabilities.hasImageGeneration ||
-                        capabilities.hasImageGenerationJobs)
-                      ? "w-32 sm:w-48"
-                      : "w-48";
-                  })()}`}
+                  className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48`}
                 >
                   <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
                     {selectedModelLabel}
@@ -1497,7 +1478,6 @@ const ChatInput = ({
                               setModelSearchQuery(e.target.value)
                             }
                             className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
-                            autoFocus
                           />
                         </div>
                       </div>
@@ -1572,7 +1552,7 @@ const ChatInput = ({
                 </AnimatePresence>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-stretch gap-1">
               {/* Conditionally show upload button only when model supports vision (in chat mode) */}
               {(() => {
                 const capabilities = getCurrentModelCapabilities();
@@ -1582,7 +1562,7 @@ const ChatInput = ({
                   !capabilities.hasImageEditing
                 );
               })() && (
-                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-3 rounded-lg">
+                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2.5 rounded-lg">
                   <input
                     type="file"
                     accept="image/*"
@@ -1634,13 +1614,12 @@ const ChatInput = ({
                     ) : (
                       <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     )}
-                    <span>ㅤ</span>
                   </button>
                 </div>
               )}
               <button
                 onClick={handleSendMessage}
-                className={`py-1.5 px-2 ml-2 rounded-lg transition-colors flex items-center ${
+                className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors ${
                   (() => {
                     const capabilities = getCurrentModelCapabilities();
                     if (capabilities?.hasVision) {
@@ -1675,7 +1654,6 @@ const ChatInput = ({
                 aria-label={disabled ? "Sending..." : "Send message"}
               >
                 <ArrowUp className="w-4 h-4" />
-                <span>ㅤ</span>
               </button>
             </div>
           </div>
