@@ -82,13 +82,23 @@ const ImageContentComponent: React.FC<{
     // Calculate display dimensions based on natural image dimensions
     const displayDimensions = useMemo(() => {
       if (!naturalDimensions) {
-        // Fallback dimensions while loading - use full container size
+        // While loading, use a reasonable default aspect ratio (4:3)
+        const defaultAspectRatio = 4 / 3;
+        let loadingWidth = maxWidth;
+        let loadingHeight = maxWidth / defaultAspectRatio;
+        
+        // If height exceeds max, adjust to fit
+        if (loadingHeight > maxHeight) {
+          loadingHeight = maxHeight;
+          loadingWidth = maxHeight * defaultAspectRatio;
+        }
+        
         return {
-          width: maxWidth,
-          height: maxHeight,
-          containerWidth: maxWidth,
-          containerHeight: maxHeight,
-          fillsContainer: true,
+          width: Math.round(loadingWidth),
+          height: Math.round(loadingHeight),
+          containerWidth: Math.round(loadingWidth),
+          containerHeight: Math.round(loadingHeight),
+          fillsContainer: false,
         };
       }
 
@@ -120,8 +130,8 @@ const ImageContentComponent: React.FC<{
       return {
         width: finalWidth,
         height: finalHeight,
-        containerWidth: maxWidth,
-        containerHeight: maxHeight,
+        containerWidth: finalWidth,
+        containerHeight: finalHeight,
         fillsContainer,
       };
     }, [naturalDimensions, maxWidth, maxHeight]);
