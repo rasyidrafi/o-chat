@@ -280,6 +280,7 @@ interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
   animationsDisabled: boolean;
+  isLastMessage?: boolean;
 }
 
 const CodeBlock: React.FC<{
@@ -901,7 +902,7 @@ const createMarkdownProcessor = () =>
   );
 
 const Message: React.FC<MessageProps> = memo(
-  ({ message, isStreaming = false, animationsDisabled }) => {
+  ({ message, isStreaming = false, animationsDisabled, isLastMessage = false }) => {
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [processor, setProcessor] = useState<any>(null);
@@ -1332,6 +1333,12 @@ const Message: React.FC<MessageProps> = memo(
                       <span className="ml-2">
                         • {message.modelName || message.model}
                       </span>
+                    )}
+                    {/* AI disclaimer for last message */}
+                    {isLastMessage && (
+                      <div className="mt-1 text-zinc-400 dark:text-zinc-500 text-xs text-right">
+                        AI can make mistakes. Please verify important information.
+                      </div>
                     )}
                   </div>
                 )}

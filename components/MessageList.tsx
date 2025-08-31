@@ -54,12 +54,13 @@ const MessageList: React.FC<MessageListProps> = ({
     >
       <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto overflow-x-hidden">
         <AnimatePresence mode="popLayout">
-          {messages.map((message) => (
+          {messages.map((message, idx) => (
             <Message
               key={message.id}
               message={message}
               isStreaming={streamingMessageId === message.id}
               animationsDisabled={animationsDisabled}
+              isLastMessage={idx === messages.length - 1}
             />
           ))}
         </AnimatePresence>
