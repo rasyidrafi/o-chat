@@ -622,11 +622,16 @@ const ChatInput = ({
       setIsLoadingModelFromConversation(true);
 
       // Check if the model exists in our available models
-      const modelExists = modelOptions.some(option => 
-        option.value === model && 
-        (option.providerId || '') === (providerId || '') &&
-        option.source === source
-      );
+      const modelExists = modelOptions.some(option => {
+        let found = true;
+        if (selectedProviderId) {
+          if (!option?.providerId) return false;
+          found = found && (option.providerId || '') === (selectedProviderId || '');
+        }
+
+        found = found && option.value === model;
+        return found;
+      });
 
       // console.log('Model exists in options:', modelExists);
 
