@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, ChevronDown, Paperclip, ArrowUp, X, Search, Eye, Edit, Palette } from "./Icons";
+import { ChevronDown, Paperclip, ArrowUp, X, Search, Eye, Edit, Palette, FullScreen } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import { motion, AnimatePresence } from "framer-motion";
 import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
@@ -1062,9 +1062,13 @@ const ChatInput = ({
                     if (isLoadingSystemModels) return;
                     setIsModelDropdownOpen(!isModelDropdownOpen);
                   }}
-                  className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-48"
+                  className={`flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors ${(() => {
+                    const capabilities = getCurrentModelCapabilities();
+                    return capabilities && (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) && capabilities.hasImageEditing 
+                      ? "w-32 sm:w-48" 
+                      : "w-48";
+                  })()}`}
                 >
-                  <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
                   <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
                     {selectedModelLabel}
                   </span>
@@ -1085,7 +1089,7 @@ const ChatInput = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 left-0 w-80 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
+                      className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
                     >
                       {/* Search Input */}
                       <div className="p-3 border-b border-zinc-200/50 dark:border-zinc-700/50">
@@ -1159,13 +1163,13 @@ const ChatInput = ({
                 </AnimatePresence>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {/* Upload button for image editing models only (generation-only models don't support image input) */}
               {(() => {
                 const capabilities = getCurrentModelCapabilities();
                 return capabilities && capabilities.hasImageEditing;
               })() && (
-                <div className="relative">
+                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2 rounded-lg">
                   <input
                     type="file"
                     accept="image/*"
@@ -1180,7 +1184,7 @@ const ChatInput = ({
                     disabled={isUploadingImage || isImageGenerating}
                   />
                   <button
-                    className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors relative"
+                    className="transition-colors relative"
                     aria-label="Upload image for editing"
                     disabled={isUploadingImage || isImageGenerating}
                   >
@@ -1197,10 +1201,13 @@ const ChatInput = ({
               <div ref={sizeDropdownRef} className="relative">
                 <button
                   onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                  className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[120px]"
+                  className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px]"
                   disabled={disabled || isImageGenerating}
+                  title={selectedImageSize}
                 >
-                  <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
+                  {/* Icon for mobile, text for larger screens */}
+                  <FullScreen className="w-4 h-4 text-zinc-500 dark:text-zinc-400 sm:hidden flex-shrink-0" />
+                  <span className="text-zinc-900 dark:text-white truncate flex-1 text-left hidden sm:block">
                     {selectedImageSize}
                   </span>
                   <ChevronDown
@@ -1359,9 +1366,13 @@ const ChatInput = ({
                     if (isLoadingSystemModels) return;
                     setIsModelDropdownOpen(!isModelDropdownOpen);
                   }}
-                  className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-48"
+                  className={`flex items-center gap-2 text-sm py-2 px-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors ${(() => {
+                    const capabilities = getCurrentModelCapabilities();
+                    return capabilities && (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) 
+                      ? "w-32 sm:w-48" 
+                      : "w-48";
+                  })()}`}
                 >
-                  <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0" />
                   <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
                     {selectedModelLabel}
                   </span>
@@ -1382,7 +1393,7 @@ const ChatInput = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 left-0 w-80 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
+                      className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-md rounded-lg shadow-lg border border-zinc-200/50 dark:border-zinc-700/50 overflow-hidden z-10"
                     >
                       {/* Search Input */}
                       <div className="p-3 border-b border-zinc-200/50 dark:border-zinc-700/50">
@@ -1462,7 +1473,7 @@ const ChatInput = ({
                 const capabilities = getCurrentModelCapabilities();
                 return capabilities && capabilities.hasVision && !capabilities.hasImageEditing;
               })() && (
-                <div className="relative">
+                <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2 rounded-lg">
                   <input
                     type="file"
                     accept="image/*"
@@ -1497,7 +1508,7 @@ const ChatInput = ({
                     disabled={isUploadingImage}
                   />
                   <button
-                    className="p-1.5 rounded-lg hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 transition-colors relative"
+                    className="transition-colors relative"
                     aria-label="Attach image"
                     disabled={isUploadingImage}
                   >
