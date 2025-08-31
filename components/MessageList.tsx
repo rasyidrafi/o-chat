@@ -41,15 +41,13 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, []);
 
-  // Listen for scroll to bottom events (triggered when user sends a message)
+  // Scroll to bottom only when user sends a new message
   useEffect(() => {
-    const handleScrollToBottom = () => {
+    if (prevMessages && messages.length > prevMessages.length) {
+      // New message added, scroll to bottom
       scrollToBottom(true);
-    };
-
-    window.addEventListener("scrollToBottom", handleScrollToBottom);
-    return () => window.removeEventListener("scrollToBottom", handleScrollToBottom);
-  }, [scrollToBottom]);
+    }
+  }, [messages.length, prevMessages, scrollToBottom]);
 
   // Detect when we're transitioning between conversations (empty -> filled)
   useEffect(() => {

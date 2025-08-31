@@ -20,7 +20,9 @@ export interface ImageGenerationJobConfig {
 }
 
 export class ImageGenerationJobService {
-  private static activeJobs: Map<string, NodeJS.Timeout> = new Map();
+  private static activeJobs: Map<string, NodeJS.Timeout> = new Map(); // Now stores setInterval IDs
+  private static jobStates: Map<string, ImageGenerationJob> = new Map();
+  private static startingJobs: Set<string> = new Set(); // Track jobs that are in the process of starting
 
   // Unused for now - keeping for potential future use
   // private static createOpenAIInstance(idToken?: string, baseURL?: string, apiKey?: string) {
@@ -253,59 +255,135 @@ export class ImageGenerationJobService {
     onComplete: (job: ImageGenerationJob) => void,
     onError: (error: Error) => void
   ): void {
-    // Clear any existing polling for this job
-    this.stopJobPolling(jobId);
+    // Prevent multiple simultaneous starts for the same job
+    if (this.startingJobs.has(jobId)) {
+      console.log(`Job ${jobId} is already starting, ignoring duplicate start request`);
+      return;
+    }
+
+    // Check if we're already polling this job
+    if (this.activeJobs.has(jobId)) {
+      console.log(`Job ${jobId} is already being polled, ignoring duplicate start request`);
+      return;
+    }
+    
+    // Mark job as starting
+    this.startingJobs.add(jobId);
+    
+    console.log(`Starting polling for job: ${jobId} (active jobs: ${this.activeJobs.size})`);
 
     const pollJob = async () => {
       try {
+        // Check if job is still active before making the API call
+        if (!this.activeJobs.has(jobId)) {
+          console.log(`Job ${jobId} is no longer active, stopping polling`);
+          return;
+        }
+
+        console.log(`Polling job ${jobId} - making API call (${new Date().toISOString()})`);
+        
         // Check job status from API
         const statusJob = await this.checkJobStatus(jobId, source, providerId, user);
         
-        // Always call onUpdate to ensure UI updates, regardless of whether Firestore data changed
-        onUpdate(statusJob);
+        // Check if job is still active after API call
+        if (!this.activeJobs.has(jobId)) {
+          console.log(`Job ${jobId} is no longer active after API call, stopping polling`);
+          return;
+        }
+
+        // Get previous job state to compare for changes
+        const previousJob = this.jobStates.get(jobId);
+        let hasChanges = false;
+
+        if (!previousJob) {
+          // First time polling this job
+          hasChanges = true;
+        } else {
+          // Check for meaningful changes
+          hasChanges = 
+            previousJob.status !== statusJob.status ||
+            previousJob.data?.length !== statusJob.data?.length ||
+            JSON.stringify(previousJob.info) !== JSON.stringify(statusJob.info);
+        }
+
+        // Store current state for next comparison
+        this.jobStates.set(jobId, statusJob);
+
+        // Only call onUpdate if there are changes
+        if (hasChanges) {
+          console.log(`Job ${jobId} has changes (status: ${statusJob.status}, data: ${statusJob.data?.length || 0} items), updating UI and Firestore`);
+          onUpdate(statusJob);
+        } else {
+          console.log(`Job ${jobId} has no changes (status: ${statusJob.status}), skipping update`);
+        }
 
         // Check if job is complete
         if (statusJob.status === 'SUCCESS' || statusJob.status === 'FAILED') {
+          console.log(`Job ${jobId} completed with status: ${statusJob.status}`);
           this.stopJobPolling(jobId);
           onComplete(statusJob);
-        } else {
-          // Continue polling
-          const timeoutId = setTimeout(pollJob, 2000); // Poll every 2 seconds
-          this.activeJobs.set(jobId, timeoutId);
         }
       } catch (error) {
         console.error('Error polling job status:', error);
+        
+        // Check if job is still active before handling error
+        if (!this.activeJobs.has(jobId)) {
+          console.log(`Job ${jobId} is no longer active, not continuing polling after error`);
+          return;
+        }
+        
         onError(error as Error);
-        // Continue polling on error (might be temporary)
-        const timeoutId = setTimeout(pollJob, 5000); // Poll every 5 seconds on error
-        this.activeJobs.set(jobId, timeoutId);
       }
     };
 
-    // Start polling immediately
-    pollJob();
+    // Start interval polling every 3 seconds (no immediate poll)
+    console.log(`Starting interval polling for job ${jobId} every 3 seconds`);
+    const intervalId = setInterval(pollJob, 3000); // Poll every 3 seconds
+    this.activeJobs.set(jobId, intervalId);
+    
+    // Remove from starting set
+    this.startingJobs.delete(jobId);
+
+    // Do first poll after 1 second (not immediately to avoid burst)
+    setTimeout(pollJob, 1000);
   }
 
   // Stop polling for a specific job
   static stopJobPolling(jobId: string): void {
-    const timeoutId = this.activeJobs.get(jobId);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+    const intervalId = this.activeJobs.get(jobId);
+    if (intervalId) {
+      clearInterval(intervalId);
       this.activeJobs.delete(jobId);
+      console.log(`Stopped polling for job: ${jobId} (remaining active jobs: ${this.activeJobs.size})`);
+    } else {
+      console.log(`Job ${jobId} was not being polled`);
     }
+    // Clean up stored job state and starting status
+    this.jobStates.delete(jobId);
+    this.startingJobs.delete(jobId);
   }
 
-  // Check if a job is currently being polled
+  // Check if a job is currently being polled or starting
   static isJobBeingPolled(jobId: string): boolean {
-    return this.activeJobs.has(jobId);
+    return this.activeJobs.has(jobId) || this.startingJobs.has(jobId);
   }
 
   // Stop all polling
   static stopAllPolling(): void {
-    this.activeJobs.forEach((timeoutId) => {
-      clearTimeout(timeoutId);
+    const activeJobCount = this.activeJobs.size;
+    console.log(`Stopping polling for ${activeJobCount} active jobs`)
+    
+    // Clear all intervals
+    this.activeJobs.forEach((intervalId, jobId) => {
+      clearInterval(intervalId);
+      console.log(`Cancelled job: ${jobId}`);
     });
     this.activeJobs.clear();
+    
+    // Clear all stored job states and starting statuses
+    this.jobStates.clear();
+    this.startingJobs.clear();
+    console.log("All polling stopped and job states cleared");
   }
 
   // Get all active jobs for a user - search through conversation messages
@@ -313,5 +391,13 @@ export class ImageGenerationJobService {
     // This method should be called from the hook context where conversations are available
     // For now, return empty array since we'll handle this logic in the hook
     return [];
+  }
+
+  // Get current polling status (for debugging)
+  static getPollingStatus(): { activeJobs: string[], jobStates: string[] } {
+    return {
+      activeJobs: Array.from(this.activeJobs.keys()),
+      jobStates: Array.from(this.jobStates.keys())
+    };
   }
 }

@@ -1436,8 +1436,9 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               return; // Skip polling for this completed job
             }
 
-            // Resume polling for in-progress jobs
-            ImageGenerationJobService.startJobPolling(
+            // Resume polling for in-progress jobs only if not already being polled
+            if (!ImageGenerationJobService.isJobBeingPolled(job.id)) {
+              ImageGenerationJobService.startJobPolling(
               job.id,
               originalSource,
               originalProviderId,
@@ -1628,6 +1629,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                 });
               }
             );
+            }
           }
         }
       });

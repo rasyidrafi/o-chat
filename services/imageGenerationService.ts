@@ -237,35 +237,15 @@ export class ImageGenerationService {
     ];
   }
 
-  static calculatePlaceholderDimensions(size: string, maxWidth: number = 320): { width: number; height: number; aspectRatio: number } {
-    const [widthStr, heightStr] = size.split('x');
-    const originalWidth = parseInt(widthStr);
-    const originalHeight = parseInt(heightStr);
-
-    if (isNaN(originalWidth) || isNaN(originalHeight)) {
-      // Default to square if invalid size
-      return { width: maxWidth, height: maxWidth, aspectRatio: 1 };
-    }
-
-    const aspectRatio = originalWidth / originalHeight;
-
-    // Calculate dimensions that fit within maxWidth while maintaining aspect ratio
-    let width, height;
-
-    if (aspectRatio >= 1) {
-      // Landscape or square - constrain by width
-      width = Math.min(maxWidth, originalWidth);
-      height = width / aspectRatio;
-    } else {
-      // Portrait - constrain by height to prevent very tall images
-      const maxHeight = maxWidth * 1.5; // Allow up to 1.5x maxWidth in height
-      height = Math.min(maxHeight, (maxWidth / aspectRatio));
-      width = height * aspectRatio;
-    }
+  static calculatePlaceholderDimensions(_size: string, maxWidth: number = 320): { width: number; height: number; aspectRatio: number } {
+    // Always use 4:3 aspect ratio for consistent loading placeholders
+    const aspectRatio = 4 / 3;
+    const width = maxWidth;
+    const height = Math.round(width / aspectRatio);
 
     return {
-      width: Math.round(width),
-      height: Math.round(height),
+      width,
+      height,
       aspectRatio
     };
   }

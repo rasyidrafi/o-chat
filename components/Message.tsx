@@ -70,71 +70,21 @@ const ImageContentComponent: React.FC<{
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
     const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
-    const [naturalDimensions, setNaturalDimensions] = useState<{
-      width: number;
-      height: number;
-    } | null>(null);
 
     // Max dimensions for container
     const maxWidth = 320;
     const maxHeight = 240;
 
-    // Calculate display dimensions based on natural image dimensions
+    // Calculate display dimensions - always use 4:3 aspect ratio
     const displayDimensions = useMemo(() => {
-      if (!naturalDimensions) {
-        // While loading, use a reasonable default aspect ratio (4:3)
-        const defaultAspectRatio = 4 / 3;
-        let loadingWidth = maxWidth;
-        let loadingHeight = maxWidth / defaultAspectRatio;
-        
-        // If height exceeds max, adjust to fit
-        if (loadingHeight > maxHeight) {
-          loadingHeight = maxHeight;
-          loadingWidth = maxHeight * defaultAspectRatio;
-        }
-        
-        return {
-          width: Math.round(loadingWidth),
-          height: Math.round(loadingHeight),
-          containerWidth: Math.round(loadingWidth),
-          containerHeight: Math.round(loadingHeight),
-          fillsContainer: false,
-        };
-      }
-
-      const { width: naturalWidth, height: naturalHeight } = naturalDimensions;
-      const aspectRatio = naturalWidth / naturalHeight;
-
-      // Calculate dimensions that fit within max constraints while maintaining aspect ratio
-      let displayWidth = naturalWidth;
-      let displayHeight = naturalHeight;
-
-      // Scale down if image is too large
-      if (displayWidth > maxWidth) {
-        displayWidth = maxWidth;
-        displayHeight = displayWidth / aspectRatio;
-      }
-
-      if (displayHeight > maxHeight) {
-        displayHeight = maxHeight;
-        displayWidth = displayHeight * aspectRatio;
-      }
-
-      const finalWidth = Math.round(displayWidth);
-      const finalHeight = Math.round(displayHeight);
-
-      // Check if image fills the entire container (no black borders)
-      const fillsContainer =
-        finalWidth === maxWidth && finalHeight === maxHeight;
-
       return {
-        width: finalWidth,
-        height: finalHeight,
-        containerWidth: finalWidth,
-        containerHeight: finalHeight,
-        fillsContainer,
+        width: maxWidth,
+        height: maxHeight,
+        containerWidth: maxWidth,
+        containerHeight: maxHeight,
+        fillsContainer: false, // Never fills completely since we're forcing aspect ratio
       };
-    }, [naturalDimensions, maxWidth, maxHeight]);
+    }, [maxWidth]);
 
     useEffect(() => {
       if (gcsPath && gcsPath !== url) {
@@ -153,18 +103,6 @@ const ImageContentComponent: React.FC<{
       setImageError(false);
       setShowExpiredPlaceholder(false);
     }, [currentUrl]);
-
-    const handleImageLoad = useCallback(
-      (event: React.SyntheticEvent<HTMLImageElement>) => {
-        const img = event.currentTarget;
-        setNaturalDimensions({
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-        });
-        setImageLoading(false);
-      },
-      []
-    );
 
     const handleImageError = useCallback(() => {
       setImageError(true);
@@ -250,9 +188,7 @@ const ImageContentComponent: React.FC<{
           <img
             src={currentUrl}
             alt={""}
-            className={`cursor-pointer hover:opacity-90 transition-opacity object-contain ${
-              displayDimensions.fillsContainer ? "rounded-lg" : ""
-            } ${imageLoading ? "opacity-0" : "opacity-100"}`}
+            className={`cursor-pointer hover:opacity-90 transition-opacity object-contain rounded-lg ${imageLoading ? "opacity-0" : "opacity-100"}`}
             style={{
               width: isUser ? "100%" : `${displayDimensions.width}px`,
               height: `${displayDimensions.height}px`,
@@ -260,7 +196,7 @@ const ImageContentComponent: React.FC<{
               maxHeight: `${displayDimensions.containerHeight}px`,
               position: imageLoading ? "absolute" : "relative",
             }}
-            onLoad={handleImageLoad}
+            onLoad={() => setImageLoading(false)}
             onError={handleImageError}
             onClick={() => {
               window.open(currentUrl, "_blank");

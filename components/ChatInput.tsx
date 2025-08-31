@@ -9,6 +9,7 @@ import {
   Edit,
   Palette,
   FullScreen,
+  Brain,
 } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import { motion, AnimatePresence } from "framer-motion";
@@ -232,6 +233,14 @@ const ChatInput = ({
       icons.push(
         <div key="vision" title="Vision">
           <Eye className="w-4 h-4 text-green-500" />
+        </div>
+      );
+    }
+
+    if (capabilities.hasReasoning) {
+      icons.push(
+        <div key="reasoning" title="Reasoning">
+          <Brain className="w-4 h-4 text-orange-500" />
         </div>
       );
     }
