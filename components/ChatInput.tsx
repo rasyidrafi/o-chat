@@ -1296,7 +1296,7 @@ const ChatInput = ({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className="absolute bottom-full mb-2 left-0 w-40 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
+                      className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                     >
                       <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
                         {ImageGenerationService.getImageSizeOptions().map(
