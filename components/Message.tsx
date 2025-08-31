@@ -772,6 +772,30 @@ const MarkdownComponents = {
 
   // Custom horizontal rule
   hr: (props: any) => <HorizontalRule {...props} />, // Use extracted component
+
+  // Custom span for KaTeX inline math
+  span: ({ className, children, ...props }: any) => {
+    if (className && (className.includes('katex') || className.includes('math-inline'))) {
+      return (
+        <span className={`katex-container ${className || ''}`} {...props}>
+          {children}
+        </span>
+      );
+    }
+    return <span className={className} {...props}>{children}</span>;
+  },
+
+  // Custom div for KaTeX display math
+  div: ({ className, children, ...props }: any) => {
+    if (className && (className.includes('katex-display') || className.includes('math-display'))) {
+      return (
+        <div className={`katex-container ${className || ''}`} {...props}>
+          {children}
+        </div>
+      );
+    }
+    return <div className={className} {...props}>{children}</div>;
+  },
 };
 
 // Mermaid diagram component with memoization
