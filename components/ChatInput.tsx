@@ -39,7 +39,7 @@ interface ChatInputProps {
     model: string,
     source: string,
     providerId?: string,
-    attachments?: MessageAttachment[]
+    attachments?: MessageAttachment[],
   ) => void;
   onImageGenerate?: (
     prompt: string,
@@ -52,7 +52,8 @@ interface ChatInputProps {
   onModelSelect?: (model: string, source: string, providerId?: string) => void;
   disabled?: boolean;
   animationsDisabled?: boolean;
-  currentConversation?: ChatConversation | null; // Conversation object to get last message model
+  currentConversation?: ChatConversation | null;
+  isMobile?: boolean;
 }
 
 const ChatInput = ({
@@ -62,6 +63,7 @@ const ChatInput = ({
   disabled = false,
   animationsDisabled = false,
   currentConversation,
+  isMobile
 }: ChatInputProps) => {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
@@ -1366,7 +1368,7 @@ const ChatInput = ({
                 if (isLoadingSystemModels || isLoadingModelFromConversation) return;
                 setIsModelDropdownOpen(!isModelDropdownOpen);
               }}
-              className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48`}
+              className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48 cursor-pointer`}
             >
               <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
                 {selectedModelLabel}
@@ -1400,6 +1402,7 @@ const ChatInput = ({
                         value={modelSearchQuery}
                         onChange={(e) => setModelSearchQuery(e.target.value)}
                         className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                        autoFocus={!isMobile}
                       />
                     </div>
                   </div>
@@ -1434,7 +1437,7 @@ const ChatInput = ({
                             <button
                               key={`${option.value}-${option.providerId || "system"}`}
                               onClick={() => handleModelSelect(option)}
-                              className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                              className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
                                 isSelected
                                   ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
                                   : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
@@ -1507,7 +1510,7 @@ const ChatInput = ({
             <div ref={sizeDropdownRef} className="flex items-stretch relative">
               <button
                 onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                className="flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px]"
+                className="flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer"
                 disabled={disabled || isImageGenerating}
                 title={selectedImageSize}
               >
@@ -1540,7 +1543,7 @@ const ChatInput = ({
                               setSelectedImageSize(option.value);
                               setIsSizeDropdownOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                            className={`cursor-pointer w-full text-left px-3 py-2 text-sm transition-colors ${
                               isSelected
                                 ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
                                 : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"

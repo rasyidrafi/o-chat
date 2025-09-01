@@ -25,6 +25,19 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [activeByokTab, setActiveByokTab] = useState<"selected" | "available">("available");
   const [availableProviders, setAvailableProviders] = useState<Array<Provider>>([]);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  // Check if mobile on mount and window resize
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   // Custom hooks
   const modelsManager = useModelsManager();
@@ -297,7 +310,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     if (paginationData.totalPages <= 1) return null;
 
     const pageNumbers = [];
-    const maxVisiblePages = 5;
+    // Mobile: show max 3 pages, Desktop: show max 5 pages
+    const maxVisiblePages = isMobile ? 3 : 5;
     const startPage = Math.max(1, paginationData.currentPage - Math.floor(maxVisiblePages / 2));
     const endPage = Math.min(paginationData.totalPages, startPage + maxVisiblePages - 1);
 
@@ -306,20 +320,21 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     }
 
     return (
-      <div className="flex justify-center items-center gap-2 mt-6">
+      <div className="flex justify-center items-center gap-1 sm:gap-2 mt-6 px-2">
         <button
           onClick={() => pagination.goToPage(paginationData.currentPage - 1)}
           disabled={!paginationData.hasPreviousPage}
-          className="px-3 py-1.5 text-sm font-medium rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
-          Previous
+          <span className="hidden sm:inline">Previous</span>
+          <span className="sm:hidden">Prev</span>
         </button>
         
         {pageNumbers.map(page => (
           <button
             key={page}
             onClick={() => pagination.goToPage(page)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+            className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border transition-colors cursor-pointer ${
               page === paginationData.currentPage
                 ? 'border-pink-500 bg-gradient-to-r from-pink-600 to-purple-600 text-white'
                 : 'border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -332,49 +347,54 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         <button
           onClick={() => pagination.goToPage(paginationData.currentPage + 1)}
           disabled={!paginationData.hasNextPage}
-          className="px-3 py-1.5 text-sm font-medium rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
-          Next
+          <span className="hidden sm:inline">Next</span>
+          <span className="sm:hidden">Next</span>
         </button>
       </div>
     );
-  }, [paginatedServerModels, paginatedByokModels, serverPagination, byokPagination]);
+  }, [paginatedServerModels, paginatedByokModels, serverPagination, byokPagination, isMobile]);
 
   return (
     <div className="space-y-8">
       {/* Server Models Section */}
       <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
             Server Models
           </h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             <button
               onClick={handleRefreshServerModels}
               disabled={modelsManager.isLoadingSystemModels}
-              className="px-3 py-1 text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
               title="Refresh server models"
             >
-              <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
-              {modelsManager.isLoadingSystemModels ? 'Loading...' : 'Refresh'}
+              <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
+              <span className="hidden xs:inline">
+                {modelsManager.isLoadingSystemModels ? 'Loading...' : 'Refresh'}
+              </span>
             </button>
             <button
               onClick={handleServerSelectAll}
-              className="px-3 py-1 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40"
+              className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
             >
-              Select All
+              <span className="sm:hidden">All</span>
+              <span className="hidden sm:inline">Select All</span>
             </button>
             <button
               onClick={handleServerUnselectAll}
-              className="px-3 py-1 text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40"
+              className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
             >
-              Unselect All
+              <span className="sm:hidden">None</span>
+              <span className="hidden sm:inline">Unselect All</span>
             </button>
           </div>
         </div>
 
         {/* Server Models Filters */}
-        <div className={`flex flex-col lg:flex-row gap-4 mb-6 transition-all duration-300 ${
+        <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
           modelsManager.isLoadingSystemModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
         }`}>
           <div className="flex-1">
@@ -432,7 +452,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 <button
                   onClick={handleRefreshServerModels}
                   disabled={modelsManager.isLoadingSystemModels}
-                  className="ml-4 px-3 py-1 text-sm bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
+                  className="ml-4 px-3 py-1 text-sm bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shrink-0 cursor-pointer"
                 >
 
                   <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
@@ -478,7 +498,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
       {/* BYOK Models Section */}
       <section>
-        <h2 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-white">
+        <h2 className="text-xl sm:text-2xl font-bold mb-6 text-zinc-900 dark:text-white">
           Bring Your Own Key (BYOK) Models
         </h2>
 
@@ -534,7 +554,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             </div>
 
             {/* BYOK Models Filters */}
-            <div className={`flex flex-col lg:flex-row gap-4 mb-6 transition-all duration-300 ${
+            <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
               modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
             }`}>
               <div className="flex-1">
@@ -547,7 +567,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                   className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
                 <div className="flex-shrink-0 lg:w-80">
                   <AdvancedFilter
                     categories={MODEL_FILTER_CATEGORIES}
@@ -561,9 +581,10 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 {activeByokTab === "selected" && (
                   <button
                     onClick={handleUnselectAll}
-                    className="px-3 py-1.5 text-sm font-medium bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 transition-colors whitespace-nowrap"
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors whitespace-nowrap self-start"
                   >
-                    Unselect All
+                    <span className="sm:hidden">Clear All</span>
+                    <span className="hidden sm:inline">Unselect All</span>
                   </button>
                 )}
               </div>

@@ -12,7 +12,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, animati
     return (
         <button
             onClick={onClick}
-            className={`relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors focus:outline-none 
+            className={`relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors focus:outline-none cursor-pointer 
                 ${isActive 
                     ? 'text-pink-500' 
                     : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'

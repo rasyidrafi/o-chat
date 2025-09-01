@@ -22,7 +22,7 @@ const TabButtonGroup = <T extends string | number | boolean>({
                 <button
                     key={String(option.value)}
                     onClick={() => onChange(option.value)}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-zinc-100 dark:focus:ring-offset-zinc-800 ${
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-zinc-100 dark:focus:ring-offset-zinc-800 cursor-pointer ${
                         !animationsDisabled ? 'transition-all duration-200' : ''
                     } ${
                         value === option.value

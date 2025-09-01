@@ -16,7 +16,7 @@ interface SuggestionButtonProps {
 const SuggestionButton: React.FC<SuggestionButtonProps> = memo(({ icon, label, onClick, isActive }) => (
   <button 
     onClick={onClick}
-    className={`flex items-center gap-2.5 py-2 px-4 rounded-lg transition-colors ${
+    className={`flex items-center gap-2.5 py-2 px-4 rounded-lg transition-colors cursor-pointer ${
       isActive 
         ? 'bg-zinc-200 dark:bg-zinc-800' // Active state style
         : 'bg-zinc-100 dark:bg-[#2a2a2a] hover:bg-zinc-200 dark:hover:bg-zinc-700'
@@ -36,7 +36,7 @@ const PromptSuggestion: React.FC<{
 }> = memo(({ children, onClick }) => (
     <button 
       onClick={onClick}
-      className="w-full text-left py-3 px-4 bg-zinc-100 dark:bg-[#2a2a2a] rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+      className="w-full text-left py-3 px-4 bg-zinc-100 dark:bg-[#2a2a2a] rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
     >
         <p className="text-sm text-zinc-900 dark:text-zinc-200">{children}</p>
     </button>

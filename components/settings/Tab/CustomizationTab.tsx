@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import SettingsTextarea from "../SettingsTextarea";
 import TabButtonGroup from "../../ui/TabButtonGroup";
 import CustomDropdown from "../../ui/CustomDropdown";
-import FontSizeSelector from "../FontSizeSelector";
 import FontPreview from "../FontPreview";
 import Button from "../../ui/Button";
 import { AppSettings } from "../../../hooks/useSettings";

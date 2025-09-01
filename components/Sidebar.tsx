@@ -266,7 +266,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
         // Collapsed mode - Show search button (only on desktop)
         <button
           onClick={onOpenSearchCenter}
-          className="w-full mb-4 p-2.5 bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors hidden md:flex items-center justify-center"
+          className="w-full mb-4 p-2.5 bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors hidden md:flex items-center justify-center cursor-pointer"
           aria-label="Open search"
         >
           <Search className="w-4 h-4 text-zinc-500" />
@@ -385,7 +385,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
                               e.stopPropagation();
                               handleDeleteCancel();
                             }}
-                            className="p-1 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded transition-colors"
+                            className="p-1 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded transition-colors cursor-pointer"
                             aria-label="Cancel delete"
                           >
                             <X className="w-3 h-3 text-zinc-600 dark:text-zinc-400" />
@@ -395,7 +395,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
                               e.stopPropagation();
                               handleDeleteConfirm(conversation.id);
                             }}
-                            className="p-1 hover:bg-red-500 hover:text-white rounded transition-colors"
+                            className="p-1 hover:bg-red-500 hover:text-white rounded transition-colors cursor-pointer"
                             aria-label="Confirm delete"
                           >
                             <Check className="w-3 h-3 text-red-500 hover:text-white" />
@@ -404,7 +404,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
                       ) : (
                         <button
                           onClick={(e) => handleDeleteClick(e, conversation)}
-                          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded transition-all shadow-sm"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded transition-all shadow-sm cursor-pointer"
                           aria-label="Delete conversation"
                         >
                           <X className="w-3 h-3" />

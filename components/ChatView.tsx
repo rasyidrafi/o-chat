@@ -1,5 +1,5 @@
 // Improved ChatView with better scroll handling
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
@@ -10,7 +10,6 @@ import { Tab as SettingsTab } from "./SettingsPage";
 import { motion, AnimatePresence } from "framer-motion";
 import { DEFAULT_MODEL_ID } from "../constants/models";
 import { useChat } from "../hooks/useChat";
-import SmallButton from "./ui/SmallButton";
 import LoadingState from "./ui/LoadingState";
 
 interface ChatViewProps {
@@ -212,15 +211,6 @@ const ChatView: React.FC<ChatViewProps> = ({
     [animationsDisabled]
   );
 
-  // Memoize padding styles for scroll button and chat input
-  const scrollButtonPadding = useMemo(
-    () => ({
-      paddingLeft: isMobile ? "16px" : `${sidebarWidth + 16}px`,
-      paddingRight: "16px",
-      paddingBottom: isMobile ? "140px" : "160px",
-    }),
-    [isMobile, sidebarWidth]
-  );
   const chatInputPadding = useMemo(
     () => ({
       paddingLeft: isMobile ? "0" : `${sidebarWidth + 16}px`,
@@ -242,7 +232,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={toggleSidebar}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Toggle sidebar"
         >
@@ -260,7 +250,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={onMenuClick}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Open menu"
         >
@@ -275,14 +265,14 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={() => onOpenSettings()}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Settings"
         >
           <SlidersHorizontal className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
         </button>
         <button
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
           onClick={toggleTheme}
           aria-label={`Switch to ${
             theme === "light" ? "dark" : theme === "dark" ? "system" : "light"
@@ -338,6 +328,7 @@ const ChatView: React.FC<ChatViewProps> = ({
             disabled={streamingState.isStreaming || isLoading}
             animationsDisabled={animationsDisabled}
             currentConversation={currentConversation}
+            isMobile={isMobile}
           />
         </div>
       </div>

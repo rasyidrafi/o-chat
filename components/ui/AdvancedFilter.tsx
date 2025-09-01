@@ -76,7 +76,7 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
           hover:bg-zinc-200 dark:hover:bg-zinc-700
           disabled:opacity-50 disabled:cursor-not-allowed
           focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500
-          transition-colors duration-200
+          transition-colors duration-200 cursor-pointer 
           ${isOpen ? 'ring-1 ring-pink-500 border-pink-500' : ''}
         `}
       >
@@ -170,7 +170,7 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({
                             onClick={() => onFilterChange(option.id)}
                             className={`
                               w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md
-                              transition-colors duration-150
+                              transition-colors duration-150 cursor-pointer
                               ${isSelected
                                 ? `bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 ${option.color ? `bg-${option.color}-100 dark:bg-${option.color}-900/30 text-${option.color}-700 dark:text-${option.color}-300` : ''}`
                                 : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"

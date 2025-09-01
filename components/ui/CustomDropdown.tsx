@@ -58,7 +58,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                 <button
                     type="button"
                     onClick={() => setIsOpen(!isOpen)}
-                    className="w-full flex items-center justify-between text-left bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full flex items-center justify-between text-left bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 cursor-pointer"
                 >
                     <span>{selected}</span>
                     <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -80,7 +80,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({ label, description, opt
                                             <button
                                                 onClick={() => !isDisabled && handleSelect(option)}
                                                 disabled={isDisabled}
-                                                className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                                                className={`w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors cursor-pointer ${
                                                     isDisabled
                                                         ? 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
                                                         : 'text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer'
