@@ -1258,7 +1258,7 @@ const ChatInput = ({
     <div
       className="bg-zinc-200/80 dark:bg-zinc-800/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 p-3 rounded-3xl w-full
         sm:rounded-3xl
-        rounded-t-3xl rounded-b-none
+        rounded-t-3xl rounded-b-none border border-zinc-300 dark:border-zinc-700 
         shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.12),0_-4px_16px_-2px_rgba(0,0,0,0.08)]
         dark:shadow-[0_-8px_32px_-4px_rgba(0,0,0,0.3),0_-4px_16px_-2px_rgba(0,0,0,0.2)]
       "

@@ -62,132 +62,132 @@ const ImageContentComponent: React.FC<{
   gcsPath?: string;
   attachment?: MessageAttachment;
   isUser?: boolean;
-}> = memo(
-  ({ url, gcsPath, attachment, isUser = false }) => {
-    const [currentUrl, setCurrentUrl] = useState(url);
-    const [isLoading, setIsLoading] = useState(false);
-    const [imageLoading, setImageLoading] = useState(true);
-    const [imageError, setImageError] = useState(false);
-    const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
+}> = memo(({ url, gcsPath, attachment, isUser = false }) => {
+  const [currentUrl, setCurrentUrl] = useState(url);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
 
-    // Responsive dimensions for container - use CSS classes instead of fixed dimensions
-    const displayDimensions = useMemo(() => {
-      return {
-        // Use CSS classes for responsive sizing instead of fixed pixel values
-        containerClass: isUser 
-          ? "w-full max-w-full" 
-          : "w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg",
-        aspectRatio: "4/3", // Maintain 4:3 aspect ratio
-      };
-    }, [isUser]);
+  // Responsive dimensions for container - use CSS classes instead of fixed dimensions
+  const displayDimensions = useMemo(() => {
+    return {
+      // Use CSS classes for responsive sizing instead of fixed pixel values
+      containerClass: isUser
+        ? "w-full max-w-full"
+        : "w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg",
+      aspectRatio: "4/3", // Maintain 4:3 aspect ratio
+    };
+  }, [isUser]);
 
-    useEffect(() => {
-      if (gcsPath && gcsPath !== url) {
-        setIsLoading(true);
-        getImageUrlFromPath(gcsPath).then((newUrl) => {
-          if (newUrl) {
-            setCurrentUrl(newUrl);
-          }
-          setIsLoading(false);
-        });
-      }
-    }, [gcsPath, url]);
-
-    useEffect(() => {
-      setImageLoading(true);
-      setImageError(false);
-      setShowExpiredPlaceholder(false);
-    }, [currentUrl]);
-
-    const handleImageError = useCallback(() => {
-      setImageError(true);
-      setImageLoading(false);
-
-      if (attachment?.isDirectUrl) {
-        setShowExpiredPlaceholder(true);
-      }
-    }, [attachment?.isDirectUrl]);
-
-    // Loading state
-    if (isLoading) {
-      return (
-        <div
-          className={`bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center ${displayDimensions.containerClass}`}
-          style={{ aspectRatio: displayDimensions.aspectRatio }}
-        >
-          <div className="text-zinc-500 text-xs">Loading...</div>
-        </div>
-      );
+  useEffect(() => {
+    if (gcsPath && gcsPath !== url) {
+      setIsLoading(true);
+      getImageUrlFromPath(gcsPath).then((newUrl) => {
+        if (newUrl) {
+          setCurrentUrl(newUrl);
+        }
+        setIsLoading(false);
+      });
     }
+  }, [gcsPath, url]);
 
-    // Expired placeholder
-    if (showExpiredPlaceholder) {
-      return (
+  useEffect(() => {
+    setImageLoading(true);
+    setImageError(false);
+    setShowExpiredPlaceholder(false);
+  }, [currentUrl]);
+
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+    setImageLoading(false);
+
+    if (attachment?.isDirectUrl) {
+      setShowExpiredPlaceholder(true);
+    }
+  }, [attachment?.isDirectUrl]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div
+        className={`bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center ${displayDimensions.containerClass}`}
+        style={{ aspectRatio: displayDimensions.aspectRatio }}
+      >
+        <div className="text-zinc-500 text-xs">Loading...</div>
+      </div>
+    );
+  }
+
+  // Expired placeholder
+  if (showExpiredPlaceholder) {
+    return (
+      <div
+        className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
+        style={{ aspectRatio: displayDimensions.aspectRatio }}
+      >
+        <div className="text-zinc-500 text-xs text-center px-2">
+          Generated image is no longer available
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black ${displayDimensions.containerClass}`}
+      style={{ aspectRatio: displayDimensions.aspectRatio }}
+    >
+      {/* Loading placeholder */}
+      {imageLoading && !imageError && !showExpiredPlaceholder && (
+        <div
+          className={`absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
+        >
+          <div className="flex items-center space-x-2 text-zinc-500">
+            <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
+            <div
+              className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
+              style={{ animationDelay: "0.1s" }}
+            ></div>
+            <div
+              className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
+              style={{ animationDelay: "0.2s" }}
+            ></div>
+          </div>
+        </div>
+      )}
+
+      {/* Actual image */}
+      {!imageError && !showExpiredPlaceholder ? (
+        <img
+          src={currentUrl}
+          alt={""}
+          className={`cursor-pointer hover:opacity-90 transition-opacity object-contain rounded-lg w-full h-full ${
+            imageLoading ? "opacity-0" : "opacity-100"
+          }`}
+          style={{
+            position: imageLoading ? "absolute" : "relative",
+          }}
+          onLoad={() => setImageLoading(false)}
+          onError={handleImageError}
+          onClick={() => {
+            window.open(currentUrl, "_blank");
+          }}
+          title="Click to view full size"
+        />
+      ) : imageError && !showExpiredPlaceholder ? (
         <div
           className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
           style={{ aspectRatio: displayDimensions.aspectRatio }}
         >
           <div className="text-zinc-500 text-xs text-center px-2">
-            Generated image is no longer available
+            {gcsPath ? "Error loading image" : "Failed to load image"}
           </div>
         </div>
-      );
-    }
-
-    return (
-      <div
-        className={`relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black ${displayDimensions.containerClass}`}
-        style={{ aspectRatio: displayDimensions.aspectRatio }}
-      >
-        {/* Loading placeholder */}
-        {imageLoading && !imageError && !showExpiredPlaceholder && (
-          <div
-            className={`absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
-          >
-            <div className="flex items-center space-x-2 text-zinc-500">
-              <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
-              <div
-                className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
-                style={{ animationDelay: "0.1s" }}
-              ></div>
-              <div
-                className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"
-                style={{ animationDelay: "0.2s" }}
-              ></div>
-            </div>
-          </div>
-        )}
-
-        {/* Actual image */}
-        {!imageError && !showExpiredPlaceholder ? (
-          <img
-            src={currentUrl}
-            alt={""}
-            className={`cursor-pointer hover:opacity-90 transition-opacity object-contain rounded-lg w-full h-full ${imageLoading ? "opacity-0" : "opacity-100"}`}
-            style={{
-              position: imageLoading ? "absolute" : "relative",
-            }}
-            onLoad={() => setImageLoading(false)}
-            onError={handleImageError}
-            onClick={() => {
-              window.open(currentUrl, "_blank");
-            }}
-            title="Click to view full size"
-          />
-        ) : imageError && !showExpiredPlaceholder ? (
-          <div
-            className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
-            style={{ aspectRatio: displayDimensions.aspectRatio }}
-          >
-            <div className="text-zinc-500 text-xs text-center px-2">
-              {gcsPath ? "Error loading image" : "Failed to load image"}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-);
+      ) : null}
+    </div>
+  );
+});
 
 ImageContentComponent.displayName = "ImageContentComponent";
 
@@ -203,196 +203,217 @@ const CodeBlock: React.FC<{
   className?: string;
   forceAscii?: boolean;
   isInlineMultiLine?: boolean;
-}> = memo(
-  ({ children, className, isInlineMultiLine = false }) => {
-    const [copied, setCopied] = useState(false);
-    const [isDark, setIsDark] = useState(false);
-    const [isWrapped, setIsWrapped] = useState(false);
-    const codeRef = useRef<HTMLElement>(null);
+}> = memo(({ children, className, isInlineMultiLine = false }) => {
+  const [copied, setCopied] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+  const [isWrapped, setIsWrapped] = useState(false);
+  const codeRef = useRef<HTMLElement>(null);
 
-    // Check if it's a single line inline code (no newlines and no language)
-    const isSingleLineInline =
-      !className && !isInlineMultiLine && !children.includes("\n");
+  // Check if it's a single line inline code (no newlines and no language)
+  const isSingleLineInline =
+    !className && !isInlineMultiLine && !children.includes("\n");
 
-    // Show header for everything EXCEPT single line inline code
-    const showHeader = !isSingleLineInline;
+  // Show header for everything EXCEPT single line inline code
+  const showHeader = !isSingleLineInline;
 
-    // Dynamically load highlight.js theme based on isDark
-    useEffect(() => {
-      const darkHref =
-        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-dark.min.css";
-      const lightHref =
-        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-light.min.css";
-      const themeId = "hljs-theme-dynamic";
+  // Dynamically load highlight.js theme based on isDark
+  useEffect(() => {
+    const darkHref =
+      "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-dark.min.css";
+    const lightHref =
+      "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-light.min.css";
+    const themeId = "hljs-theme-dynamic";
 
-      // Helper to add or update theme link
-      const setTheme = (dark: boolean) => {
-        let link = document.getElementById(themeId) as HTMLLinkElement | null;
-        if (!link) {
-          link = document.createElement("link");
-          link.rel = "stylesheet";
-          link.id = themeId;
-          document.head.appendChild(link);
-        }
-        link.href = dark ? darkHref : lightHref;
-      };
-
-      setTheme(isDark);
-
-      return () => {
-        // Optionally remove theme link on unmount
-        // const link = document.getElementById(themeId);
-        // if (link) link.remove();
-      };
-    }, [isDark]);
-
-    // Detect dark mode
-    useEffect(() => {
-      const checkDarkMode = () => {
-        setIsDark(document.documentElement.classList.contains("dark"));
-      };
-      checkDarkMode();
-      const observer = new MutationObserver(checkDarkMode);
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class"],
-      });
-      return () => observer.disconnect();
-    }, []);
-
-    // Highlight code using highlight.js
-    const [highlighted, setHighlighted] = useState<string>("");
-    useEffect(() => {
-      let lang = className?.replace("language-", "") || "";
-      if (!hljs.getLanguage(lang)) lang = "plaintext";
-      try {
-        const result =
-          lang === "plaintext"
-            ? hljs.highlightAuto(children)
-            : hljs.highlight(children, { language: lang });
-        setHighlighted(result.value);
-      } catch {
-        setHighlighted(children);
+    // Helper to add or update theme link
+    const setTheme = (dark: boolean) => {
+      let link = document.getElementById(themeId) as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.id = themeId;
+        document.head.appendChild(link);
       }
-    }, [children, className]);
-
-    const copyToClipboard = useCallback(async () => {
-      try {
-        await navigator.clipboard.writeText(children);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error("Failed to copy:", err);
-      }
-    }, [children]);
-
-    const renderContent = () => {
-      // if (viewMode === "ascii") {
-      //   return (
-      //     <div
-      //       className={`${showHeader ? "p-4" : "px-1.5 py-0.5"} ${
-      //         showHeader ? "" : "rounded"
-      //       }`}
-      //       style={{
-      //         backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
-      //       }}
-      //     >
-      //       <code
-      //         className="text-zinc-800 dark:text-zinc-200 text-xs font-mono block"
-      //         style={{
-      //           lineHeight: "1.2",
-      //           fontSize: "0.85em",
-      //           fontFamily:
-      //             'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-      //           whiteSpace: isWrapped ? "pre-wrap" : "pre",
-      //         }}
-      //       >
-      //         {children}
-      //       </code>
-      //     </div>
-      //   );
-      // }
-
-      return (
-        <div
-          className={`${showHeader ? "" : "rounded-lg"} overflow-hidden`}
-          style={{
-            backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
-          }}
-        >
-          <div
-            className={`${
-              isWrapped ? "overflow-x-visible" : "overflow-x-auto"
-            } thin-scrollbar`}
-            style={{
-              maxWidth: "100%",
-              width: "100%",
-            }}
-          >
-            <code
-              ref={codeRef}
-              className={`${
-                className ? className + " hljs" : "hljs"
-              } block p-2 sm:p-4 text-xs sm:text-sm leading-[1.4] ${
-                isWrapped ? "whitespace-pre-wrap" : "whitespace-pre"
-              }`}
-              style={{
-                margin: 0,
-                width: isWrapped ? "100%" : "max-content",
-                minWidth: isWrapped ? "auto" : "100%",
-                maxWidth: isWrapped ? "100%" : "none",
-              }}
-              dangerouslySetInnerHTML={{ __html: highlighted }}
-            />
-          </div>
-        </div>
-      );
+      link.href = dark ? darkHref : lightHref;
     };
 
-    if (!showHeader) {
-      // Simple inline code without header (only for single-line inline)
-      return (
-        <code className="bg-zinc-200 dark:bg-zinc-700 px-1 sm:px-1.5 py-0.5 rounded text-xs font-mono break-all">
-          {children}
-        </code>
-      );
-    }
+    setTheme(isDark);
 
-    // Code block or multi-line with header
+    return () => {
+      // Optionally remove theme link on unmount
+      // const link = document.getElementById(themeId);
+      // if (link) link.remove();
+    };
+  }, [isDark]);
+
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  // Highlight code using highlight.js
+  const [highlighted, setHighlighted] = useState<string>("");
+  useEffect(() => {
+    let lang = className?.replace("language-", "") || "";
+    if (!hljs.getLanguage(lang)) lang = "plaintext";
+    try {
+      const result =
+        lang === "plaintext"
+          ? hljs.highlightAuto(children)
+          : hljs.highlight(children, { language: lang });
+      setHighlighted(result.value);
+    } catch {
+      setHighlighted(children);
+    }
+  }, [children, className]);
+
+  const copyToClipboard = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(children);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  }, [children]);
+
+  const renderContent = () => {
+    // if (viewMode === "ascii") {
+    //   return (
+    //     <div
+    //       className={`${showHeader ? "p-4" : "px-1.5 py-0.5"} ${
+    //         showHeader ? "" : "rounded"
+    //       }`}
+    //       style={{
+    //         backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
+    //       }}
+    //     >
+    //       <code
+    //         className="text-zinc-800 dark:text-zinc-200 text-xs font-mono block"
+    //         style={{
+    //           lineHeight: "1.2",
+    //           fontSize: "0.85em",
+    //           fontFamily:
+    //             'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+    //           whiteSpace: isWrapped ? "pre-wrap" : "pre",
+    //         }}
+    //       >
+    //         {children}
+    //       </code>
+    //     </div>
+    //   );
+    // }
+
     return (
-      <div className="relative group my-4 w-full max-w-full overflow-hidden">
+      <div
+        className={`${showHeader ? "" : "rounded-lg"} overflow-hidden`}
+        style={{
+          backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
+        }}
+      >
         <div
-          className="relative w-full rounded-lg"
+          className={`${
+            isWrapped ? "overflow-x-visible" : "overflow-x-auto"
+          } thin-scrollbar`}
           style={{
             maxWidth: "100%",
             width: "100%",
-            overflow: "hidden",
-            backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
           }}
         >
-          {/* Header with controls */}
-          <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
-            {/* Left side: Language indicator */}
-            <div className="flex items-center">
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                {className ? className.replace("language-", "") : "text"}
-              </span>
-            </div>
+          <code
+            ref={codeRef}
+            className={`${
+              className ? className + " hljs" : "hljs"
+            } block p-2 sm:p-4 text-xs sm:text-sm leading-[1.4] ${
+              isWrapped ? "whitespace-pre-wrap" : "whitespace-pre"
+            }`}
+            style={{
+              margin: 0,
+              width: isWrapped ? "100%" : "max-content",
+              minWidth: isWrapped ? "auto" : "100%",
+              maxWidth: isWrapped ? "100%" : "none",
+            }}
+            dangerouslySetInnerHTML={{ __html: highlighted }}
+          />
+        </div>
+      </div>
+    );
+  };
 
-            {/* Right side: Controls - Stack vertically on mobile */}
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              {/* Text wrap toggle */}
-              <button
-                onClick={() => setIsWrapped(!isWrapped)}
-                className="p-1 sm:p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
-                title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
+  if (!showHeader) {
+    // Simple inline code without header (only for single-line inline)
+    return (
+      <code className="bg-zinc-200 dark:bg-zinc-700 px-1 sm:px-1.5 py-0.5 rounded text-xs font-mono break-all">
+        {children}
+      </code>
+    );
+  }
+
+  // Code block or multi-line with header
+  return (
+    <div className="relative group my-4 w-full max-w-full overflow-hidden">
+      <div
+        className="relative w-full rounded-lg"
+        style={{
+          maxWidth: "100%",
+          width: "100%",
+          overflow: "hidden",
+          backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
+        }}
+      >
+        {/* Header with controls */}
+        <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
+          {/* Left side: Language indicator */}
+          <div className="flex items-center">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+              {className ? className.replace("language-", "") : "text"}
+            </span>
+          </div>
+
+          {/* Right side: Controls - Stack vertically on mobile */}
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            {/* Text wrap toggle */}
+            <button
+              onClick={() => setIsWrapped(!isWrapped)}
+              className="p-1 sm:p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+              title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
+            >
+              <svg
+                className={`w-3 h-3 sm:w-4 sm:h-4 transition-colors duration-150 ${
+                  isWrapped
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-zinc-600 dark:text-zinc-400"
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h8m-8 6h16"
+                />
+              </svg>
+            </button>
+
+            {/* Copy button */}
+            <button
+              onClick={copyToClipboard}
+              className="p-1 sm:p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+              title={copied ? "Copied!" : "Copy to clipboard"}
+            >
+              {copied ? (
                 <svg
-                  className={`w-3 h-3 sm:w-4 sm:h-4 transition-colors duration-150 ${
-                    isWrapped
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-zinc-600 dark:text-zinc-400"
-                  }`}
+                  className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 dark:text-green-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -401,59 +422,34 @@ const CodeBlock: React.FC<{
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M4 6h16M4 12h8m-8 6h16"
+                    d="M5 13l4 4L19 7"
                   />
                 </svg>
-              </button>
-
-              {/* Copy button */}
-              <button
-                onClick={copyToClipboard}
-                className="p-1 sm:p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
-                title={copied ? "Copied!" : "Copy to clipboard"}
-              >
-                {copied ? (
-                  <svg
-                    className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 dark:text-green-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-600 dark:text-zinc-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Content container with proper flex layout */}
-          <div className="flex-1 min-h-0">
-            {renderContent()}
+              ) : (
+                <svg
+                  className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-600 dark:text-zinc-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Content container with proper flex layout */}
+        <div className="flex-1 min-h-0">{renderContent()}</div>
       </div>
-    );
-  }
-);
+    </div>
+  );
+});
 
 // Set display names for debugging
 CodeBlock.displayName = "CodeBlock";
@@ -486,7 +482,7 @@ const MarkdownComponents = {
   ),
 
   ol: ({ children, ...props }: any) => (
-    <ol className="mb-2 last:mb-0 pl-4 space-y-1 list-decimal" {...props}>
+    <ol className="mb-2 last:mb-0 pl-4 space-y-1 list-disc" {...props}>
       {children}
     </ol>
   ),
@@ -601,21 +597,23 @@ const MarkdownComponents = {
 
   th: ({ children, ...props }: any) => (
     <th
-      className="px-2 py-2 text-left font-semibold text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
+      className="px-2 py-2 text-center font-semibold text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
       {...props}
     >
       {children}
     </th>
   ),
 
-  td: ({ children, ...props }: any) => (
-    <td
-      className="px-2 py-2 text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
-      {...props}
-    >
-      {children}
-    </td>
-  ),
+  td: ({ children, ...props }: any) => {
+    return (
+      <td
+        className="px-2 py-2 text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
+        {...props}
+      >
+        {children}
+      </td>
+    );
+  },
 
   // Strikethrough support for GFM
   del: ({ children, ...props }: any) => (
@@ -1233,8 +1231,8 @@ const Message: React.FC<MessageProps> = memo(
                         </>
                       )}
                       {/* AI disclaimer for last message */}
-                      {(isLastMessage && !message.isError) && (
-                        <div className="my-4 text-zinc-400 dark:text-zinc-500 text-xs text-right">
+                      {isLastMessage && !message.isError && (
+                        <div className="mt-4 md:mt-2 mb-0 sm:mb-4 text-zinc-400 dark:text-zinc-500 text-xs text-right">
                           AI can make mistakes. Please verify important
                           information.
                         </div>
@@ -1259,10 +1257,8 @@ const Message: React.FC<MessageProps> = memo(
           className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}
         >
           <div
-            className={`my-4 flex flex-col w-full ${
-              isUser
-                ? "max-w-full items-end"
-                : "max-w-full items-start min-w-0"
+            className={`mt-4 flex flex-col w-full ${
+              isUser ? "max-w-full items-end" : "max-w-full items-start min-w-0"
             }`}
           >
             <div className={getMessageStyles()}>{renderContent()}</div>
