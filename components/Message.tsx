@@ -1234,7 +1234,7 @@ const Message: React.FC<MessageProps> = memo(
                       )}
                       {/* AI disclaimer for last message */}
                       {(isLastMessage && !message.isError) && (
-                        <div className="mt-4 text-zinc-400 dark:text-zinc-500 text-xs text-right">
+                        <div className="my-4 text-zinc-400 dark:text-zinc-500 text-xs text-right">
                           AI can make mistakes. Please verify important
                           information.
                         </div>
