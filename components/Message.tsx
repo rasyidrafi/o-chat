@@ -59,32 +59,27 @@ const getImageUrlFromPath = async (gcsPath: string): Promise<string> => {
 
 const ImageContentComponent: React.FC<{
   url: string;
-  alt?: string;
   gcsPath?: string;
   attachment?: MessageAttachment;
   isUser?: boolean;
 }> = memo(
-  ({ url, alt = "Uploaded image", gcsPath, attachment, isUser = false }) => {
+  ({ url, gcsPath, attachment, isUser = false }) => {
     const [currentUrl, setCurrentUrl] = useState(url);
     const [isLoading, setIsLoading] = useState(false);
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
     const [showExpiredPlaceholder, setShowExpiredPlaceholder] = useState(false);
 
-    // Max dimensions for container
-    const maxWidth = 320;
-    const maxHeight = 240;
-
-    // Calculate display dimensions - always use 4:3 aspect ratio
+    // Responsive dimensions for container - use CSS classes instead of fixed dimensions
     const displayDimensions = useMemo(() => {
       return {
-        width: maxWidth,
-        height: maxHeight,
-        containerWidth: maxWidth,
-        containerHeight: maxHeight,
-        fillsContainer: false, // Never fills completely since we're forcing aspect ratio
+        // Use CSS classes for responsive sizing instead of fixed pixel values
+        containerClass: isUser 
+          ? "w-full max-w-full" 
+          : "w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg",
+        aspectRatio: "4/3", // Maintain 4:3 aspect ratio
       };
-    }, [maxWidth]);
+    }, [isUser]);
 
     useEffect(() => {
       if (gcsPath && gcsPath !== url) {
@@ -117,13 +112,8 @@ const ImageContentComponent: React.FC<{
     if (isLoading) {
       return (
         <div
-          className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center"
-          style={{
-            width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
-            height: `${displayDimensions.containerHeight}px`,
-            minWidth: `${displayDimensions.containerWidth}px`,
-            minHeight: `${displayDimensions.containerHeight}px`,
-          }}
+          className={`bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center ${displayDimensions.containerClass}`}
+          style={{ aspectRatio: displayDimensions.aspectRatio }}
         >
           <div className="text-zinc-500 text-xs">Loading...</div>
         </div>
@@ -134,13 +124,8 @@ const ImageContentComponent: React.FC<{
     if (showExpiredPlaceholder) {
       return (
         <div
-          className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
-          style={{
-            width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
-            height: `${displayDimensions.containerHeight}px`,
-            minWidth: `${displayDimensions.containerWidth}px`,
-            minHeight: `${displayDimensions.containerHeight}px`,
-          }}
+          className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
+          style={{ aspectRatio: displayDimensions.aspectRatio }}
         >
           <div className="text-zinc-500 text-xs text-center px-2">
             Generated image is no longer available
@@ -151,23 +136,13 @@ const ImageContentComponent: React.FC<{
 
     return (
       <div
-        className="relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black"
-        style={{
-          width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
-          height: `${displayDimensions.containerHeight}px`,
-          minWidth: `${displayDimensions.containerWidth}px`,
-          minHeight: `${displayDimensions.containerHeight}px`,
-        }}
+        className={`relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black ${displayDimensions.containerClass}`}
+        style={{ aspectRatio: displayDimensions.aspectRatio }}
       >
         {/* Loading placeholder */}
         {imageLoading && !imageError && !showExpiredPlaceholder && (
           <div
-            className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
-            style={{
-              width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
-              minWidth: `${displayDimensions.containerWidth}px`,
-              minHeight: `${displayDimensions.containerHeight}px`,
-            }}
+            className={`absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
           >
             <div className="flex items-center space-x-2 text-zinc-500">
               <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
@@ -188,12 +163,8 @@ const ImageContentComponent: React.FC<{
           <img
             src={currentUrl}
             alt={""}
-            className={`cursor-pointer hover:opacity-90 transition-opacity object-contain rounded-lg ${imageLoading ? "opacity-0" : "opacity-100"}`}
+            className={`cursor-pointer hover:opacity-90 transition-opacity object-contain rounded-lg w-full h-full ${imageLoading ? "opacity-0" : "opacity-100"}`}
             style={{
-              width: isUser ? "100%" : `${displayDimensions.width}px`,
-              height: `${displayDimensions.height}px`,
-              minWidth: `${displayDimensions.containerWidth}px`,
-              maxHeight: `${displayDimensions.containerHeight}px`,
               position: imageLoading ? "absolute" : "relative",
             }}
             onLoad={() => setImageLoading(false)}
@@ -205,13 +176,8 @@ const ImageContentComponent: React.FC<{
           />
         ) : imageError && !showExpiredPlaceholder ? (
           <div
-            className="bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg"
-            style={{
-              width: isUser ? "100%" : `${displayDimensions.containerWidth}px`,
-              height: `${displayDimensions.containerHeight}px`,
-              minWidth: `${displayDimensions.containerWidth}px`,
-              minHeight: `${displayDimensions.containerHeight}px`,
-            }}
+            className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
+            style={{ aspectRatio: displayDimensions.aspectRatio }}
           >
             <div className="text-zinc-500 text-xs text-center px-2">
               {gcsPath ? "Error loading image" : "Failed to load image"}
@@ -238,12 +204,9 @@ const CodeBlock: React.FC<{
   forceAscii?: boolean;
   isInlineMultiLine?: boolean;
 }> = memo(
-  ({ children, className, forceAscii = false, isInlineMultiLine = false }) => {
+  ({ children, className, isInlineMultiLine = false }) => {
     const [copied, setCopied] = useState(false);
     const [isDark, setIsDark] = useState(false);
-    const [viewMode, setViewMode] = useState<"code" | "ascii">(
-      forceAscii ? "ascii" : "code"
-    );
     const [isWrapped, setIsWrapped] = useState(false);
     const codeRef = useRef<HTMLElement>(null);
 
@@ -253,15 +216,6 @@ const CodeBlock: React.FC<{
 
     // Show header for everything EXCEPT single line inline code
     const showHeader = !isSingleLineInline;
-
-    // Handle view mode changes (simplified since AnimatePresence handles transitions)
-    const handleViewModeChange = useCallback(
-      (newMode: "code" | "ascii") => {
-        if (newMode === viewMode) return;
-        setViewMode(newMode);
-      },
-      [viewMode]
-    );
 
     // Dynamically load highlight.js theme based on isDark
     useEffect(() => {
@@ -309,20 +263,18 @@ const CodeBlock: React.FC<{
     // Highlight code using highlight.js
     const [highlighted, setHighlighted] = useState<string>("");
     useEffect(() => {
-      if (viewMode === "code") {
-        let lang = className?.replace("language-", "") || "";
-        if (!hljs.getLanguage(lang)) lang = "plaintext";
-        try {
-          const result =
-            lang === "plaintext"
-              ? hljs.highlightAuto(children)
-              : hljs.highlight(children, { language: lang });
-          setHighlighted(result.value);
-        } catch {
-          setHighlighted(children);
-        }
+      let lang = className?.replace("language-", "") || "";
+      if (!hljs.getLanguage(lang)) lang = "plaintext";
+      try {
+        const result =
+          lang === "plaintext"
+            ? hljs.highlightAuto(children)
+            : hljs.highlight(children, { language: lang });
+        setHighlighted(result.value);
+      } catch {
+        setHighlighted(children);
       }
-    }, [children, className, viewMode]);
+    }, [children, className]);
 
     const copyToClipboard = useCallback(async () => {
       try {
@@ -381,7 +333,7 @@ const CodeBlock: React.FC<{
               ref={codeRef}
               className={`${
                 className ? className + " hljs" : "hljs"
-              } block p-4 text-sm leading-[1.4] ${
+              } block p-2 sm:p-4 text-xs sm:text-sm leading-[1.4] ${
                 isWrapped ? "whitespace-pre-wrap" : "whitespace-pre"
               }`}
               style={{
@@ -400,7 +352,7 @@ const CodeBlock: React.FC<{
     if (!showHeader) {
       // Simple inline code without header (only for single-line inline)
       return (
-        <code className="bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 rounded text-xs font-mono">
+        <code className="bg-zinc-200 dark:bg-zinc-700 px-1 sm:px-1.5 py-0.5 rounded text-xs font-mono break-all">
           {children}
         </code>
       );
@@ -420,42 +372,23 @@ const CodeBlock: React.FC<{
         >
           {/* Header with controls */}
           <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
-            {/* Left side: View mode selector (only show if has ASCII patterns or forced) */}
+            {/* Left side: Language indicator */}
             <div className="flex items-center">
-              {/* <div className="inline-flex rounded-md bg-zinc-200 dark:bg-zinc-700 p-0.5">
-                <button
-                  onClick={() => handleViewModeChange("code")}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
-                    viewMode === "code"
-                      ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                      : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  Code
-                </button>
-                <button
-                  onClick={() => handleViewModeChange("ascii")}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors duration-150 focus:outline-none ${
-                    viewMode === "ascii"
-                      ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                      : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  Raw Format
-                </button>
-              </div> */}
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                {className ? className.replace("language-", "") : "text"}
+              </span>
             </div>
 
-            {/* Right side: Controls */}
-            <div className="flex items-center space-x-2">
+            {/* Right side: Controls - Stack vertically on mobile */}
+            <div className="flex items-center space-x-1 sm:space-x-2">
               {/* Text wrap toggle */}
               <button
                 onClick={() => setIsWrapped(!isWrapped)}
-                className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+                className="p-1 sm:p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
                 title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
               >
                 <svg
-                  className={`w-4 h-4 transition-colors duration-150 ${
+                  className={`w-3 h-3 sm:w-4 sm:h-4 transition-colors duration-150 ${
                     isWrapped
                       ? "text-blue-600 dark:text-blue-400"
                       : "text-zinc-600 dark:text-zinc-400"
@@ -476,12 +409,12 @@ const CodeBlock: React.FC<{
               {/* Copy button */}
               <button
                 onClick={copyToClipboard}
-                className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+                className="p-1 sm:p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
                 title={copied ? "Copied!" : "Copy to clipboard"}
               >
                 {copied ? (
                   <svg
-                    className="w-4 h-4 text-green-600 dark:text-green-400"
+                    className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 dark:text-green-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -495,7 +428,7 @@ const CodeBlock: React.FC<{
                   </svg>
                 ) : (
                   <svg
-                    className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
+                    className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-600 dark:text-zinc-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -513,18 +446,9 @@ const CodeBlock: React.FC<{
           </div>
 
           {/* Content container with proper flex layout */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={viewMode} // This ensures animation when switching between modes
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="flex-1 min-h-0"
-            >
-              {renderContent()}
-            </motion.div>
-          </AnimatePresence>
+          <div className="flex-1 min-h-0">
+            {renderContent()}
+          </div>
         </div>
       </div>
     );
@@ -556,13 +480,13 @@ const MarkdownComponents = {
   ),
 
   ul: ({ children, ...props }: any) => (
-    <ul className="mb-2 last:mb-0 pl-4 space-y-1" {...props}>
+    <ul className="mb-2 last:mb-0 pl-3 sm:pl-4 space-y-1" {...props}>
       {children}
     </ul>
   ),
 
   ol: ({ children, ...props }: any) => (
-    <ol className="mb-2 last:mb-0 pl-4 space-y-1 list-decimal" {...props}>
+    <ol className="mb-2 last:mb-0 pl-3 sm:pl-4 space-y-1 list-decimal" {...props}>
       {children}
     </ol>
   ),
@@ -593,7 +517,7 @@ const MarkdownComponents = {
 
   blockquote: ({ children, ...props }: any) => (
     <blockquote
-      className="border-l-4 border-zinc-300 dark:border-zinc-600 pl-4 italic my-3 text-zinc-700 dark:text-zinc-300"
+      className="border-l-4 border-zinc-300 dark:border-zinc-600 pl-3 sm:pl-4 italic my-3 text-zinc-700 dark:text-zinc-300"
       {...props}
     >
       {children}
@@ -652,10 +576,10 @@ const MarkdownComponents = {
     );
   },
 
-  // Table components for GFM
+  // Table components for GFM - More responsive
   table: ({ children, ...props }: any) => (
-    <div className="overflow-x-auto my-4 border-collapse border border-zinc-300 dark:border-zinc-600 rounded-lg">
-      <table className="min-w-full" {...props}>
+    <div className="overflow-x-auto my-4 border-collapse border border-zinc-300 dark:border-zinc-600 rounded-lg -mx-2 sm:mx-0">
+      <table className="min-w-full text-xs sm:text-sm" {...props}>
         {children}
       </table>
     </div>
@@ -677,7 +601,7 @@ const MarkdownComponents = {
 
   th: ({ children, ...props }: any) => (
     <th
-      className="px-3 py-2 text-left font-semibold text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
+      className="px-2 sm:px-3 py-2 text-left font-semibold text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
       {...props}
     >
       {children}
@@ -686,7 +610,7 @@ const MarkdownComponents = {
 
   td: ({ children, ...props }: any) => (
     <td
-      className="px-3 py-2 text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
+      className="px-2 sm:px-3 py-2 text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
       {...props}
     >
       {children}
@@ -958,10 +882,10 @@ const Message: React.FC<MessageProps> = memo(
 
     const getMessageStyles = () => {
       if (isUser) {
-        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-100 border border-zinc-300/50 dark:border-zinc-700/50";
+        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[85%] sm:max-w-[75%] md:max-w-[65%] lg:max-w-[55%] border border-zinc-300/50 dark:border-zinc-700/50";
       }
       if (message.isError) {
-        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
+        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 w-full max-w-full";
       }
       return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
     };
@@ -983,7 +907,7 @@ const Message: React.FC<MessageProps> = memo(
         // Convert display math \[...\] to $$...$$ (non-greedy match)
         processedText = processedText.replace(
           /\\\[([\s\S]*?)\\\]/g,
-          (match, content) => {
+          (_match, content) => {
             return `$$${content}$$`;
           }
         );
@@ -991,7 +915,7 @@ const Message: React.FC<MessageProps> = memo(
         // Convert inline math \(...\) to $...$ (non-greedy match)
         processedText = processedText.replace(
           /\\\(([\s\S]*?)\\\)/g,
-          (match, content) => {
+          (_match, content) => {
             return `$${content}$`;
           }
         );
@@ -1047,7 +971,6 @@ const Message: React.FC<MessageProps> = memo(
                       url={attachment.url}
                       gcsPath={attachment.gcsPath}
                       attachment={attachment}
-                      alt=""
                       isUser={isUser}
                     />
                   ))}
@@ -1151,7 +1074,6 @@ const Message: React.FC<MessageProps> = memo(
                       message.attachments?.[0]?.url ||
                       ""
                     }
-                    alt=""
                     gcsPath={message.attachments?.[0]?.gcsPath}
                     attachment={message.attachments?.[0]}
                     isUser={isUser}
@@ -1226,7 +1148,6 @@ const Message: React.FC<MessageProps> = memo(
                       url={item.image_url.url}
                       gcsPath={attachment?.gcsPath}
                       attachment={attachment}
-                      alt=""
                       isUser={isUser}
                     />
                   );
@@ -1335,13 +1256,13 @@ const Message: React.FC<MessageProps> = memo(
           initial={animationsDisabled ? {} : "initial"}
           animate="animate"
           exit={animationsDisabled ? {} : "exit"}
-          className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+          className={`flex ${isUser ? "justify-end" : "justify-start"} px-2 sm:px-4 md:px-6 w-full`}
         >
           <div
-            className={`my-4 flex flex-col ${
+            className={`my-4 flex flex-col w-full ${
               isUser
                 ? "max-w-full items-end"
-                : "w-full max-w-full items-start min-w-0"
+                : "max-w-full items-start min-w-0"
             }`}
           >
             <div className={getMessageStyles()}>{renderContent()}</div>
