@@ -576,9 +576,9 @@ const MarkdownComponents = {
     );
   },
 
-  // Table components for GFM - More responsive
+  // Table components for GFM - Restored original responsive design
   table: ({ children, ...props }: any) => (
-    <div className="overflow-x-auto my-4 border-collapse border border-zinc-300 dark:border-zinc-600 rounded-lg -mx-2 sm:mx-0">
+    <div className="overflow-x-auto my-4 border border-zinc-300 dark:border-zinc-600 rounded-lg">
       <table className="min-w-full text-xs sm:text-sm" {...props}>
         {children}
       </table>
