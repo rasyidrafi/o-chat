@@ -1563,7 +1563,7 @@ const ChatInput = ({
           {/* Send/Generate Button */}
           <button
             onClick={handleSendMessage}
-            className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors ${
+            className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors cursor-pointer ${
               (() => {
                 const capabilities = getCurrentModelCapabilities();
                 if (inputMode === "image_generation") {
