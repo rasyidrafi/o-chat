@@ -480,13 +480,13 @@ const MarkdownComponents = {
   ),
 
   ul: ({ children, ...props }: any) => (
-    <ul className="mb-2 last:mb-0 pl-3 sm:pl-4 space-y-1" {...props}>
+    <ul className="mb-2 last:mb-0 pl-4 space-y-1" {...props}>
       {children}
     </ul>
   ),
 
   ol: ({ children, ...props }: any) => (
-    <ol className="mb-2 last:mb-0 pl-3 sm:pl-4 space-y-1 list-decimal" {...props}>
+    <ol className="mb-2 last:mb-0 pl-4 space-y-1 list-decimal" {...props}>
       {children}
     </ol>
   ),
@@ -517,7 +517,7 @@ const MarkdownComponents = {
 
   blockquote: ({ children, ...props }: any) => (
     <blockquote
-      className="border-l-4 border-zinc-300 dark:border-zinc-600 pl-3 sm:pl-4 italic my-3 text-zinc-700 dark:text-zinc-300"
+      className="border-l-4 border-zinc-300 dark:border-zinc-600 pl-4 italic my-3 text-zinc-700 dark:text-zinc-300"
       {...props}
     >
       {children}
@@ -601,7 +601,7 @@ const MarkdownComponents = {
 
   th: ({ children, ...props }: any) => (
     <th
-      className="px-2 sm:px-3 py-2 text-left font-semibold text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
+      className="px-2 py-2 text-left font-semibold text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
       {...props}
     >
       {children}
@@ -610,7 +610,7 @@ const MarkdownComponents = {
 
   td: ({ children, ...props }: any) => (
     <td
-      className="px-2 sm:px-3 py-2 text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
+      className="px-2 py-2 text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
       {...props}
     >
       {children}
@@ -882,10 +882,10 @@ const Message: React.FC<MessageProps> = memo(
 
     const getMessageStyles = () => {
       if (isUser) {
-        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[85%] sm:max-w-[75%] md:max-w-[65%] lg:max-w-[55%] border border-zinc-300/50 dark:border-zinc-700/50";
+        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[85%] sm:max-w-[75%] md:max-w-[65%] lg:max-w-[55%] border border-zinc-300/50 dark:border-zinc-700/50";
       }
       if (message.isError) {
-        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-3 sm:px-4 py-2 sm:py-3 w-full max-w-full";
+        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
       }
       return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
     };
@@ -1256,7 +1256,7 @@ const Message: React.FC<MessageProps> = memo(
           initial={animationsDisabled ? {} : "initial"}
           animate="animate"
           exit={animationsDisabled ? {} : "exit"}
-          className={`flex ${isUser ? "justify-end" : "justify-start"} px-2 sm:px-4 md:px-6 w-full`}
+          className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}
         >
           <div
             className={`my-4 flex flex-col w-full ${
