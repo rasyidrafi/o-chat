@@ -10,6 +10,7 @@ import { Tab as SettingsTab } from "./SettingsPage";
 import { motion, AnimatePresence } from "framer-motion";
 import { DEFAULT_MODEL_ID } from "../constants/models";
 import { useChat } from "../hooks/useChat";
+import { useSettingsContext } from "../contexts/SettingsContext";
 import LoadingState from "./ui/LoadingState";
 
 interface ChatViewProps {
@@ -45,30 +46,8 @@ const ChatView: React.FC<ChatViewProps> = ({
     hasMoreMessages,
   } = chat;
 
-  const [windowWidth, setWindowWidth] = React.useState(
-    typeof window !== "undefined" ? window.innerWidth : 0
-  );
-
-  // Throttled resize handler for better performance
-  React.useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-
-    const handleResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        setWindowWidth(window.innerWidth);
-      }, 100); // Throttle to 100ms
-    };
-
-    window.addEventListener("resize", handleResize, { passive: true });
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      clearTimeout(timeoutId);
-    };
-  }, []);
-
-  // Memoize mobile calculation to prevent unnecessary re-renders
-  const isMobile = useMemo(() => windowWidth < 768, [windowWidth]);
+  // Get isMobile from SettingsContext
+  const { isMobile } = useSettingsContext();
 
   // State to track selected model info from ChatInput
   const [selectedModelInfo, setSelectedModelInfo] = React.useState({

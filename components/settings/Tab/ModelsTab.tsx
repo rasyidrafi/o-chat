@@ -8,6 +8,7 @@ import { Provider } from "../../../types/providers";
 import { useModelsManager } from "../../../hooks/useModelsManager";
 import { usePagination, useSearchAndFilter } from "../../../hooks/usePagination";
 import { useLocalStorageData } from "../../../hooks/useLocalStorageData";
+import { useSettingsContext } from "../../../contexts/SettingsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw } from "../../Icons";
 import { MODEL_FILTER_CATEGORIES, FILTER_ID_MAPPING, REVERSE_FILTER_ID_MAPPING } from "../../../constants/modelFilters";
@@ -21,23 +22,13 @@ interface ModelsTabProps {
 const ITEMS_PER_PAGE = 6;
 
 const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
+  // Get isMobile from SettingsContext
+  const { isMobile } = useSettingsContext();
+
   // State management
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [activeByokTab, setActiveByokTab] = useState<"selected" | "available">("available");
   const [availableProviders, setAvailableProviders] = useState<Array<Provider>>([]);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
-
-  // Check if mobile on mount and window resize
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    
-    return () => window.removeEventListener('resize', checkIfMobile);
-  }, []);
 
   // Custom hooks
   const modelsManager = useModelsManager();

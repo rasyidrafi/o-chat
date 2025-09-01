@@ -9,7 +9,7 @@ import SearchCenter from "./components/SearchCenter";
 import AuthLoadingScreen from "./components/AuthLoadingScreen";
 import { useChat } from "./hooks/useChat";
 import { useAuth } from "./contexts/AuthContext";
-import { useSettings } from "./hooks/useSettings";
+import { SettingsProvider, useSettingsContext } from "./contexts/SettingsContext";
 
 const defaultConfirmDialogProps = {
   title: "",
@@ -93,21 +93,26 @@ const ConversationRoute: React.FC<{
   return null; // This component just handles routing logic
 };
 
-const AppContent: React.FC = () => {
+const AppContent: React.FC<{
+  modal: {
+    initialSettingsTab: SettingsTab;
+    confirmDialogProps: typeof defaultConfirmDialogProps;
+  };
+  setModal: React.Dispatch<React.SetStateAction<{
+    initialSettingsTab: SettingsTab;
+    confirmDialogProps: typeof defaultConfirmDialogProps;
+  }>>;
+  isConfirmDialogOpen: boolean;
+  setIsConfirmDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  openConfirmationDialog: (props: Partial<typeof defaultConfirmDialogProps>) => void;
+}> = ({ modal, setModal, isConfirmDialogOpen, setIsConfirmDialogOpen, openConfirmationDialog }) => {
   // UI state
   const [ui, setUi] = useState({
     isMobileMenuOpen: false,
     isSidebarCollapsed: false,
     isSettingsOpen: false,
     isAuthModalOpen: false,
-    isConfirmDialogOpen: false,
     isSearchCenterOpen: false
-  });
-
-  // Modal state
-  const [modal, setModal] = useState({
-    initialSettingsTab: "Customization" as SettingsTab,
-    confirmDialogProps: defaultConfirmDialogProps
   });
 
   const sidebarRef = useRef<HTMLElement>(null);
@@ -115,21 +120,8 @@ const AppContent: React.FC = () => {
 
   // Custom hooks
   const { user, signOut, authLoaded, isLoading: authIsLoading } = useAuth();
-  
-  const openConfirmationDialog = useCallback((
-    props: Partial<typeof modal.confirmDialogProps>
-  ) => {
-    setModal(prev => ({ 
-      ...prev, 
-      confirmDialogProps: { ...defaultConfirmDialogProps, ...props }
-    }));
-    setUi(prev => ({ ...prev, isConfirmDialogOpen: true }));
-  }, []);
 
-  const { settings, settingsLoaded, updateSettings, toggleTheme } = useSettings(
-    user,
-    openConfirmationDialog
-  );
+  const { settings, settingsLoaded, updateSettings, toggleTheme } = useSettingsContext();
 
   const chat = useChat(settingsLoaded ? settings : undefined, navigate);
 
@@ -194,8 +186,9 @@ const AppContent: React.FC = () => {
     });
   };
 
-  // Show global loading screen while auth is initializing
-  if (authIsLoading || !authLoaded) {
+  // Show global loading screen while auth or settings are initializing
+  // This ensures all core app state is ready before rendering the main UI
+  if (authIsLoading || !authLoaded || !settingsLoaded) {
     return <AuthLoadingScreen />;
   }
 
@@ -271,8 +264,8 @@ const AppContent: React.FC = () => {
         animationsDisabled={settings.animationsDisabled}
       />
       <ConfirmationDialog
-        isOpen={ui.isConfirmDialogOpen}
-        onClose={() => setUi(prev => ({ ...prev, isConfirmDialogOpen: false }))}
+        isOpen={isConfirmDialogOpen}
+        onClose={() => setIsConfirmDialogOpen(false)}
         onConfirm={modal.confirmDialogProps.onConfirm}
         title={modal.confirmDialogProps.title}
         confirmText={modal.confirmDialogProps.confirmText}
@@ -294,7 +287,37 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  return <AppContent />;
+  const { user } = useAuth();
+  
+  // Move confirmation dialog state to App level so it can be shared
+  const [modal, setModal] = useState({
+    initialSettingsTab: "Customization" as SettingsTab,
+    confirmDialogProps: defaultConfirmDialogProps
+  });
+  
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  
+  const openConfirmationDialog = useCallback((
+    props: Partial<typeof defaultConfirmDialogProps>
+  ) => {
+    setModal(prev => ({ 
+      ...prev, 
+      confirmDialogProps: { ...defaultConfirmDialogProps, ...props }
+    }));
+    setIsConfirmDialogOpen(true);
+  }, []);
+
+  return (
+    <SettingsProvider user={user} onConfirmationDialog={openConfirmationDialog}>
+      <AppContent 
+        modal={modal}
+        setModal={setModal}
+        isConfirmDialogOpen={isConfirmDialogOpen}
+        setIsConfirmDialogOpen={setIsConfirmDialogOpen}
+        openConfirmationDialog={openConfirmationDialog}
+      />
+    </SettingsProvider>
+  );
 };
 
 export default App;
