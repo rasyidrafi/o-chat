@@ -1,9 +1,9 @@
-// Alternative: Scroll-based bottom detection with RAF throttling
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ChatMessage } from "../types/chat";
 import Message from "./Message";
 import { AnimatePresence } from "framer-motion";
 import { useSettingsContext } from "../contexts/SettingsContext";
+import { throttle } from "lodash";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -27,140 +27,188 @@ function usePrevious<T>(value: T): T | null {
   return ref.current;
 }
 
-const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
-  messages,
-  streamingMessageId,
-  animationsDisabled,
-  onScrollStateChange,
-}, ref) => {
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const { isMobile } = useSettingsContext();
-  
-  // RAF throttling
-  const rafId = useRef<number | null>(null);
-  const lastScrollTop = useRef<number>(0);
+const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
+  (
+    {
+      messages,
+      streamingMessageId,
+      animationsDisabled,
+      onScrollStateChange,
+      isLoadingMoreMessages,
+      hasMoreMessages,
+      onLoadMoreMessages,
+    },
+    ref
+  ) => {
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const sentinelRef = useRef<HTMLDivElement>(null);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const { isMobile } = useSettingsContext();
 
-  const prevMessages = usePrevious(messages);
+    // Optimized scroll tracking
+    const scrollState = useRef<{
+      scrollTop: number;
+      scrollHeight: number;
+      clientHeight: number;
+      shouldShowButton: boolean;
+    }>({
+      scrollTop: 0,
+      scrollHeight: 0,
+      clientHeight: 0,
+      shouldShowButton: false,
+    });
+    const rafId = useRef<number | null>(null);
+    const prevMessages = usePrevious(messages);
 
-  // Optimized scroll detection with RAF throttling
-  useEffect(() => {
-    const container = messagesContainerRef.current;
-    
-    if (!container || !onScrollStateChange || messages.length === 0) {
-      return;
-    }
+    // --- Scroll Handler Optimization ---
+    const checkScrollPosition = useCallback(() => {
+      const container = messagesContainerRef.current;
+      if (!container || !onScrollStateChange) return;
 
-    const checkScrollPosition = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      
-      // Only check if scroll position actually changed
-      if (scrollTop === lastScrollTop.current) {
+
+      // Only update if values changed
+      if (
+        scrollTop === scrollState.current.scrollTop &&
+        scrollHeight === scrollState.current.scrollHeight &&
+        clientHeight === scrollState.current.clientHeight
+      ) {
+        rafId.current = null;
         return;
       }
-      
-      lastScrollTop.current = scrollTop;
-      
-      // Calculate if we're near the bottom (within 200px)
+
+      // Calculate distance from bottom (use a larger threshold for mobile)
+      const threshold = isMobile ? 300 : 200;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const shouldShowButton = distanceFromBottom > 200;
-      
-      onScrollStateChange(shouldShowButton);
-    };
+      const shouldShowButton = distanceFromBottom > threshold;
 
-    const handleScroll = () => {
-      // Cancel previous RAF if still pending
-      if (rafId.current) {
-        cancelAnimationFrame(rafId.current);
+      // Check if the button state changed BEFORE updating scrollState
+      const previousShouldShowButton = scrollState.current.shouldShowButton;
+
+      // Update scroll state
+      scrollState.current = {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+        shouldShowButton,
+      };
+
+      // Only call onScrollStateChange if the button state actually changed
+      if (shouldShowButton !== previousShouldShowButton) {
+        onScrollStateChange(shouldShowButton);
       }
-      
-      // Schedule check for next frame
-      rafId.current = requestAnimationFrame(checkScrollPosition);
-    };
 
-    // Use passive listener for better performance
-    if (!isMobile) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-    }
+      rafId.current = null;
+    }, [isMobile, onScrollStateChange]);
 
-    // Initial check
-    checkScrollPosition();
-
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      if (rafId.current) {
-        cancelAnimationFrame(rafId.current);
+    const handleScroll = useCallback(() => {
+      console.log("scroll Called");
+      if (!rafId.current) {
+        rafId.current = requestAnimationFrame(checkScrollPosition);
       }
-    };
-  }, [messages.length, onScrollStateChange]);
+    }, [checkScrollPosition]);
 
-  // Smooth scroll to bottom function
-  const scrollToBottom = React.useCallback((smooth = true) => {
-    if (sentinelRef.current) {
-      sentinelRef.current.scrollIntoView({
-        behavior: smooth ? 'smooth' : 'auto',
-        block: 'end'
-      });
-    }
-  }, []);
+    // --- Mobile-Specific Scroll Handling ---
+    useEffect(() => {
+      const container = messagesContainerRef.current;
+      if (!container || !onScrollStateChange || messages.length === 0) return;
 
-  // Expose scrollToBottom function to parent component
-  React.useImperativeHandle(ref, () => ({
-    scrollToBottom: (smooth = true) => scrollToBottom(smooth)
-  }), [scrollToBottom]);
+      // Use passive listeners for both mobile and desktop
+      const options: AddEventListenerOptions = { passive: true };
 
-  // Auto-scroll to bottom when new messages are added
-  useEffect(() => {
-    if (prevMessages && messages.length > prevMessages.length) {
-      // New message added, scroll to bottom automatically
-      requestAnimationFrame(() => {
-        scrollToBottom(true);
-      });
-    }
-  }, [messages.length, prevMessages, scrollToBottom]);
+      container.addEventListener("scroll", handleScroll, options);
 
-  // Detect when we're transitioning between conversations (empty -> filled)
-  useEffect(() => {
-    if (prevMessages && prevMessages.length > 0 && messages.length === 0) {
-      // Starting transition (had messages, now empty)
-      setIsTransitioning(true);
-    } else if (isTransitioning && messages.length > 0) {
-      // Ending transition (was empty, now has messages)
-      setIsTransitioning(false);
-      // Auto scroll to bottom after loading new conversation
-      requestAnimationFrame(() => {
-        scrollToBottom(false);
-      });
-    }
-  }, [messages.length, prevMessages, isTransitioning, scrollToBottom]);
+      // Initial check
+      checkScrollPosition();
 
-  if (messages.length === 0) {
-    return null;
-  }
+      return () => {
+        container.removeEventListener("scroll", handleScroll);
+        if (rafId.current) cancelAnimationFrame(rafId.current);
+      };
+    }, [
+      handleScroll,
+      checkScrollPosition,
+      messages.length,
+      onScrollStateChange,
+    ]);
 
-  return (
-    <div
-      ref={messagesContainerRef}
-      className="absolute inset-0 overflow-y-auto custom-scrollbar pt-8 overflow-x-hidden"
-    >
-      <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto overflow-x-hidden">
-        <AnimatePresence mode="popLayout">
-          {messages.map((message, idx) => (
-            <Message
-              key={message.id}
-              message={message}
-              isStreaming={streamingMessageId === message.id}
-              animationsDisabled={animationsDisabled}
-              isLastMessage={idx === messages.length - 1}
-            />
-          ))}
-        </AnimatePresence>
-        {/* Bottom padding to account for the overlay chat input */}
-        <div ref={sentinelRef} className="h-32 md:h-36"></div>
+    // --- Auto-Scroll Optimization ---
+    const scrollToBottom = useCallback(
+      (smooth = true) => {
+        if (!sentinelRef.current) return;
+
+        // On mobile, use "auto" behavior for smoother scrolls
+        const behavior = isMobile ? "auto" : smooth ? "smooth" : "auto";
+        sentinelRef.current.scrollIntoView({ behavior, block: "end" });
+      },
+      [isMobile]
+    );
+
+    React.useImperativeHandle(ref, () => ({ scrollToBottom }), [
+      scrollToBottom,
+    ]);
+
+    // --- Auto-Scroll on New Messages ---
+    useEffect(() => {
+      if (prevMessages && messages.length > prevMessages.length) {
+        // Only auto-scroll if we're near the bottom (to avoid jarring users)
+        const container = messagesContainerRef.current;
+        if (container) {
+          const { scrollTop, scrollHeight, clientHeight } = container;
+          const isNearBottom = scrollHeight - scrollTop - clientHeight < 300;
+
+          if (isNearBottom || isMobile) {
+            // Mobile always auto-scrolls
+            requestAnimationFrame(() => scrollToBottom(true));
+          }
+        }
+      }
+    }, [messages.length, prevMessages, scrollToBottom, isMobile]);
+
+    // --- Transition Handling ---
+    useEffect(() => {
+      if (prevMessages && prevMessages.length > 0 && messages.length === 0) {
+        setIsTransitioning(true);
+      } else if (isTransitioning && messages.length > 0) {
+        setIsTransitioning(false);
+        requestAnimationFrame(() => scrollToBottom(false));
+      }
+    }, [messages.length, prevMessages, isTransitioning, scrollToBottom]);
+
+    if (messages.length === 0) return null;
+
+    return (
+      <div
+        ref={messagesContainerRef}
+        className="absolute inset-0 overflow-y-auto custom-scrollbar pt-8 overflow-x-hidden"
+        // Disable overscroll bounce on mobile (optional, reduces jank)
+        style={{ overscrollBehaviorY: "contain" }}
+      >
+        <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto overflow-x-hidden">
+          <AnimatePresence mode="popLayout">
+            {messages.map((message, idx) => (
+              <Message
+                key={message.id}
+                message={message}
+                isStreaming={streamingMessageId === message.id}
+                animationsDisabled={animationsDisabled || isMobile} // Disable animations on mobile
+                isLastMessage={idx === messages.length - 1}
+              />
+            ))}
+          </AnimatePresence>
+          {/* Bottom padding + sentinel for scroll tracking */}
+          <div ref={sentinelRef} className="h-32 md:h-36">
+            {" "}
+          </div>
+
+          {/* Load more messages indicator (if needed) */}
+          {isLoadingMoreMessages && (
+            <div className="text-center p-4"> Loading more...</div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 export default MessageList;
