@@ -1,8 +1,9 @@
-// Improved MessageList with performance optimizations
-import React, { useEffect, useRef, useState } from "react";
+// Alternative: Scroll-based bottom detection with RAF throttling
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ChatMessage } from "../types/chat";
 import Message from "./Message";
 import { AnimatePresence } from "framer-motion";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -35,30 +36,63 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const { isMobile } = useSettingsContext();
+  
+  // RAF throttling
+  const rafId = useRef<number | null>(null);
+  const lastScrollTop = useRef<number>(0);
 
   const prevMessages = usePrevious(messages);
 
-  // Intersection Observer for scroll detection
+  // Optimized scroll detection with RAF throttling
   useEffect(() => {
-    const sentinel = sentinelRef.current;
+    const container = messagesContainerRef.current;
     
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // Button shows when bottom sentinel is NOT visible
-        const shouldShowButton = !entry.isIntersecting && messages.length > 0;
-        onScrollStateChange?.(shouldShowButton);
-      },
-      {
-        rootMargin: '0px 0px -100px 0px', // Trigger 100px before actual bottom
-        threshold: 0
-      }
-    );
-
-    if (sentinel) {
-      observer.observe(sentinel);
+    if (!container || !onScrollStateChange || messages.length === 0) {
+      return;
     }
 
-    return () => observer.disconnect();
+    const checkScrollPosition = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      
+      // Only check if scroll position actually changed
+      if (scrollTop === lastScrollTop.current) {
+        return;
+      }
+      
+      lastScrollTop.current = scrollTop;
+      
+      // Calculate if we're near the bottom (within 200px)
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const shouldShowButton = distanceFromBottom > 200;
+      
+      onScrollStateChange(shouldShowButton);
+    };
+
+    const handleScroll = () => {
+      // Cancel previous RAF if still pending
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+      }
+      
+      // Schedule check for next frame
+      rafId.current = requestAnimationFrame(checkScrollPosition);
+    };
+
+    // Use passive listener for better performance
+    if (!isMobile) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    // Initial check
+    checkScrollPosition();
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (rafId.current) {
+        cancelAnimationFrame(rafId.current);
+      }
+    };
   }, [messages.length, onScrollStateChange]);
 
   // Smooth scroll to bottom function
@@ -80,7 +114,9 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
   useEffect(() => {
     if (prevMessages && messages.length > prevMessages.length) {
       // New message added, scroll to bottom automatically
-      setTimeout(() => scrollToBottom(true), 50); // Small delay to ensure DOM is updated
+      requestAnimationFrame(() => {
+        scrollToBottom(true);
+      });
     }
   }, [messages.length, prevMessages, scrollToBottom]);
 
@@ -93,12 +129,13 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
       // Ending transition (was empty, now has messages)
       setIsTransitioning(false);
       // Auto scroll to bottom after loading new conversation
-      setTimeout(() => scrollToBottom(false), 100);
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
+      });
     }
   }, [messages.length, prevMessages, isTransitioning, scrollToBottom]);
 
   if (messages.length === 0) {
-    // Don't show loading here - let ChatView handle all loading states
     return null;
   }
 
@@ -119,14 +156,8 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
             />
           ))}
         </AnimatePresence>
-        {/* Intersection Observer sentinel - placed at the very bottom */}
-        <div 
-          ref={sentinelRef} 
-          style={{ height: '1px', width: '1px' }} 
-          aria-hidden="true"
-        />
         {/* Bottom padding to account for the overlay chat input */}
-        <div className="h-32 md:h-36"></div>
+        <div ref={sentinelRef} className="h-32 md:h-36"></div>
       </div>
     </div>
   );
