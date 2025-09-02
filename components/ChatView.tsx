@@ -4,7 +4,14 @@ import { useLocation } from "react-router-dom";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
-import { SlidersHorizontal, Sun, Moon, Desktop, Menu, ArrowDown } from "./Icons";
+import {
+  SlidersHorizontal,
+  Sun,
+  Moon,
+  Desktop,
+  Menu,
+  ArrowDown,
+} from "./Icons";
 import { Theme } from "../hooks/useSettings";
 import { Tab as SettingsTab } from "./SettingsPage";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,7 +57,9 @@ const ChatView: React.FC<ChatViewProps> = ({
   const { isMobile } = useSettingsContext();
 
   // MessageList ref and scroll state
-  const messageListRef = useRef<{ scrollToBottom: (smooth?: boolean) => void }>(null);
+  const messageListRef = useRef<{ scrollToBottom: (smooth?: boolean) => void }>(
+    null
+  );
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   // State to track selected model info from ChatInput
@@ -114,7 +123,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   // Handle scroll to bottom button click - optimized
   const handleScrollToBottom = React.useCallback(() => {
     if (messageListRef.current) {
-      messageListRef.current.scrollToBottom(true);
+      messageListRef.current.scrollToBottom(false);
       setShowScrollButton(false); // Hide button immediately for better UX
     }
   }, []);
@@ -315,7 +324,6 @@ const ChatView: React.FC<ChatViewProps> = ({
 
       {/* Chat Input Container - separate from scroll button */}
       <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
-        {/* Scroll to Bottom Button */}
         <AnimatePresence>
           {showScrollButton && (
             <motion.div
@@ -329,7 +337,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
                 <button
                   onClick={handleScrollToBottom}
-                  className="w-10 h-10 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg hover:bg-white dark:hover:bg-zinc-800 transition-all duration-200 flex items-center justify-center group cursor-pointer"
+                  className="w-10 h-10 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg hover:bg-white dark:hover:bg-zinc-800 transition-all duration-200 flex items-center justify-center group cursor-pointer"
                   aria-label="Scroll to bottom"
                 >
                   <ArrowDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200" />
@@ -338,7 +346,7 @@ const ChatView: React.FC<ChatViewProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-        
+
         <div
           className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"
           style={chatInputPadding}

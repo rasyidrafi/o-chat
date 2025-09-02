@@ -3,7 +3,6 @@ import { ChatMessage } from "../types/chat";
 import Message from "./Message";
 import { AnimatePresence } from "framer-motion";
 import { useSettingsContext } from "../contexts/SettingsContext";
-import { throttle } from "lodash";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -59,17 +58,30 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
     });
     const rafId = useRef<number | null>(null);
     const prevMessages = usePrevious(messages);
+    
+    // Add throttling for scroll state updates to reduce button flickering
+    const lastUpdateTime = useRef<number>(0);
+    const SCROLL_UPDATE_THROTTLE = isMobile ? 100 : 50; // Less frequent updates on mobile
 
     // --- Scroll Handler Optimization ---
     const checkScrollPosition = useCallback(() => {
       const container = messagesContainerRef.current;
       if (!container || !onScrollStateChange) return;
 
+      const now = performance.now();
+      
+      // Throttle updates, especially on mobile
+      if (now - lastUpdateTime.current < SCROLL_UPDATE_THROTTLE) {
+        rafId.current = null;
+        return;
+      }
+
       const { scrollTop, scrollHeight, clientHeight } = container;
 
-      // Only update if values changed
+      // Only update if values changed significantly
+      const scrollDiff = Math.abs(scrollTop - scrollState.current.scrollTop);
       if (
-        scrollTop === scrollState.current.scrollTop &&
+        scrollDiff < 10 && // Only update if scroll changed by more than 10px
         scrollHeight === scrollState.current.scrollHeight &&
         clientHeight === scrollState.current.clientHeight
       ) {
@@ -95,14 +107,14 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
 
       // Only call onScrollStateChange if the button state actually changed
       if (shouldShowButton !== previousShouldShowButton) {
+        lastUpdateTime.current = now;
         onScrollStateChange(shouldShowButton);
       }
 
       rafId.current = null;
-    }, [isMobile, onScrollStateChange]);
+    }, [isMobile, onScrollStateChange, SCROLL_UPDATE_THROTTLE]);
 
     const handleScroll = useCallback(() => {
-      console.log("scroll Called");
       if (!rafId.current) {
         rafId.current = requestAnimationFrame(checkScrollPosition);
       }
@@ -159,7 +171,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
 
           if (isNearBottom || isMobile) {
             // Mobile always auto-scrolls
-            requestAnimationFrame(() => scrollToBottom(true));
+            requestAnimationFrame(() => scrollToBottom(false));
           }
         }
       }
