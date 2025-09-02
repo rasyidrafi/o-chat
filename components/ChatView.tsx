@@ -324,7 +324,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       {/* Chat Input Container - separate from scroll button */}
       <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
         <AnimatePresence>
-          {showScrollButton && (
+          {showScrollButton && !isLoading && !isLoadingMessages && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

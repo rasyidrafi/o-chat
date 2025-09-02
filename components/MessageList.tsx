@@ -90,7 +90,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       }
 
       // Calculate distance from bottom (use a larger threshold for mobile)
-      const threshold = isMobile ? 300 : 200;
+      const threshold = 100;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       const shouldShowButton = distanceFromBottom > threshold;
 
