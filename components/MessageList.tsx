@@ -51,24 +51,12 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
     }
   }, []);
 
-  // Optimized scroll check using timeout-based approach
+  // Optimized scroll check with immediate response
   const checkScrollPosition = useCallback(() => {
     if (messagesContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 100; // 100px threshold
       const shouldShow = !isAtBottom && messages.length >= 1; // Show if not at bottom and has messages
-      
-      // Debug logging (remove in production)
-      console.log('Scroll check:', {
-        scrollTop,
-        scrollHeight,
-        clientHeight,
-        diff: scrollHeight - scrollTop - clientHeight,
-        isAtBottom,
-        messagesLength: messages.length,
-        shouldShow,
-        currentShowButton: showScrollButton
-      });
       
       if (shouldShow !== showScrollButton) {
         setShowScrollButton(shouldShow);
@@ -77,20 +65,35 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
     }
   }, [showScrollButton, onScrollStateChange, messages.length]);
 
-  // Throttled scroll handler - only runs occasionally
+  // Immediate scroll handler for instant feedback using RAF
+  const immediateScrollHandler = useCallback(() => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+      const shouldShow = !isAtBottom && messages.length >= 1;
+      
+      // Only update if state needs to change (prevents unnecessary re-renders)
+      if (shouldShow !== showScrollButton) {
+        // Use RAF for smooth state updates
+        requestAnimationFrame(() => {
+          setShowScrollButton(shouldShow);
+          onScrollStateChange?.(shouldShow);
+        });
+      }
+    }
+  }, [showScrollButton, onScrollStateChange, messages.length]);
+
+  // Throttled scroll handler for final accuracy check
   const throttledScrollHandler = useCallback(() => {
-    isUserScrolling.current = true;
-    
     // Clear existing timeout
     if (scrollCheckTimeoutRef.current) {
       clearTimeout(scrollCheckTimeoutRef.current);
     }
     
-    // Set a timeout to check scroll position after user stops scrolling
+    // Set a timeout to do a final check after scrolling stops
     scrollCheckTimeoutRef.current = setTimeout(() => {
       checkScrollPosition();
-      isUserScrolling.current = false;
-    }, 150); // Check 150ms after user stops scrolling
+    }, 50); // Further reduced to 50ms for better responsiveness
   }, [checkScrollPosition]);
 
   // Handle touch events for mobile optimization
@@ -99,12 +102,22 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
   }, []);
 
   const handleTouchEnd = useCallback(() => {
-    // Small delay to let scroll settle
+    // Immediate check when touch ends
+    immediateScrollHandler();
+    // Also do a delayed check for accuracy
     setTimeout(() => {
       checkScrollPosition();
       isUserScrolling.current = false;
-    }, 100);
-  }, [checkScrollPosition]);
+    }, 50);
+  }, [immediateScrollHandler, checkScrollPosition]);
+
+  // Combined scroll handler for best of both worlds
+  const combinedScrollHandler = useCallback(() => {
+    // Immediate check for instant feedback
+    immediateScrollHandler();
+    // Throttled check for final accuracy
+    throttledScrollHandler();
+  }, [immediateScrollHandler, throttledScrollHandler]);
 
   // Expose scrollToBottom function to parent component
   React.useImperativeHandle(ref, () => ({
@@ -124,14 +137,14 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
     }
   }, [messages.length, prevMessages, scrollToBottom, checkScrollPosition]);
 
-  // Set up optimized scroll detection using passive listeners
+  // Set up optimized scroll detection with immediate response
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (container) {
       // Add passive scroll listener for better performance
       const options: AddEventListenerOptions = { passive: true };
       
-      container.addEventListener('scroll', throttledScrollHandler, options);
+      container.addEventListener('scroll', combinedScrollHandler, options);
       container.addEventListener('touchstart', handleTouchStart, options);
       container.addEventListener('touchend', handleTouchEnd, options);
       
@@ -139,7 +152,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
       setTimeout(() => checkScrollPosition(), 200);
       
       return () => {
-        container.removeEventListener('scroll', throttledScrollHandler);
+        container.removeEventListener('scroll', combinedScrollHandler);
         container.removeEventListener('touchstart', handleTouchStart);
         container.removeEventListener('touchend', handleTouchEnd);
         
@@ -149,7 +162,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
         }
       };
     }
-  }, [throttledScrollHandler, handleTouchStart, handleTouchEnd, checkScrollPosition]);
+  }, [combinedScrollHandler, handleTouchStart, handleTouchEnd, checkScrollPosition]);
 
   // Detect when we're transitioning between conversations (empty -> filled)
   useEffect(() => {
