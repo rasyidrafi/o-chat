@@ -237,7 +237,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={toggleSidebar}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white md:bg-white/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Toggle sidebar"
         >
@@ -245,7 +245,6 @@ const ChatView: React.FC<ChatViewProps> = ({
         </button>
       </motion.div>
 
-      {/* Top-left positioned menu button for mobile */}
       <div
         className="fixed z-50 md:hidden"
         style={{
@@ -255,7 +254,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={onMenuClick}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white md:bg-white/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Open menu"
         >
@@ -270,14 +269,14 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={() => onOpenSettings()}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white md:bg-white/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Settings"
         >
           <SlidersHorizontal className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
         </button>
         <button
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white md:bg-white/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
           onClick={toggleTheme}
           aria-label={`Switch to ${
             theme === "light" ? "dark" : theme === "dark" ? "system" : "light"
@@ -337,7 +336,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
                 <button
                   onClick={handleScrollToBottom}
-                  className="w-10 h-10 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg hover:bg-white dark:hover:bg-zinc-800 transition-all duration-200 flex items-center justify-center group cursor-pointer"
+                  className="w-10 h-10 bg-white md:bg-white/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group cursor-pointer"
                   aria-label="Scroll to bottom"
                 >
                   <ArrowDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200" />

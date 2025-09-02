@@ -1256,7 +1256,7 @@ const ChatInput = ({
 
   return (
     <div
-      className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg"
+      className="bg-white md:bg-white/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg"
     >
       {/* Image Preview Section */}
       {inputMode === "image_generation" && uploadedImageForEditing && (
@@ -1346,7 +1346,7 @@ const ChatInput = ({
               ? "Describe the image you want to generate..."
               : "Type your message here..."
           }
-          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-32 overflow-y-auto thin-scrollbar"
+          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-32 overflow-y-auto thin-scrollbar min-h-12"
           rows={1}
         />
       </div>
