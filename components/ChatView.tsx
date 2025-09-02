@@ -106,15 +106,16 @@ const ChatView: React.FC<ChatViewProps> = ({
     []
   );
 
-  // Handle scroll state changes from MessageList
+  // Handle scroll state changes from MessageList - optimized with useCallback
   const handleScrollStateChange = useCallback((shouldShowButton: boolean) => {
     setShowScrollButton(shouldShowButton);
   }, []);
 
-  // Handle scroll to bottom button click
-  const handleScrollToBottom = useCallback(() => {
+  // Handle scroll to bottom button click - optimized
+  const handleScrollToBottom = React.useCallback(() => {
     if (messageListRef.current) {
       messageListRef.current.scrollToBottom(true);
+      setShowScrollButton(false); // Hide button immediately for better UX
     }
   }, []);
 
@@ -328,7 +329,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
                 <button
                   onClick={handleScrollToBottom}
-                  className="w-10 h-10 bg-zinc-200/80 dark:bg-zinc-800/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all duration-200 flex items-center justify-center group cursor-pointer"
+                  className="w-10 h-10 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg hover:bg-white dark:hover:bg-zinc-800 transition-all duration-200 flex items-center justify-center group cursor-pointer"
                   aria-label="Scroll to bottom"
                 >
                   <ArrowDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200" />

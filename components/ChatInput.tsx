@@ -1256,7 +1256,7 @@ const ChatInput = ({
 
   return (
     <div
-      className="bg-zinc-200/80 dark:bg-zinc-800/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg"
+      className="bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg"
     >
       {/* Image Preview Section */}
       {inputMode === "image_generation" && uploadedImageForEditing && (

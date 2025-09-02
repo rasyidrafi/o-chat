@@ -33,63 +33,56 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
   onScrollStateChange,
 }, ref) => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const prevMessages = usePrevious(messages);
 
+  // Intersection Observer for scroll detection
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Button shows when bottom sentinel is NOT visible
+        const shouldShowButton = !entry.isIntersecting && messages.length > 0;
+        onScrollStateChange?.(shouldShowButton);
+      },
+      {
+        rootMargin: '0px 0px -100px 0px', // Trigger 100px before actual bottom
+        threshold: 0
+      }
+    );
+
+    if (sentinel) {
+      observer.observe(sentinel);
+    }
+
+    return () => observer.disconnect();
+  }, [messages.length, onScrollStateChange]);
+
   // Smooth scroll to bottom function
   const scrollToBottom = React.useCallback((smooth = true) => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
+    if (sentinelRef.current) {
+      sentinelRef.current.scrollIntoView({
         behavior: smooth ? 'smooth' : 'auto',
+        block: 'end'
       });
     }
   }, []);
-
-  // Check if user is at bottom of scroll
-  const checkIfAtBottom = React.useCallback(() => {
-    if (messagesContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
-      // Notify parent component about scroll state
-      if (onScrollStateChange) {
-        onScrollStateChange(!isAtBottom);
-      }
-    }
-  }, [onScrollStateChange]);
-
-  // Handle scroll events
-  const handleScroll = React.useCallback(() => {
-    checkIfAtBottom();
-  }, [checkIfAtBottom]);
 
   // Expose scrollToBottom function to parent component
   React.useImperativeHandle(ref, () => ({
     scrollToBottom: (smooth = true) => scrollToBottom(smooth)
   }), [scrollToBottom]);
 
-  // Scroll to bottom only when user sends a new message
+  // Auto-scroll to bottom when new messages are added
   useEffect(() => {
     if (prevMessages && messages.length > prevMessages.length) {
-      // New message added, scroll to bottomno
-      scrollToBottom(true);
+      // New message added, scroll to bottom automatically
+      setTimeout(() => scrollToBottom(true), 50); // Small delay to ensure DOM is updated
     }
   }, [messages.length, prevMessages, scrollToBottom]);
-
-  // Set up scroll listener
-  useEffect(() => {
-    const container = messagesContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      // Check initial position
-      checkIfAtBottom();
-      
-      return () => {
-        container.removeEventListener('scroll', handleScroll);
-      };
-    }
-  }, [handleScroll, checkIfAtBottom]);
 
   // Detect when we're transitioning between conversations (empty -> filled)
   useEffect(() => {
@@ -99,8 +92,10 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
     } else if (isTransitioning && messages.length > 0) {
       // Ending transition (was empty, now has messages)
       setIsTransitioning(false);
+      // Auto scroll to bottom after loading new conversation
+      setTimeout(() => scrollToBottom(false), 100);
     }
-  }, [messages.length, prevMessages, isTransitioning]);
+  }, [messages.length, prevMessages, isTransitioning, scrollToBottom]);
 
   if (messages.length === 0) {
     // Don't show loading here - let ChatView handle all loading states
@@ -124,6 +119,12 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
             />
           ))}
         </AnimatePresence>
+        {/* Intersection Observer sentinel - placed at the very bottom */}
+        <div 
+          ref={sentinelRef} 
+          style={{ height: '1px', width: '1px' }} 
+          aria-hidden="true"
+        />
         {/* Bottom padding to account for the overlay chat input */}
         <div className="h-32 md:h-36"></div>
       </div>
