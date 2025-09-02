@@ -1,10 +1,10 @@
 // Improved ChatView with better scroll handling
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
-import { SlidersHorizontal, Sun, Moon, Desktop, Menu } from "./Icons";
+import { SlidersHorizontal, Sun, Moon, Desktop, Menu, ArrowDown } from "./Icons";
 import { Theme } from "../hooks/useSettings";
 import { Tab as SettingsTab } from "./SettingsPage";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,6 +48,10 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   // Get isMobile from SettingsContext
   const { isMobile } = useSettingsContext();
+
+  // MessageList ref and scroll state
+  const messageListRef = useRef<{ scrollToBottom: (smooth?: boolean) => void }>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   // State to track selected model info from ChatInput
   const [selectedModelInfo, setSelectedModelInfo] = React.useState({
@@ -101,6 +105,18 @@ const ChatView: React.FC<ChatViewProps> = ({
     },
     []
   );
+
+  // Handle scroll state changes from MessageList
+  const handleScrollStateChange = useCallback((shouldShowButton: boolean) => {
+    setShowScrollButton(shouldShowButton);
+  }, []);
+
+  // Handle scroll to bottom button click
+  const handleScrollToBottom = useCallback(() => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollToBottom(true);
+    }
+  }, []);
 
   // Calculate sidebar width based on collapsed state - memoized
   const sidebarWidth = useMemo(
@@ -282,6 +298,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         ) : (
           <div className="flex-1 relative overflow-hidden">
             <MessageList
+              ref={messageListRef}
               messages={currentConversation?.messages || []}
               streamingMessageId={streamingState.currentMessageId}
               // onStopStreaming={stopStreaming}
@@ -289,6 +306,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               isLoadingMoreMessages={isLoadingMoreMessages}
               hasMoreMessages={hasMoreMessages}
               onLoadMoreMessages={() => {}}
+              onScrollStateChange={handleScrollStateChange}
             />
           </div>
         )}
@@ -296,6 +314,30 @@ const ChatView: React.FC<ChatViewProps> = ({
 
       {/* Chat Input Container - separate from scroll button */}
       <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+        {/* Scroll to Bottom Button */}
+        <AnimatePresence>
+          {showScrollButton && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: animationsDisabled ? 0 : 0.2 }}
+              className="absolute -top-16 left-0 right-0 flex justify-center pointer-events-auto"
+              style={chatInputPadding}
+            >
+              <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
+                <button
+                  onClick={handleScrollToBottom}
+                  className="w-10 h-10 bg-zinc-200/80 dark:bg-zinc-800/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-700 rounded-full shadow-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all duration-200 flex items-center justify-center group cursor-pointer"
+                  aria-label="Scroll to bottom"
+                >
+                  <ArrowDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
         <div
           className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"
           style={chatInputPadding}

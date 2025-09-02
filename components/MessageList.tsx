@@ -11,6 +11,11 @@ interface MessageListProps {
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
   onLoadMoreMessages: () => void;
+  onScrollStateChange?: (showScrollButton: boolean) => void;
+}
+
+interface MessageListRef {
+  scrollToBottom: (smooth?: boolean) => void;
 }
 
 function usePrevious<T>(value: T): T | null {
@@ -21,11 +26,12 @@ function usePrevious<T>(value: T): T | null {
   return ref.current;
 }
 
-const MessageList: React.FC<MessageListProps> = ({
+const MessageList = React.forwardRef<MessageListRef, MessageListProps>(({
   messages,
   streamingMessageId,
   animationsDisabled,
-}) => {
+  onScrollStateChange,
+}, ref) => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -41,13 +47,49 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   }, []);
 
+  // Check if user is at bottom of scroll
+  const checkIfAtBottom = React.useCallback(() => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
+      // Notify parent component about scroll state
+      if (onScrollStateChange) {
+        onScrollStateChange(!isAtBottom);
+      }
+    }
+  }, [onScrollStateChange]);
+
+  // Handle scroll events
+  const handleScroll = React.useCallback(() => {
+    checkIfAtBottom();
+  }, [checkIfAtBottom]);
+
+  // Expose scrollToBottom function to parent component
+  React.useImperativeHandle(ref, () => ({
+    scrollToBottom: (smooth = true) => scrollToBottom(smooth)
+  }), [scrollToBottom]);
+
   // Scroll to bottom only when user sends a new message
   useEffect(() => {
     if (prevMessages && messages.length > prevMessages.length) {
-      // New message added, scroll to bottom
+      // New message added, scroll to bottomno
       scrollToBottom(true);
     }
   }, [messages.length, prevMessages, scrollToBottom]);
+
+  // Set up scroll listener
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      // Check initial position
+      checkIfAtBottom();
+      
+      return () => {
+        container.removeEventListener('scroll', handleScroll);
+      };
+    }
+  }, [handleScroll, checkIfAtBottom]);
 
   // Detect when we're transitioning between conversations (empty -> filled)
   useEffect(() => {
@@ -87,6 +129,6 @@ const MessageList: React.FC<MessageListProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default MessageList;
