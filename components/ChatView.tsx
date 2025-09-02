@@ -112,7 +112,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   }, []);
 
   // Handle scroll to bottom button click - optimized
-  const handleScrollToBottom = useCallback(() => {
+  const handleScrollToBottom = React.useCallback(() => {
     if (messageListRef.current) {
       messageListRef.current.scrollToBottom(true);
       setShowScrollButton(false); // Hide button immediately for better UX
