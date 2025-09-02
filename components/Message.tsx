@@ -383,11 +383,11 @@ const CodeBlock: React.FC<{
             {/* Text wrap toggle */}
             <button
               onClick={() => setIsWrapped(!isWrapped)}
-              className="p-1 sm:p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+              className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
               title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
             >
               <svg
-                className={`w-3 h-3 sm:w-4 sm:h-4 transition-colors duration-150 ${
+                className={`w-4 h-4 transition-colors duration-150 ${
                   isWrapped
                     ? "text-blue-600 dark:text-blue-400"
                     : "text-zinc-600 dark:text-zinc-400"
@@ -408,12 +408,12 @@ const CodeBlock: React.FC<{
             {/* Copy button */}
             <button
               onClick={copyToClipboard}
-              className="p-1 sm:p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
+              className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
               title={copied ? "Copied!" : "Copy to clipboard"}
             >
               {copied ? (
                 <svg
-                  className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 dark:text-green-400"
+                  className="w-4 h-4 text-green-600 dark:text-green-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -427,7 +427,7 @@ const CodeBlock: React.FC<{
                 </svg>
               ) : (
                 <svg
-                  className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-600 dark:text-zinc-400"
+                  className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -880,10 +880,10 @@ const Message: React.FC<MessageProps> = memo(
 
     const getMessageStyles = () => {
       if (isUser) {
-        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[95%] sm:max-w-[85%] md:max-w-[75%] border border-zinc-300/50 dark:border-zinc-700/50";
+        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[95%] sm:max-w-[85%] md:max-w-[75%] border border-zinc-300/50 dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
       }
       if (message.isError) {
-        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
+        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full break-words overflow-wrap-anywhere";
       }
       return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
     };
@@ -932,7 +932,7 @@ const Message: React.FC<MessageProps> = memo(
         console.error("Markdown processing error:", error);
         if (typeof message.content === "string") {
           return (
-            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere">
               {message.content}
             </div>
           );
@@ -1110,7 +1110,7 @@ const Message: React.FC<MessageProps> = memo(
               variants={fadeVariants}
               initial={animationsDisabled ? {} : "initial"}
               animate="animate"
-              className="text-sm leading-relaxed whitespace-pre-wrap"
+              className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere"
             >
               {message.content}
             </motion.div>
@@ -1129,7 +1129,7 @@ const Message: React.FC<MessageProps> = memo(
                   return (
                     <div
                       key={index}
-                      className="text-sm leading-relaxed whitespace-pre-wrap"
+                      className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere"
                     >
                       {item.text}
                     </div>
