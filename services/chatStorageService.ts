@@ -207,7 +207,7 @@ export class ChatStorageService {
   }
 
   // Get conversations from Firestore
-  private static async getConversationsFromFirestore(userId: string): Promise<ChatConversation[]> {
+  private static async getConversationsFromFirestore(userId: string, includeMessages: boolean = false): Promise<ChatConversation[]> {
     try {
       const chatRef = doc(db, 'chats', userId);
       const conversationsRef = collection(chatRef, 'conversations');
@@ -218,13 +218,18 @@ export class ChatStorageService {
 
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
-        const messages = await this.getMessagesFromFirestore(userId, data.id);
+        
+        // Only load messages if explicitly requested (for search functionality)
+        const messages = includeMessages 
+          ? await this.getMessagesFromFirestore(userId, data.id)
+          : [];
 
         // @ts-ignore
         conversations.push({
           id: data.id,
           title: data.title,
           model: data.model,
+          source: data.source || 'server',
           createdAt: data.createdAt.toDate(),
           updatedAt: data.updatedAt.toDate(),
           messages
@@ -368,8 +373,9 @@ export class ChatStorageService {
   static async loadConversation(conversationId: string, user?: User | null): Promise<ChatConversation | null> {
     if (user) {
       try {
-        // Load conversation metadata from Firestore
-        const conversationRef = doc(db, 'users', user.uid, 'conversations', conversationId);
+        // Load conversation metadata from Firestore - using correct path structure
+        const chatRef = doc(db, 'chats', user.uid);
+        const conversationRef = doc(collection(chatRef, 'conversations'), conversationId);
         const conversationSnap = await getDoc(conversationRef);
         
         if (!conversationSnap.exists()) {
@@ -601,15 +607,15 @@ export class ChatStorageService {
   }
 
   // Load conversations (automatically chooses storage method)
-  static async loadConversations(user?: User | null): Promise<ChatConversation[]> {
+  static async loadConversations(user?: User | null, includeMessages: boolean = false): Promise<ChatConversation[]> {
     if (user) {
-      return await this.getConversationsFromFirestore(user.uid);
+      return await this.getConversationsFromFirestore(user.uid, includeMessages);
     } else {
       const conversations = this.getConversationsFromLocal();
-      // Load messages for each conversation
+      // Load messages for each conversation if requested
       return conversations.map(conv => ({
         ...conv,
-        messages: this.getMessagesFromLocal(conv.id)
+        messages: includeMessages ? this.getMessagesFromLocal(conv.id) : []
       }));
     }
   }

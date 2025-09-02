@@ -31,7 +31,7 @@ const CACHE_EXPIRY_TIME = 30 * 60 * 1000; // 30 minutes in milliseconds
 export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateFunction) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreConversations, setHasMoreConversations] = useState(true);
   const [conversationsLastDoc, setConversationsLastDoc] = useState<any>(null);
@@ -56,6 +56,10 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   // Add conversation cache state
   const [conversationCache, setConversationCache] = useState<ConversationCache>({});
   const cacheRef = useRef<ConversationCache>({});
+
+  // Track background loading to prevent duplicate requests
+  const isLoadingAllConversationsRef = useRef(false);
+  const isLoadingConversationsRef = useRef(false);
 
   const streamingMessageRef = useRef<string>('');
   const streamingReasoningRef = useRef<string>('');
@@ -156,16 +160,35 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
   // Load conversations on mount and user change
   const loadConversations = useCallback(async () => {
+    // Prevent multiple simultaneous loads using only the ref
+    if (isLoadingConversationsRef.current) {
+      console.log('⏸️ Skipping loadConversations - already in progress');
+      return;
+    }
+
     try {
+      isLoadingConversationsRef.current = true;
       setIsLoading(true);
-      const result = await ChatStorageService.loadConversationsPaginated(user, 20);
+      
+      // Add timeout as safety net
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Conversation loading timeout')), 15000)
+      );
+      
+      const loadPromise = ChatStorageService.loadConversationsPaginated(user, 20);
+      const result = await Promise.race([loadPromise, timeoutPromise]) as any;
+      
       setConversations(result.conversations);
       setHasMoreConversations(result.hasMore);
       setConversationsLastDoc(result.lastDoc);
     } catch (error) {
       console.error('Error loading conversations:', error);
+      // Ensure we don't stay in loading state on error
+      setConversations([]);
+      setHasMoreConversations(false);
     } finally {
       setIsLoading(false);
+      isLoadingConversationsRef.current = false;
     }
   }, [user]);
 
@@ -173,6 +196,42 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   React.useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  // Clear search cache when user changes (login/logout/switch users)
+  React.useEffect(() => {
+    // Clear search cache whenever user changes to ensure user isolation
+    setAllConversationsForSearch([]);
+    setFilteredConversations([]);
+    if (searchQuery) {
+      setSearchQuery('');
+    }
+    setIsSearching(false);
+    
+    // Reset ALL loading flags immediately when user changes
+    isLoadingAllConversationsRef.current = false;
+    isLoadingConversationsRef.current = false;
+    
+    // Also reset loading state to prevent stuck loading
+    setIsLoading(false);
+  }, [user?.uid]); // Only trigger when actual user ID changes
+
+  // Re-search when more comprehensive conversation data becomes available
+  React.useEffect(() => {
+    // If we have an active search query and more conversations just became available, re-search
+    if (searchQuery && searchQuery.trim() && allConversationsForSearch.length > conversations.length) {
+      console.log(`🔄 Re-searching with ${allConversationsForSearch.length} conversations (was ${conversations.length})`);
+      
+      // Re-run the search with the complete data - ONLY search titles
+      const searchLower = searchQuery.toLowerCase();
+      const results = allConversationsForSearch.filter(conv => {
+        // Only check title - no message searching
+        return conv.title.toLowerCase().includes(searchLower);
+      });
+      
+      console.log(`🔍 Enhanced search complete: ${results.length} results found (was ${filteredConversations.length})`);
+      setFilteredConversations(results);
+    }
+  }, [allConversationsForSearch.length, searchQuery, conversations.length]); // Re-search when more conversations become available
 
   // Handle user login - migrate data if needed
   React.useEffect(() => {
@@ -1942,6 +2001,12 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       clearCache();
       ImageGenerationJobService.stopAllPolling();
       
+      // Also clear search cache when user changes
+      setAllConversationsForSearch([]);
+      setFilteredConversations([]);
+      setSearchQuery('');
+      setIsSearching(false);
+      
       // Flush any pending saves before clearing
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -1962,33 +2027,62 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       return;
     }
 
+    console.log(`🔍 Starting search for: "${query}"`);
     setIsSearching(true);
     try {
-      // Load all conversations for search if not already loaded
+      // Get current search data - use smart caching strategy
       let searchableConversations = allConversationsForSearch;
+      
       if (searchableConversations.length === 0) {
-        const allConversations = await ChatStorageService.loadConversations(user);
-        setAllConversationsForSearch(allConversations);
-        searchableConversations = allConversations;
+        // First search: Start with currently loaded conversations for immediate results
+        if (conversations.length > 0) {
+          console.log(`⚡ Fast search: Using ${conversations.length} loaded conversations`);
+          searchableConversations = conversations;
+          
+          // Cache the current conversations for immediate use
+          setAllConversationsForSearch(conversations);
+          
+          // Load all conversations in the background for future searches (don't wait for it)
+          if (hasMoreConversations) {
+            console.log('� Background loading: Fetching all conversations for future searches...');
+            ChatStorageService.loadConversations(user, false).then(allConversations => {
+              console.log(`📦 Background complete: ${allConversations.length} total conversations cached`);
+              setAllConversationsForSearch(allConversations);
+              
+              // If the user is still searching the same query, update results with complete data
+              // This is handled by the React state update triggering a re-search
+            }).catch(error => {
+              console.warn('Background conversation loading failed:', error);
+            });
+          }
+        } else {
+          // No conversations loaded yet, need to load them
+          console.log('📥 Loading conversations for title search...');
+          const allConversations = await ChatStorageService.loadConversations(user, false);
+          console.log(`� Loaded ${allConversations.length} total conversations`);
+          searchableConversations = allConversations;
+          setAllConversationsForSearch(allConversations);
+        }
+      } else {
+        console.log(`⚡ Using cached ${searchableConversations.length} conversations for search`);
       }
 
-      // Simple text search
+      // Optimized text search - ONLY search titles, no message content
       const searchLower = query.toLowerCase();
-      const results = searchableConversations.filter(conv =>
-        conv.title.toLowerCase().includes(searchLower) ||
-        conv.messages.some(msg => {
-          const content = typeof msg.content === 'string' ? msg.content : '';
-          return content.toLowerCase().includes(searchLower);
-        })
-      );
+      const results = searchableConversations.filter(conv => {
+        // Only check title - no message searching needed
+        return conv.title.toLowerCase().includes(searchLower);
+      });
 
+      console.log(`✅ Search complete: ${results.length} results found`);
       setFilteredConversations(results);
     } catch (error) {
-      console.error('Error searching conversations:', error);
+      console.error('❌ Error searching conversations:', error);
+      setFilteredConversations([]);
     } finally {
       setIsSearching(false);
     }
-  }, [user, allConversationsForSearch]);
+  }, [user, conversations, hasMoreConversations]); // Add conversations and hasMoreConversations to optimize
 
   const clearSearch = useCallback(() => {
     setSearchQuery('');

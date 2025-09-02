@@ -114,10 +114,16 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     }
     
     searchTimeoutRef.current = setTimeout(() => {
+      // Only update search query state, let searchConversations handle the actual search
       setSearchQuery(query);
-      searchConversations(query);
+      if (query.trim()) {
+        searchConversations(query);
+      } else {
+        // If query is empty, clear search immediately
+        clearSearch();
+      }
     }, 300); // 300ms debounce
-  }, [setSearchQuery, searchConversations]);
+  }, [setSearchQuery, searchConversations, clearSearch]);
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,8 +150,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     };
   }, []);
 
-  // Determine which conversations to display
-  const displayConversations = localSearchQuery.trim() ? filteredConversations : conversations;
+  // Determine which conversations to display (memoized)
+  const displayConversations = React.useMemo(() => {
+    return localSearchQuery.trim() ? filteredConversations : conversations;
+  }, [localSearchQuery, filteredConversations, conversations]);
 
   // Handle scroll to load more conversations
   useEffect(() => {
@@ -195,7 +203,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     setConfirmingDelete(null);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = useCallback((date: Date) => {
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
     const diffInDays = diffInHours / 24;
@@ -211,25 +219,29 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     } else {
       return 'Older';
     }
-  };
+  }, []);
 
-  // Group conversations by date with proper ordering
-  const groupedConversations = displayConversations.reduce((groups: { [key: string]: typeof displayConversations }, conversation) => {
-    const dateKey = formatDate(conversation.updatedAt);
-    if (!groups[dateKey]) {
-      groups[dateKey] = [];
-    }
-    groups[dateKey].push(conversation);
-    return groups;
-  }, {});
+  // Group conversations by date with proper ordering (memoized)
+  const groupedConversations = React.useMemo(() => {
+    return displayConversations.reduce((groups: { [key: string]: typeof displayConversations }, conversation) => {
+      const dateKey = formatDate(conversation.updatedAt);
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(conversation);
+      return groups;
+    }, {});
+  }, [displayConversations]);
 
-  // Define the order of groups
-  const groupOrder = ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Older'];
-  
-  // Sort the grouped conversations by the defined order
-  const orderedGroups = groupOrder
-    .filter(group => groupedConversations[group] && groupedConversations[group].length > 0)
-    .map(group => [group, groupedConversations[group]] as [string, typeof displayConversations]);
+  // Sort the grouped conversations by the defined order (memoized)
+  const orderedGroups = React.useMemo(() => {
+    // Define the order of groups
+    const groupOrder = ['Today', 'Yesterday', 'Last 7 days', 'Last 30 days', 'Older'];
+    
+    return groupOrder
+      .filter(group => groupedConversations[group] && groupedConversations[group].length > 0)
+      .map(group => [group, groupedConversations[group]] as [string, typeof displayConversations]);
+  }, [groupedConversations]);
 
   // Determine active conversation from URL
   const activeConversationId = location.pathname.startsWith('/c/') 
@@ -365,10 +377,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
                     >
                       <div className="truncate">
                         {localSearchQuery.trim() ? (
-                          // Highlight search terms in results
+                          // Highlight search terms in results - safer innerHTML approach
                           <span dangerouslySetInnerHTML={{
                             __html: conversation.title.replace(
-                              new RegExp(`(${localSearchQuery.trim()})`, 'gi'),
+                              new RegExp(`(${localSearchQuery.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
                               '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>'
                             )
                           }} />

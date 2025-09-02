@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { User } from "firebase/auth";
-import { doc, setDoc, onSnapshot, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 export type Theme = "light" | "dark" | "system";
@@ -55,9 +55,6 @@ export const useSettings = (
 ) => {
   const [settings, setSettings] = useState<AppSettings>(loadGuestSettings);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
-  const [settingsUnsubscribe, setSettingsUnsubscribe] = useState<
-    (() => void) | null
-  >(null);
 
   // Use ref to store the callback to avoid dependency issues
   const confirmationDialogRef = useRef(onConfirmationDialog);
@@ -81,11 +78,6 @@ export const useSettings = (
   }, [user]);
 
   useEffect(() => {
-    if (settingsUnsubscribe) {
-      settingsUnsubscribe();
-      setSettingsUnsubscribe(null);
-    }
-
     if (user) {
       const localSettings = loadGuestSettings();
       const guestSettingsKeys: Array<keyof AppSettings> = [
@@ -105,14 +97,19 @@ export const useSettings = (
       const settingsRef = doc(db, "settings", user.uid);
 
       const setupFirestoreListener = () => {
-        const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+        // Use one-time read instead of realtime listener for better performance
+        getDoc(settingsRef).then((snapshot) => {
           if (snapshot.exists()) {
             const firestoreSettings = snapshot.data() as Partial<AppSettings>;
             setSettings((prev) => ({ ...prev, ...firestoreSettings }));
             setSettingsLoaded(true);
+          } else {
+            setSettingsLoaded(true);
           }
+        }).catch((error) => {
+          console.error("Error loading settings:", error);
+          setSettingsLoaded(true);
         });
-        setSettingsUnsubscribe(() => unsubscribe);
       };
 
       const initializeSettings = async () => {
@@ -194,12 +191,6 @@ export const useSettings = (
       setSettings(loadGuestSettings());
       setSettingsLoaded(true);
     }
-
-    return () => {
-      if (settingsUnsubscribe) {
-        settingsUnsubscribe();
-      }
-    };
   }, [user]); // Remove onConfirmationDialog from dependencies
 
   const toggleTheme = useCallback(() => {

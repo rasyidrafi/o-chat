@@ -880,7 +880,7 @@ const Message: React.FC<MessageProps> = memo(
 
     const getMessageStyles = () => {
       if (isUser) {
-        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[85%] sm:max-w-[75%] md:max-w-[65%] lg:max-w-[55%] border border-zinc-300/50 dark:border-zinc-700/50";
+        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[95%] sm:max-w-[85%] md:max-w-[75%] border border-zinc-300/50 dark:border-zinc-700/50";
       }
       if (message.isError) {
         return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full";
