@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Search, User, X, LogIn, Plus, Check } from './Icons';
 import { User as FirebaseUser } from 'firebase/auth';
 import Button from './ui/Button';

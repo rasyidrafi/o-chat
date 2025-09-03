@@ -18,7 +18,7 @@ const SuggestionButton: React.FC<SuggestionButtonProps> = memo(({ icon, label, o
     onClick={onClick}
     className={`flex items-center gap-2.5 py-2 px-4 rounded-lg transition-colors cursor-pointer ${
       isActive 
-        ? 'bg-zinc-200 dark:bg-zinc-800' // Active state style
+        ? 'bg-zinc-200 dark:bg-zinc-700' // Active state style
         : 'bg-zinc-100 dark:bg-[#2a2a2a] hover:bg-zinc-200 dark:hover:bg-zinc-700'
     }`}
   >

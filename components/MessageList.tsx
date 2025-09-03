@@ -34,8 +34,8 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       animationsDisabled,
       onScrollStateChange,
       isLoadingMoreMessages,
-      hasMoreMessages,
-      onLoadMoreMessages,
+      // hasMoreMessages,
+      // onLoadMoreMessages,
     },
     ref
   ) => {

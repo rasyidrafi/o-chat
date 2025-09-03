@@ -21,11 +21,9 @@ export class ImageUploadService {
   ): Promise<MessageAttachment> {
     try {
       let file: File | Blob;
-      let isBase64Input = false;
 
       // Handle base64 input
       if (typeof fileOrBase64 === 'string') {
-        isBase64Input = true;
         const base64Data = fileOrBase64.replace(/^data:image\/\w+;base64,/, '');
         const byteString = atob(base64Data);
         

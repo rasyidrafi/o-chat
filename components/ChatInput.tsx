@@ -13,7 +13,7 @@ import {
 } from "./Icons";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import { motion, AnimatePresence } from "framer-motion";
-import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
+// import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
 import {
   getSystemModelsSync,
   getModelCapabilities,
