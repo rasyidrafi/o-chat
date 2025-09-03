@@ -218,10 +218,10 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   const chatInputPadding = useMemo(
     () => ({
-      paddingLeft: isMobile ? "0" : `${sidebarWidth + 16}px`,
-      paddingRight: isMobile ? "0" : "16px",
+      paddingLeft: isMobile ? "0" : `${sidebarWidth + 16 + (isSidebarCollapsed ? 80 : 0)}px`,
+      paddingRight: isMobile ? "0" : `${16 + (isSidebarCollapsed ? 80 : 0)}px`,
     }),
-    [isMobile, sidebarWidth]
+    [isMobile, sidebarWidth, isSidebarCollapsed]
   );
 
   return (
