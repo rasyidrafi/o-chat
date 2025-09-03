@@ -408,9 +408,9 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
 
               {/* Show search results or all conversations */}
               {orderedGroups.map(([dateGroup, convs]) => (
-                <div key={dateGroup} className="mb-6 last:mb-0">
+                <div key={dateGroup} className="mb-4 last:mb-0">
                   <div
-                    className="text-xs font-semibold text-zinc-500 mb-1 px-5"
+                    className="text-xs font-semibold text-zinc-500 mb-3 px-5"
                   >
                     {localSearchQuery.trim()
                       ? `${dateGroup} (${convs.length} result${
