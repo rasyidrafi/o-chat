@@ -1,7 +1,7 @@
 import React from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost';
-type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
+type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost' | 'none';
+type ButtonSize = 'default' | 'sm' | 'lg' | 'icon' | 'none';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -23,6 +23,7 @@ const Button: React.FC<ButtonProps> = ({
     secondary: 'bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white focus:ring-zinc-500',
     destructive: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
     ghost: 'hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-zinc-500',
+    none: ''
   };
 
   const sizeClasses = {
@@ -30,6 +31,7 @@ const Button: React.FC<ButtonProps> = ({
     sm: 'py-2 px-3 text-sm',
     lg: 'py-3 px-8 text-lg',
     icon: 'h-10 w-10',
+    none: ''
   };
 
   const combinedClasses = [
