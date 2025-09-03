@@ -83,7 +83,6 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
   },
   ref // <-- forwarded ref
 ) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { user, isSignedIn } = useAuth();
   
@@ -100,7 +99,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
     filteredConversations,
     isSearching,
     searchConversations,
-    clearSearch
+    clearSearch,
   } = chat;
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -184,8 +183,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>((
   };
 
   const handleConversationSelect = (conversation: any) => {
-    // Navigate to conversation route
-    navigate(`/c/${conversation.id}`);
+    chat.selectConversation(conversation.id);
     setIsMobileMenuOpen(false);
   };
 

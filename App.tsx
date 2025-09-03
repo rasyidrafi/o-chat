@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Routes, Route, useParams, useNavigate, useLocation } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  useParams,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import ChatView from "./components/ChatView";
 import SettingsPage, { Tab as SettingsTab } from "./components/SettingsPage";
@@ -9,7 +15,10 @@ import SearchCenter from "./components/SearchCenter";
 import AuthLoadingScreen from "./components/AuthLoadingScreen";
 import { useChat } from "./hooks/useChat";
 import { useAuth } from "./contexts/AuthContext";
-import { SettingsProvider, useSettingsContext } from "./contexts/SettingsContext";
+import {
+  SettingsProvider,
+  useSettingsContext,
+} from "./contexts/SettingsContext";
 
 const defaultConfirmDialogProps = {
   title: "",
@@ -26,70 +35,18 @@ const ConversationRoute: React.FC<{
   chat: ReturnType<typeof useChat>;
 }> = ({ chat }) => {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
-  const [hasAttemptedSelection, setHasAttemptedSelection] = useState(false);
-  const [authStable, setAuthStable] = useState(false);
-  const previousIdRef = useRef<string | null>(null);
 
-  // Wait for auth state to stabilize
-  React.useEffect(() => {
-    // If we already have a determined auth state (user is logged in or explicitly null), 
-    // we don't need to wait as long
-    const delay = user !== undefined ? 100 : 500;
-    const timer = setTimeout(() => {
-      setAuthStable(true);
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [user]);
+  if (chat.isLoading) {
+    console.log("Still loading conversations, waiting...");
+    return null;
+  }
 
   React.useEffect(() => {
-    // Don't do anything until auth is stable
-    if (!authStable) {
-      console.log('Waiting for auth to stabilize...');
-      return;
-    }
-
-    // Don't try to select conversation while still loading initial conversations
-    if (chat.isLoading) {
-      console.log('Still loading conversations, waiting...');
-      return;
-    }
-
-    // Don't attempt multiple times
-    if (hasAttemptedSelection) {
-      return;
-    }
-
-    // If we're on the root path (/) and we just had a conversation,
-    // that means we intentionally cleared the conversation, so don't reselect
-    if (!conversationId && location.pathname === '/' && previousIdRef.current) {
-      return;
-    }
-
-    // Check if the conversation in the URL is different from current or we're coming from root
-    if (conversationId && conversationId !== chat.currentConversationId) {
-      setHasAttemptedSelection(true);
+    if (conversationId && chat.currentConversationId !== conversationId && chat.currentConversationId == null) {
       chat.selectConversation(conversationId);
     }
-  }, [conversationId, chat.currentConversationId, chat.isLoading, user, authStable, 
-      navigate, hasAttemptedSelection, location.pathname, chat]);
-
-  // Update the previous ID ref when the current conversation changes
-  // This helps us track when we've explicitly cleared a conversation
-  React.useEffect(() => {
-    if (chat.currentConversationId) {
-      previousIdRef.current = chat.currentConversationId;
-    }
-  }, [chat.currentConversationId]);
-
-  // Reset attempt flag when conversation ID changes
-  React.useEffect(() => {
-    setHasAttemptedSelection(false);
-  }, [conversationId]);
-
+  }, []);
+  
   return null; // This component just handles routing logic
 };
 
@@ -98,21 +55,31 @@ const AppContent: React.FC<{
     initialSettingsTab: SettingsTab;
     confirmDialogProps: typeof defaultConfirmDialogProps;
   };
-  setModal: React.Dispatch<React.SetStateAction<{
-    initialSettingsTab: SettingsTab;
-    confirmDialogProps: typeof defaultConfirmDialogProps;
-  }>>;
+  setModal: React.Dispatch<
+    React.SetStateAction<{
+      initialSettingsTab: SettingsTab;
+      confirmDialogProps: typeof defaultConfirmDialogProps;
+    }>
+  >;
   isConfirmDialogOpen: boolean;
   setIsConfirmDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  openConfirmationDialog: (props: Partial<typeof defaultConfirmDialogProps>) => void;
-}> = ({ modal, setModal, isConfirmDialogOpen, setIsConfirmDialogOpen, openConfirmationDialog }) => {
+  openConfirmationDialog: (
+    props: Partial<typeof defaultConfirmDialogProps>
+  ) => void;
+}> = ({
+  modal,
+  setModal,
+  isConfirmDialogOpen,
+  setIsConfirmDialogOpen,
+  openConfirmationDialog,
+}) => {
   // UI state
   const [ui, setUi] = useState({
     isMobileMenuOpen: false,
     isSidebarCollapsed: false,
     isSettingsOpen: false,
     isAuthModalOpen: false,
-    isSearchCenterOpen: false
+    isSearchCenterOpen: false,
   });
 
   const sidebarRef = useRef<HTMLElement>(null);
@@ -121,23 +88,24 @@ const AppContent: React.FC<{
   // Custom hooks
   const { user, signOut, authLoaded, isLoading: authIsLoading } = useAuth();
 
-  const { settings, settingsLoaded, updateSettings, toggleTheme } = useSettingsContext();
+  const { settings, settingsLoaded, updateSettings, toggleTheme } =
+    useSettingsContext();
 
   const chat = useChat(settingsLoaded ? settings : undefined, navigate);
 
   const openSettings = (tab: SettingsTab = "Customization") => {
-    setModal(prev => ({ ...prev, initialSettingsTab: tab }));
-    setUi(prev => ({ ...prev, isSettingsOpen: true }));
+    setModal((prev) => ({ ...prev, initialSettingsTab: tab }));
+    setUi((prev) => ({ ...prev, isSettingsOpen: true }));
   };
 
   const closeSettings = () => {
-    setUi(prev => ({ ...prev, isSettingsOpen: false }));
+    setUi((prev) => ({ ...prev, isSettingsOpen: false }));
   };
 
   // Close auth modal when user logs in
   useEffect(() => {
     if (user) {
-      setUi(prev => ({ ...prev, isAuthModalOpen: false }));
+      setUi((prev) => ({ ...prev, isAuthModalOpen: false }));
     }
   }, [user]);
 
@@ -168,7 +136,7 @@ const AppContent: React.FC<{
       await signOut();
       // Clear current conversation to show welcome page
       chat.selectConversation(null);
-      setUi(prev => ({ ...prev, isConfirmDialogOpen: false }));
+      setUi((prev) => ({ ...prev, isConfirmDialogOpen: false }));
       closeSettings();
     } catch (error) {
       console.error("Error signing out:", error);
@@ -198,36 +166,33 @@ const AppContent: React.FC<{
         <Sidebar
           ref={sidebarRef}
           isMobileMenuOpen={ui.isMobileMenuOpen}
-          setIsMobileMenuOpen={(open) => setUi(prev => ({ ...prev, isMobileMenuOpen: open }))}
+          setIsMobileMenuOpen={(open) =>
+            setUi((prev) => ({ ...prev, isMobileMenuOpen: open }))
+          }
           isCollapsed={ui.isSidebarCollapsed}
           onLoginClick={() => openSettings("Account")}
           onSignOutClick={onSignOutClick}
-          onOpenSearchCenter={() => setUi(prev => ({ ...prev, isSearchCenterOpen: true }))}
+          onOpenSearchCenter={() =>
+            setUi((prev) => ({ ...prev, isSearchCenterOpen: true }))
+          }
           onOpenSettings={openSettings}
           chat={chat}
         />
-        
+
         <Routes>
-          <Route path="/" element={
-            <ChatView
-              onMenuClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: true }))}
-              toggleSidebar={() => setUi(prev => ({ ...prev, isSidebarCollapsed: !prev.isSidebarCollapsed }))}
-              isSidebarCollapsed={ui.isSidebarCollapsed}
-              onOpenSettings={openSettings}
-              theme={settings.theme}
-              toggleTheme={toggleTheme}
-              animationsDisabled={settings.animationsDisabled}
-              chat={chat}
-            />
-          } />
-          <Route path="/c/:conversationId" element={
-            <>
-              <ConversationRoute 
-                chat={chat}
-              />
+          <Route
+            path="/"
+            element={
               <ChatView
-                onMenuClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: true }))}
-                toggleSidebar={() => setUi(prev => ({ ...prev, isSidebarCollapsed: !prev.isSidebarCollapsed }))}
+                onMenuClick={() =>
+                  setUi((prev) => ({ ...prev, isMobileMenuOpen: true }))
+                }
+                toggleSidebar={() =>
+                  setUi((prev) => ({
+                    ...prev,
+                    isSidebarCollapsed: !prev.isSidebarCollapsed,
+                  }))
+                }
                 isSidebarCollapsed={ui.isSidebarCollapsed}
                 onOpenSettings={openSettings}
                 theme={settings.theme}
@@ -235,32 +200,61 @@ const AppContent: React.FC<{
                 animationsDisabled={settings.animationsDisabled}
                 chat={chat}
               />
-            </>
-          } />
+            }
+          />
+          <Route
+            path="/c/:conversationId"
+            element={
+              <>
+                <ConversationRoute chat={chat} />
+                <ChatView
+                  onMenuClick={() =>
+                    setUi((prev) => ({ ...prev, isMobileMenuOpen: true }))
+                  }
+                  toggleSidebar={() =>
+                    setUi((prev) => ({
+                      ...prev,
+                      isSidebarCollapsed: !prev.isSidebarCollapsed,
+                    }))
+                  }
+                  isSidebarCollapsed={ui.isSidebarCollapsed}
+                  onOpenSettings={openSettings}
+                  theme={settings.theme}
+                  toggleTheme={toggleTheme}
+                  animationsDisabled={settings.animationsDisabled}
+                  chat={chat}
+                />
+              </>
+            }
+          />
         </Routes>
 
         {ui.isMobileMenuOpen && (
           <div
             className="fixed inset-0 bg-black/60 z-30 md:hidden"
-            onClick={() => setUi(prev => ({ ...prev, isMobileMenuOpen: false }))}
+            onClick={() =>
+              setUi((prev) => ({ ...prev, isMobileMenuOpen: false }))
+            }
             aria-hidden="true"
           ></div>
         )}
       </div>
-      
+
       {ui.isSettingsOpen && (
         <SettingsPage
           onClose={closeSettings}
           initialTab={modal.initialSettingsTab}
           settings={settings}
           updateSettings={updateSettings}
-          onOpenAuthModal={() => setUi(prev => ({ ...prev, isAuthModalOpen: true }))}
+          onOpenAuthModal={() =>
+            setUi((prev) => ({ ...prev, isAuthModalOpen: true }))
+          }
           onSignOutClick={onSignOutClick}
         />
       )}
       <AuthModal
         isOpen={ui.isAuthModalOpen}
-        onClose={() => setUi(prev => ({ ...prev, isAuthModalOpen: false }))}
+        onClose={() => setUi((prev) => ({ ...prev, isAuthModalOpen: false }))}
         animationsDisabled={settings.animationsDisabled}
       />
       <ConfirmationDialog
@@ -278,7 +272,9 @@ const AppContent: React.FC<{
       </ConfirmationDialog>
       <SearchCenter
         isOpen={ui.isSearchCenterOpen}
-        onClose={() => setUi(prev => ({ ...prev, isSearchCenterOpen: false }))}
+        onClose={() =>
+          setUi((prev) => ({ ...prev, isSearchCenterOpen: false }))
+        }
         chat={chat}
         animationsDisabled={settings.animationsDisabled}
       />
@@ -288,28 +284,29 @@ const AppContent: React.FC<{
 
 const App: React.FC = () => {
   const { user } = useAuth();
-  
+
   // Move confirmation dialog state to App level so it can be shared
   const [modal, setModal] = useState({
     initialSettingsTab: "Customization" as SettingsTab,
-    confirmDialogProps: defaultConfirmDialogProps
+    confirmDialogProps: defaultConfirmDialogProps,
   });
-  
+
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  
-  const openConfirmationDialog = useCallback((
-    props: Partial<typeof defaultConfirmDialogProps>
-  ) => {
-    setModal(prev => ({ 
-      ...prev, 
-      confirmDialogProps: { ...defaultConfirmDialogProps, ...props }
-    }));
-    setIsConfirmDialogOpen(true);
-  }, []);
+
+  const openConfirmationDialog = useCallback(
+    (props: Partial<typeof defaultConfirmDialogProps>) => {
+      setModal((prev) => ({
+        ...prev,
+        confirmDialogProps: { ...defaultConfirmDialogProps, ...props },
+      }));
+      setIsConfirmDialogOpen(true);
+    },
+    []
+  );
 
   return (
     <SettingsProvider user={user} onConfirmationDialog={openConfirmationDialog}>
-      <AppContent 
+      <AppContent
         modal={modal}
         setModal={setModal}
         isConfirmDialogOpen={isConfirmDialogOpen}

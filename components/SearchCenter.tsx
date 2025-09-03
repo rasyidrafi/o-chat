@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from './Icons';
 import { useChat } from '../hooks/useChat';
 import { ChatConversation } from '../types/chat';
-import { useNavigate } from 'react-router-dom';
 
 interface SearchCenterProps {
   isOpen: boolean;
@@ -24,10 +23,10 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat, anim
     filteredConversations,
     isSearching,
     searchConversations,
-    clearSearch
+    clearSearch,
+    selectConversation
   } = chat;
 
-  const navigate = useNavigate();
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -104,7 +103,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat, anim
 
   // Handle conversation selection
   const handleConversationSelect = useCallback((conversation: ChatConversation) => {
-    navigate(`/c/${conversation.id}`);
+    selectConversation(conversation.id);
     onClose();
   }, [onClose]);
 

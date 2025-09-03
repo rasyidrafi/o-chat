@@ -169,15 +169,15 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     try {
       isLoadingConversationsRef.current = true;
       setIsLoading(true);
-      
+
       // Add timeout as safety net
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Conversation loading timeout')), 15000)
       );
-      
+
       const loadPromise = ChatStorageService.loadConversationsPaginated(user, 20);
       const result = await Promise.race([loadPromise, timeoutPromise]) as any;
-      
+
       setConversations(result.conversations);
       setHasMoreConversations(result.hasMore);
       setConversationsLastDoc(result.lastDoc);
@@ -206,11 +206,11 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       setSearchQuery('');
     }
     setIsSearching(false);
-    
+
     // Reset ALL loading flags immediately when user changes
     isLoadingAllConversationsRef.current = false;
     isLoadingConversationsRef.current = false;
-    
+
     // Also reset loading state to prevent stuck loading
     setIsLoading(false);
   }, [user?.uid]); // Only trigger when actual user ID changes
@@ -220,14 +220,14 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     // If we have an active search query and more conversations just became available, re-search
     if (searchQuery && searchQuery.trim() && allConversationsForSearch.length > conversations.length) {
       console.log(`🔄 Re-searching with ${allConversationsForSearch.length} conversations (was ${conversations.length})`);
-      
+
       // Re-run the search with the complete data - ONLY search titles
       const searchLower = searchQuery.toLowerCase();
       const results = allConversationsForSearch.filter(conv => {
         // Only check title - no message searching
         return conv.title.toLowerCase().includes(searchLower);
       });
-      
+
       console.log(`🔍 Enhanced search complete: ${results.length} results found (was ${filteredConversations.length})`);
       setFilteredConversations(results);
     }
@@ -703,7 +703,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       const onCompleteCallback = () => {
         // Mark message as complete including reasoning
         let finalConversation: ChatConversation | null = null;
-        
+
         setConversations(prev => {
           const updatedConversations = prev.map(conv =>
             conv.id === updatedConversation.id
@@ -719,7 +719,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               }
               : conv
           );
-          
+
           // Store the final conversation for immediate save
           finalConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
           return updatedConversations;
@@ -757,7 +757,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               }
               : conv
           );
-          
+
           // Store the error conversation for immediate save
           errorConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
           return updatedConversations;
@@ -806,7 +806,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
             }
             : conv
         );
-        
+
         // Store the error conversation for immediate save
         catchErrorConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
         return updatedConversations;
@@ -1498,91 +1498,126 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
             // Resume polling for in-progress jobs only if not already being polled
             if (!ImageGenerationJobService.isJobBeingPolled(job.id)) {
               ImageGenerationJobService.startJobPolling(
-              job.id,
-              originalSource,
-              originalProviderId,
-              user,
-              (updatedJob) => {
-                // Update the message with the latest job status
-                setConversations(prevConversations => {
-                  const updatedConversations = prevConversations.map(conv => {
-                    if (conv.id === conversation.id) {
-                      const updatedConv = {
-                        ...conv,
-                        messages: conv.messages.map(convMsg => {
-                          if (convMsg.id === msg.id) {
-                            return {
-                              ...convMsg,
-                              imageGenerationJob: updatedJob,
-                            };
-                          }
-                          return convMsg;
-                        }),
-                        updatedAt: new Date(),
-                      };
+                job.id,
+                originalSource,
+                originalProviderId,
+                user,
+                (updatedJob) => {
+                  // Update the message with the latest job status
+                  setConversations(prevConversations => {
+                    const updatedConversations = prevConversations.map(conv => {
+                      if (conv.id === conversation.id) {
+                        const updatedConv = {
+                          ...conv,
+                          messages: conv.messages.map(convMsg => {
+                            if (convMsg.id === msg.id) {
+                              return {
+                                ...convMsg,
+                                imageGenerationJob: updatedJob,
+                              };
+                            }
+                            return convMsg;
+                          }),
+                          updatedAt: new Date(),
+                        };
 
-                      // Save updated conversation with job status
-                      ChatStorageService.saveConversation(updatedConv, user).catch(error => {
-                        console.error('Error saving resumed job update:', error);
-                      });
+                        // Save updated conversation with job status
+                        ChatStorageService.saveConversation(updatedConv, user).catch(error => {
+                          console.error('Error saving resumed job update:', error);
+                        });
 
-                      return updatedConv;
-                    }
-                    return conv;
-                  });
-
-                  return updatedConversations;
-                });
-              },
-              async (completedJob) => {
-                // Handle job completion for resumed jobs - directly update the existing message
-                if (completedJob.status === 'SUCCESS' && completedJob.data && completedJob.data.length > 0) {
-                  try {
-                    // Download and upload the generated image to Firebase Storage
-                    const generatedImageAttachment = await ImageGenerationService.downloadAndUploadImage(
-                      completedJob.data[0].url,
-                      msg.imageGenerationParams!.prompt,
-                      user?.uid || null,
-                      msg.imageGenerationParams!.response_format
-                    );
-
-                    // Update the message with the completed image
-                    setConversations(prevConversations => {
-                      const updatedConversations = prevConversations.map(conv => {
-                        if (conv.id === conversation.id) {
-                          const updatedConv = {
-                            ...conv,
-                            messages: conv.messages.map(convMsg => {
-                              if (convMsg.id === msg.id) {
-                                return {
-                                  ...convMsg,
-                                  content: '', // Clear any status text
-                                  attachments: generatedImageAttachment ? [generatedImageAttachment] : [],
-                                  imageGenerationJob: completedJob,
-                                  isAsyncImageGeneration: false, // Mark as completed
-                                  isGeneratingImage: false,
-                                } as ChatMessage;
-                              }
-                              return convMsg;
-                            }),
-                            updatedAt: new Date(),
-                          };
-
-                          // Save updated conversation with completed job
-                          ChatStorageService.saveConversation(updatedConv, user).catch(error => {
-                            console.error('Error saving resumed job completion:', error);
-                          });
-
-                          return updatedConv;
-                        }
-                        return conv;
-                      });
-
-                      return updatedConversations;
+                        return updatedConv;
+                      }
+                      return conv;
                     });
-                  } catch (error) {
-                    console.error('Error downloading resumed job image:', error);
-                    // Handle error case
+
+                    return updatedConversations;
+                  });
+                },
+                async (completedJob) => {
+                  // Handle job completion for resumed jobs - directly update the existing message
+                  if (completedJob.status === 'SUCCESS' && completedJob.data && completedJob.data.length > 0) {
+                    try {
+                      // Download and upload the generated image to Firebase Storage
+                      const generatedImageAttachment = await ImageGenerationService.downloadAndUploadImage(
+                        completedJob.data[0].url,
+                        msg.imageGenerationParams!.prompt,
+                        user?.uid || null,
+                        msg.imageGenerationParams!.response_format
+                      );
+
+                      // Update the message with the completed image
+                      setConversations(prevConversations => {
+                        const updatedConversations = prevConversations.map(conv => {
+                          if (conv.id === conversation.id) {
+                            const updatedConv = {
+                              ...conv,
+                              messages: conv.messages.map(convMsg => {
+                                if (convMsg.id === msg.id) {
+                                  return {
+                                    ...convMsg,
+                                    content: '', // Clear any status text
+                                    attachments: generatedImageAttachment ? [generatedImageAttachment] : [],
+                                    imageGenerationJob: completedJob,
+                                    isAsyncImageGeneration: false, // Mark as completed
+                                    isGeneratingImage: false,
+                                  } as ChatMessage;
+                                }
+                                return convMsg;
+                              }),
+                              updatedAt: new Date(),
+                            };
+
+                            // Save updated conversation with completed job
+                            ChatStorageService.saveConversation(updatedConv, user).catch(error => {
+                              console.error('Error saving resumed job completion:', error);
+                            });
+
+                            return updatedConv;
+                          }
+                          return conv;
+                        });
+
+                        return updatedConversations;
+                      });
+                    } catch (error) {
+                      console.error('Error downloading resumed job image:', error);
+                      // Handle error case
+                      setConversations(prevConversations => {
+                        const updatedConversations = prevConversations.map(conv => {
+                          if (conv.id === conversation.id) {
+                            const updatedConv = {
+                              ...conv,
+                              messages: conv.messages.map(convMsg => {
+                                if (convMsg.id === msg.id) {
+                                  return {
+                                    ...convMsg,
+                                    content: 'Failed to download generated image',
+                                    imageGenerationJob: { ...completedJob, status: 'FAILED' as const },
+                                    isAsyncImageGeneration: false,
+                                    isGeneratingImage: false,
+                                  } as ChatMessage;
+                                }
+                                return convMsg;
+                              }),
+                              updatedAt: new Date(),
+                            };
+
+                            // Save error state
+                            ChatStorageService.saveConversation(updatedConv, user).catch(error => {
+                              console.error('Error saving error state:', error);
+                            });
+
+                            return updatedConv;
+                          }
+                          return conv;
+                        });
+
+                        return updatedConversations;
+                      });
+                    }
+                  } else if (completedJob.status !== 'SUCCESS') {
+                    // Job failed, update message with error
                     setConversations(prevConversations => {
                       const updatedConversations = prevConversations.map(conv => {
                         if (conv.id === conversation.id) {
@@ -1592,8 +1627,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                               if (convMsg.id === msg.id) {
                                 return {
                                   ...convMsg,
-                                  content: 'Failed to download generated image',
-                                  imageGenerationJob: { ...completedJob, status: 'FAILED' as const },
+                                  content: 'Failed to generate image',
+                                  imageGenerationJob: completedJob,
                                   isAsyncImageGeneration: false,
                                   isGeneratingImage: false,
                                 } as ChatMessage;
@@ -1603,9 +1638,9 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                             updatedAt: new Date(),
                           };
 
-                          // Save error state
+                          // Save failed state
                           ChatStorageService.saveConversation(updatedConv, user).catch(error => {
-                            console.error('Error saving error state:', error);
+                            console.error('Error saving failed resumed job:', error);
                           });
 
                           return updatedConv;
@@ -1616,8 +1651,10 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                       return updatedConversations;
                     });
                   }
-                } else if (completedJob.status !== 'SUCCESS') {
-                  // Job failed, update message with error
+                },
+                (error) => {
+                  console.error('Error polling job status:', error);
+                  // Update the message with error state
                   setConversations(prevConversations => {
                     const updatedConversations = prevConversations.map(conv => {
                       if (conv.id === conversation.id) {
@@ -1627,8 +1664,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                             if (convMsg.id === msg.id) {
                               return {
                                 ...convMsg,
-                                content: 'Failed to generate image',
-                                imageGenerationJob: completedJob,
+                                content: 'Error checking image generation status',
                                 isAsyncImageGeneration: false,
                                 isGeneratingImage: false,
                               } as ChatMessage;
@@ -1638,9 +1674,9 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                           updatedAt: new Date(),
                         };
 
-                        // Save failed state
+                        // Save error state
                         ChatStorageService.saveConversation(updatedConv, user).catch(error => {
-                          console.error('Error saving failed resumed job:', error);
+                          console.error('Error saving error state:', error);
                         });
 
                         return updatedConv;
@@ -1651,43 +1687,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                     return updatedConversations;
                   });
                 }
-              },
-              (error) => {
-                console.error('Error polling job status:', error);
-                // Update the message with error state
-                setConversations(prevConversations => {
-                  const updatedConversations = prevConversations.map(conv => {
-                    if (conv.id === conversation.id) {
-                      const updatedConv = {
-                        ...conv,
-                        messages: conv.messages.map(convMsg => {
-                          if (convMsg.id === msg.id) {
-                            return {
-                              ...convMsg,
-                              content: 'Error checking image generation status',
-                              isAsyncImageGeneration: false,
-                              isGeneratingImage: false,
-                            } as ChatMessage;
-                          }
-                          return convMsg;
-                        }),
-                        updatedAt: new Date(),
-                      };
-
-                      // Save error state
-                      ChatStorageService.saveConversation(updatedConv, user).catch(error => {
-                        console.error('Error saving error state:', error);
-                      });
-
-                      return updatedConv;
-                    }
-                    return conv;
-                  });
-
-                  return updatedConversations;
-                });
-              }
-            );
+              );
             }
           }
         }
@@ -1818,14 +1818,14 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = null;
       }
-      
+
       try {
         await ChatStorageService.saveConversation(pendingConversationRef.current, user);
         console.log('Flushed pending save for conversation:', currentConversationId);
       } catch (error) {
         console.error('Error flushing pending save:', error);
       }
-      
+
       pendingConversationRef.current = null;
       lastSaveTimeRef.current = Date.now();
     }
@@ -1834,14 +1834,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     if (!conversationId) {
       setCurrentConversationId(null);
-      setTimeout(() => {
-        setCurrentConversationId(null);
-      }, 0);
-
       if (navigate) {
-        setTimeout(() => {
-          navigate('/', { replace: true });
-        }, 0);
+        navigate('/', { replace: true });
       }
       return;
     }
@@ -1900,8 +1894,21 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         // Try to load the conversation directly from storage
         const result = await ChatStorageService.loadConversation(conversationId, user);
         if (result) {
-          // Add the loaded conversation to the conversations list
-          setConversations(prev => [result, ...prev]);
+          // Add the loaded conversation to the conversations list (check for duplicates first)
+          setConversations(prev => {
+            // Check if conversation already exists
+            const existingIndex = prev.findIndex(c => c.id === conversationId);
+            if (existingIndex >= 0) {
+              // Update existing conversation
+              const updated = [...prev];
+              updated[existingIndex] = result;
+              return updated;
+            } else {
+              // Add new conversation to the front
+              const combined = [result, ...prev];
+              return combined;
+            }
+          });
           addToCache(result);
           resumeActiveJobsForConversation(result);
           setIsLoadingMessages(false);
@@ -2000,13 +2007,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     if (!user) {
       clearCache();
       ImageGenerationJobService.stopAllPolling();
-      
+
       // Also clear search cache when user changes
       setAllConversationsForSearch([]);
       setFilteredConversations([]);
       setSearchQuery('');
       setIsSearching(false);
-      
+
       // Flush any pending saves before clearing
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -2032,23 +2039,23 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     try {
       // Get current search data - use smart caching strategy
       let searchableConversations = allConversationsForSearch;
-      
+
       if (searchableConversations.length === 0) {
         // First search: Start with currently loaded conversations for immediate results
         if (conversations.length > 0) {
           console.log(`⚡ Fast search: Using ${conversations.length} loaded conversations`);
           searchableConversations = conversations;
-          
+
           // Cache the current conversations for immediate use
           setAllConversationsForSearch(conversations);
-          
+
           // Load all conversations in the background for future searches (don't wait for it)
           if (hasMoreConversations) {
             console.log('� Background loading: Fetching all conversations for future searches...');
             ChatStorageService.loadConversations(user, false).then(allConversations => {
               console.log(`📦 Background complete: ${allConversations.length} total conversations cached`);
               setAllConversationsForSearch(allConversations);
-              
+
               // If the user is still searching the same query, update results with complete data
               // This is handled by the React state update triggering a re-search
             }).catch(error => {
