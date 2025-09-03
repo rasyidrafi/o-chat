@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ChatMessage } from "../types/chat";
-import Message from "./Message";
+import Message from "./ImprovedMessage";
 import { AnimatePresence } from "framer-motion";
 import { useSettingsContext } from "../contexts/SettingsContext";
 

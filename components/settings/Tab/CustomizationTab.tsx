@@ -48,6 +48,23 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({
           Customize O-Chat
         </h2>
         <div className="space-y-6 mt-6">
+          {/* Information about default system prompt */}
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Default System Instructions</h4>
+            <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+              O-Chat automatically includes formatting guidelines for optimal output:
+            </p>
+            <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc ml-4">
+              <li>Markdown and LaTeX formatting support</li>
+              <li>Inline math with $$math$$ syntax</li>
+              <li>Block equations with \[ \] or \( \) syntax</li>
+              <li>Clean mermaid diagrams without comments</li>
+            </ul>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-3">
+              Your custom instructions will be added to these defaults.
+            </p>
+          </div>
+          
           <SettingsTextarea
             label="Custom Instruction"
             value={customInstruction}
