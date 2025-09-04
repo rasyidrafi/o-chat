@@ -643,7 +643,7 @@ const Message: React.FC<MessageProps> = memo(
               animate="animate"
               className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
             >
-              <div className="space-y-3">
+              <div className={(isStreaming && !isUser) ? "" : "space-y-3"}>
                 {/* Assistant messages: full markdown rendering */}
                 <div className="prose prose-zinc dark:prose-invert max-w-none">
                   <MemoizedMarkdown

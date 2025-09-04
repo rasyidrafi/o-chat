@@ -68,19 +68,28 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
 
       const now = performance.now();
       
-      // Throttle updates, especially on mobile
-      if (now - lastUpdateTime.current < SCROLL_UPDATE_THROTTLE) {
+      // Reduce throttling during streaming for better responsiveness
+      const isStreaming = streamingMessageId !== null;
+      const throttleTime = isStreaming 
+        ? (isMobile ? 50 : 25)  // More frequent checks during streaming
+        : SCROLL_UPDATE_THROTTLE;
+      
+      // Throttle updates, but be more responsive during streaming
+      if (now - lastUpdateTime.current < throttleTime) {
         rafId.current = null;
         return;
       }
 
       const { scrollTop, scrollHeight, clientHeight } = container;
 
-      // Only update if values changed significantly
+      // During streaming, always check even with smaller changes
       const scrollDiff = Math.abs(scrollTop - scrollState.current.scrollTop);
+      const heightChanged = scrollHeight !== scrollState.current.scrollHeight;
+      
       if (
-        scrollDiff < 10 && // Only update if scroll changed by more than 10px
-        scrollHeight === scrollState.current.scrollHeight &&
+        !isStreaming && 
+        scrollDiff < 10 && // Only update if scroll changed by more than 10px (non-streaming)
+        !heightChanged &&
         clientHeight === scrollState.current.clientHeight
       ) {
         rafId.current = null;
@@ -110,7 +119,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       }
 
       rafId.current = null;
-    }, [isMobile, onScrollStateChange, SCROLL_UPDATE_THROTTLE]);
+    }, [isMobile, onScrollStateChange, SCROLL_UPDATE_THROTTLE, streamingMessageId]);
 
     const handleScroll = useCallback(() => {
       if (!rafId.current) {
@@ -147,9 +156,17 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       (smooth = true) => {
         if (!sentinelRef.current) return;
 
-        // On mobile, use "auto" behavior for smoother scrolls
-        const behavior = isMobile ? "auto" : smooth ? "smooth" : "auto";
-        sentinelRef.current.scrollIntoView({ behavior, block: "end" });
+        try {
+          // On mobile, use "auto" behavior for smoother scrolls
+          const behavior = isMobile ? "auto" : smooth ? "smooth" : "auto";
+          sentinelRef.current.scrollIntoView({ behavior, block: "end" });
+        } catch (error) {
+          // Fallback for edge cases where scrollIntoView fails
+          const container = messagesContainerRef.current;
+          if (container) {
+            container.scrollTop = container.scrollHeight;
+          }
+        }
       },
       [isMobile]
     );
@@ -158,22 +175,19 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       scrollToBottom,
     ]);
 
-    // --- Auto-Scroll on New Messages ---
-    useEffect(() => {
-      if (prevMessages && messages.length > prevMessages.length) {
-        // Only auto-scroll if we're near the bottom (to avoid jarring users)
-        const container = messagesContainerRef.current;
-        if (container) {
-          const { scrollTop, scrollHeight, clientHeight } = container;
-          const isNearBottom = scrollHeight - scrollTop - clientHeight < 300;
 
-          if (isNearBottom || isMobile) {
-            // Mobile always auto-scrolls
-            requestAnimationFrame(() => scrollToBottom(false));
-          }
-        }
+    // --- Content Growth Detection During Streaming ---
+    useEffect(() => {
+      // When content is streaming, we need to continuously check scroll position
+      // because the content height changes but scroll events don't fire
+      if (streamingMessageId && onScrollStateChange) {
+        const interval = setInterval(() => {
+          checkScrollPosition();
+        }, 200); // Check every 200ms during streaming
+
+        return () => clearInterval(interval);
       }
-    }, [messages.length, prevMessages, scrollToBottom, isMobile]);
+    }, [streamingMessageId, checkScrollPosition, onScrollStateChange]);
 
     // --- Transition Handling ---
     useEffect(() => {

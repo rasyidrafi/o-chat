@@ -77,6 +77,14 @@ const ChatView: React.FC<ChatViewProps> = ({
       attachments?: any[]
     ) => {
       sendMessage(message, model, source, providerId, attachments);
+      
+      // Force scroll to bottom after sending a message with a slight delay
+      // to ensure the message is added to the DOM
+      setTimeout(() => {
+        if (messageListRef.current) {
+          messageListRef.current.scrollToBottom(false);
+        }
+      }, 100);
     },
     [sendMessage]
   );
@@ -91,6 +99,13 @@ const ChatView: React.FC<ChatViewProps> = ({
       params?: any
     ) => {
       generateImage(prompt, imageUrl, model, source, providerId, params);
+      
+      // Force scroll to bottom after generating image
+      setTimeout(() => {
+        if (messageListRef.current) {
+          messageListRef.current.scrollToBottom(false);
+        }
+      }, 100);
     },
     [generateImage]
   );
@@ -103,6 +118,13 @@ const ChatView: React.FC<ChatViewProps> = ({
         selectedModelInfo.source,
         selectedModelInfo.providerId
       );
+      
+      // Force scroll to bottom after prompt selection
+      setTimeout(() => {
+        if (messageListRef.current) {
+          messageListRef.current.scrollToBottom(false);
+        }
+      }, 100);
     },
     [sendMessage, selectedModelInfo]
   );
@@ -236,7 +258,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={toggleSidebar}
-          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700/80 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Toggle sidebar"
         >
@@ -253,7 +275,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={onMenuClick}
-          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700/80 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Open menu"
         >
@@ -268,14 +290,14 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={() => onOpenSettings()}
-          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700/80 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Settings"
         >
           <SlidersHorizontal className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
         </button>
         <button
-          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700/80 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
           onClick={toggleTheme}
           aria-label={`Switch to ${
             theme === "light" ? "dark" : theme === "dark" ? "system" : "light"
@@ -334,7 +356,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
                 <button
                   onClick={handleScrollToBottom}
-                  className="w-10 h-10 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-full transition-all duration-200 flex items-center justify-center group cursor-pointer hover:bg-[#eeece9] dark:hover:bg-zinc-700/80"
+                  className="w-10 h-10 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-full transition-all duration-200 flex items-center justify-center group cursor-pointer hover:bg-[#eeece9] dark:hover:bg-zinc-700"
                   aria-label="Scroll to bottom"
                 >
                   <ArrowDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />

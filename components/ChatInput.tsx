@@ -1334,7 +1334,7 @@ const ChatInput = ({
                 {selectedModelLabel}
               </span>
               {isLoadingSystemModels || isLoadingModelFromConversation ? (
-                <LoadingIndicator size="sm" color="primary" />
+                <LoadingIndicator size="sm" color="primary" className="text-zinc-500 dark:text-zinc-400" />
               ) : (
                 <ChevronDown
                   className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
