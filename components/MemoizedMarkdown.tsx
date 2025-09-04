@@ -52,9 +52,47 @@ const sanitizeSchema: Schema = {
 };
 
 function parseMarkdownIntoBlocks(markdown: string): string[] {
-  const tokens = marked.lexer(markdown);
-  return tokens.map((token) => token.raw);
+  try {
+    const tokens = marked.lexer(markdown);
+    return tokens.map((token) => token.raw);
+  } catch (error) {
+    // Fallback: if marked.lexer fails, return the entire content as one block
+    console.warn('Failed to parse markdown into blocks, using fallback:', error);
+    return [markdown];
+  }
 }
+
+// Function to detect if content contains currency patterns
+const containsCurrency = (text: string): boolean => {
+  // Check for currency patterns: $number followed by optional currency words or decimal/period
+  const currencyPattern = /\$\d+(?:[.,]\d+)*(?:\s*(?:miliar|juta|ribu|million|billion|thousand|k|m|b|per|\/|day|TH|hari|kWh))?/gi;
+  return currencyPattern.test(text);
+};
+
+// Function to detect if content contains LaTeX math patterns
+const containsLatexMath = (text: string): boolean => {
+  // More comprehensive LaTeX detection patterns
+  const mathPatterns = [
+    // Single letter variables: $x$, $e$, $i$, etc.
+    /\$[a-zA-Z]\$/g,
+    // Greek letters: $\theta$, $\alpha$, etc.
+    /\$\\[a-zA-Z]+\$/g,
+    // Complex expressions with operators: $e^{i\theta}$, $\cos\theta$, etc.
+    /\$[a-zA-Z\\]+[\w\\{}^_+\-*/=().,\s]*[a-zA-Z\\{}^_]\$/g,
+    // Math expressions with brackets: ${...}$
+    /\$\{[^}]+\}\$/g,
+    // Expressions with backslash commands: $\cos$, $\sin$, etc.
+    /\$\\[a-zA-Z]+[\w\\{}^_+\-*/=().,\s]*\$/g,
+    // Scientific notation patterns: $10^{-10}$, $6.7 \times 10^{-10}$
+    /\$\d+(?:\.\d+)?\s*\\times\s*\d+\^?\{?-?\d+\}?\$/g,
+    // Math with multiplication symbols: $*$, $\times$
+    /\$[^$]*\\times[^$]*\$/g,
+    // Math expressions with equals: $Valor = ...$
+    /\$[^$]*=[^$]*\$/g
+  ];
+  
+  return mathPatterns.some(pattern => pattern.test(text));
+};
 
 // LaTeX preprocessing function to handle system prompt LaTeX patterns
 const preProcessLatex = (text: string): string => {
@@ -77,6 +115,30 @@ const preProcessLatex = (text: string): string => {
     }
   );
 
+  // Intelligently determine if we should escape currency
+  const hasCurrency = containsCurrency(processedText);
+  const hasLatex = containsLatexMath(processedText);
+
+  // More sophisticated logic for mixed content
+  if (hasCurrency && hasLatex) {
+    // Mixed content: selectively escape only clear currency patterns while preserving math
+    processedText = processedText.replace(
+      /\$(\d+(?:[.,]\d+)*(?:\s*(?:miliar|juta|ribu|million|billion|thousand|k|m|b|per|\/|day|TH|hari|kWh))+)/gi,
+      (match) => {
+        return '\\' + match;
+      }
+    );
+  } else if (hasCurrency && !hasLatex) {
+    // Only currency: escape all currency patterns
+    processedText = processedText.replace(
+      /\$(\d+(?:[.,]\d+)*(?:\s*(?:miliar|juta|ribu|million|billion|thousand|k|m|b|per|\/|day|TH|hari|kWh))?)/gi,
+      (match) => {
+        return '\\' + match;
+      }
+    );
+  }
+  // If only LaTeX (hasLatex && !hasCurrency), do nothing - let KaTeX handle it
+
   // Note: $$like this$$ is already handled by remarkMath as-is
   return processedText;
 };
@@ -90,7 +152,9 @@ const MemoizedMarkdownBlock = memo<MemoizedMarkdownBlockProps>(
   ({ content, isDark = false }) => {
     return (
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: false }]]}
+        remarkPlugins={[remarkGfm, [remarkMath, { 
+          singleDollarTextMath: true  // Re-enable single dollar math for proper LaTeX rendering
+        }]]}
         rehypePlugins={[
           [rehypeSanitize, sanitizeSchema],
           [rehypeKatex, { output: "html" }]
