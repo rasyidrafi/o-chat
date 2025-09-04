@@ -203,7 +203,6 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
                 key={message.id}
                 message={message}
                 isStreaming={streamingMessageId === message.id}
-                animationsDisabled={animationsDisabled || isMobile} // Disable animations on mobile
                 isLastMessage={idx === messages.length - 1}
               />
             ))}

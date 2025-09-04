@@ -207,11 +207,12 @@ export const Codeblock = memo<CodeblockProps>(({
         ) : (
           <div
             dangerouslySetInnerHTML={{ __html: highlightedCode }}
-            className={`shiki-container font-mono text-sm ${isWrapped ? 'whitespace-pre-wrap' : 'whitespace-pre'}`}
+            className={`shiki-container font-mono text-sm ${isWrapped ? 'text-wrap-enabled' : 'text-wrap-disabled'}`}
             style={{
               whiteSpace: isWrapped ? 'pre-wrap' : 'pre',
               wordWrap: isWrapped ? 'break-word' : 'normal',
-              overflowWrap: isWrapped ? 'break-word' : 'normal'
+              overflowWrap: isWrapped ? 'break-word' : 'normal',
+              overflowX: isWrapped ? 'visible' : 'auto'
             }}
           />
         )}

@@ -237,3 +237,29 @@ h6 {
   overflow-x: auto;
   padding-bottom: 1rem;
 }
+
+/* Code block text wrapping styles */
+.text-wrap-enabled pre,
+.text-wrap-enabled code {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  overflow-x: visible !important;
+}
+
+.text-wrap-disabled pre,
+.text-wrap-disabled code {
+  white-space: pre !important;
+  word-wrap: normal !important;
+  overflow-wrap: normal !important;
+  overflow-x: auto !important;
+}
+
+/* Ensure shiki container respects the wrapping settings */
+.shiki-container.text-wrap-enabled {
+  overflow-x: visible !important;
+}
+
+.shiki-container.text-wrap-disabled {
+  overflow-x: auto !important;
+}
