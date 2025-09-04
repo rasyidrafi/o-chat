@@ -1,7 +1,7 @@
 import React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { Search, User, X, LogIn, Plus, Check } from "./Icons";
+import { Search, User, X, LogIn, Plus, Check, Edit } from "./Icons";
 import { User as FirebaseUser } from "firebase/auth";
 import Button from "./ui/Button";
 import { useChat } from "../hooks/useChat";
@@ -293,89 +293,50 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     return (
       <aside
         ref={ref}
-        className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-zinc-100 dark:bg-[#111111] text-zinc-600 dark:text-zinc-400 z-60
+        className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-zinc-100 dark:bg-[#181818] text-zinc-600 dark:text-zinc-400 z-60
                  transition-all duration-300 ease-in-out
                  md:translate-x-0 ${
                    isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
                  }
                  w-64 ${isCollapsed ? "md:w-20" : ""}`}
       >
-        <div className={`flex items-center justify-between`}>
-          <div
-            className={`pt-3 flex justify-center gap-2 w-full ${
-              isCollapsed ? "md:hidden" : "flex"
-            }`}
+        <div className="flex-shrink-0 flex flex-col">
+          <Button
+            variant="ghost"
+            onClick={handleNewChat}
+            disabled={isCreatingNewChat}
+            className={`truncate text-sm py-2 mx-2 mt-2 px-2 text-zinc-700 dark:text-zinc-300`}
+            size="none"
           >
-            <span className="text-center font-bold text-lg text-zinc-900 dark:text-white w-full">
-              O-Chat
-            </span>
-          </div>
-        </div>
-
-        <Button
-          onClick={handleNewChat}
-          disabled={isCreatingNewChat}
-          className={`py-2 mx-4 mb-3 ${isCollapsed ? "mt-4" : "mt-2"}`}
-          size="none"
-        >
-          {isCollapsed ? (
-            <Plus className="w-5 h-5" />
-          ) : isCreatingNewChat ? (
-            "Creating..."
-          ) : (
-            "New Chat"
-          )}
-        </Button>
-
-        {/* Search Section - Different UI for collapsed vs expanded */}
-        {isCollapsed ? (
-          // Collapsed mode - Show search button (only on desktop)
-          <button
-            onClick={onOpenSearchCenter}
-            className="mx-4 mb-3 py-2 bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors hidden md:flex items-center justify-center cursor-pointer"
-            aria-label="Open search"
-          >
-            <Search className="w-4 h-4 text-zinc-500" />
-          </button>
-        ) : (
-          // Expanded mode - Show search input
-          <div className="mb-3 mx-4 flex">
-            <input
-              type="text"
-              value={localSearchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search your threads..."
-              className="w-full px-4 bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md py-2 focus:outline-none focus:ring-1 focus:ring-purple-500"
-            />
-          </div>
-        )}
-
-        {/* Mobile search - always show search input on mobile even when collapsed */}
-        {isCollapsed && (
-          <div className="mb-2 md:hidden">
-            <Search className="w-4 h-4 text-zinc-500" />
-            <input
-              type="text"
-              value={localSearchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search your threads..."
-              className="w-full bg-white dark:bg-[#1c1c1c] border border-zinc-300 dark:border-zinc-700 rounded-md py-2 pl-9 pr-9 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-            />
-            {localSearchQuery && (
-              <button
-                onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-                aria-label="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            {isCollapsed ? (
+              <Plus className="w-4 h-4" />
+            ) : (
+              <div className="flex items-center justify-start gap-2 w-full">
+                <Edit className="w-4 h-4 flex-shrink-0" />
+                <span>New chat</span>
+              </div>
             )}
-          </div>
-        )}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onOpenSearchCenter}
+            className={`truncate text-sm py-2 mx-2 px-2 text-zinc-700 dark:text-zinc-300`}
+            size="none"
+          >
+            {isCollapsed ? (
+              <Search className="w-4 h-4" />
+            ) : (
+              <div className="flex items-center justify-start gap-2 w-full">
+                <Search className="w-4 h-4 flex-shrink-0" />
+                <span>Search chat</span>
+              </div>
+            )}
+          </Button>
+        </div>
 
         <div
           ref={scrollContainerRef}
-          className={`py-2 flex-grow overflow-y-auto block thin-scrollbar relative ${
+          className={`py-2 flex-grow overflow-y-auto overflow-x-hidden block thin-scrollbar relative ${
             isCollapsed ? "md:hidden" : ""
           }`}
           style={{
@@ -386,7 +347,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           }}
         >
           {isLoading ? (
-            <div className="px-4 flex flex-col items-center justify-center py-8">
+            <div className="px-2 h-full flex flex-col items-center justify-center py-2">
               <LoadingState
                 message="Loading conversations..."
                 size="sm"
@@ -409,24 +370,22 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
               {/* Show search results or all conversations */}
               {orderedGroups.map(([dateGroup, convs]) => (
                 <div key={dateGroup} className="mb-4 last:mb-0">
-                  <div
-                    className="text-xs font-semibold text-zinc-500 mb-3 px-5"
-                  >
+                  <div className="text-xs text-zinc-700 dark:text-zinc-300/50 mb-2 px-4">
                     {localSearchQuery.trim()
                       ? `${dateGroup} (${convs.length} result${
                           convs.length !== 1 ? "s" : ""
                         })`
                       : dateGroup}
                   </div>
-                  <ul className="space-y-0 px-4">
+                  <ul className="space-y-0 pl-2">
                     {convs.map((conversation) => (
                       <li
                         key={conversation.id}
                         onClick={() => handleConversationSelect(conversation)}
-                        className={`p-2 text-sm rounded-md cursor-pointer transition-colors group relative ${
+                        className={`p-2 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg cursor-pointer transition-colors group relative hover:bg-zinc-100 dark:hover:bg-zinc-800/50 ${
                           activeConversationId === conversation.id
-                            ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+                            ? "bg-zinc-200 dark:bg-zinc-800"
+                            : ""
                         }`}
                       >
                         <div className="truncate">
@@ -528,11 +487,11 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           )}
         </div>
 
-        <div className="mt-auto pt-2 mx-4 mb-4">
+        <div className="mt-auto pt-2 mx-2 mb-2">
           {isSignedIn ? (
             <div className="flex flex-col">
               <div
-                className="flex justify-center items-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer ayam"
+                className="flex truncate justify-center px-2 py-1 items-center rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"
                 onClick={() => onOpenSettings?.("Account")}
               >
                 <UserAvatar user={user!} size={32} />
@@ -541,29 +500,19 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                     isCollapsed ? "md:hidden" : ""
                   }`}
                 >
-                  <div className="font-semibold text-zinc-900 dark:text-white truncate">
+                  <div className="text-zinc-900 text-sm dark:text-white truncate">
                     {user!.displayName || user!.email}
                   </div>
-                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">
                     Signed In
                   </div>
                 </div>
-              </div>
-              <div className={`mt-2 ${isCollapsed ? "md:hidden" : ""}`}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  onClick={onSignOutClick}
-                >
-                  Sign Out
-                </Button>
               </div>
             </div>
           ) : (
             <button
               onClick={onLoginClick}
-              className={`flex items-center justify-center w-full text-zinc-900 dark:text-white font-semibold py-3.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors ${
+              className={`truncate flex items-center justify-center w-full text-zinc-900 dark:text-white font-semibold py-3.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors ${
                 isCollapsed ? "px-2.5" : "px-4 gap-2"
               }`}
             >

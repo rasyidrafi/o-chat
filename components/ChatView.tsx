@@ -310,7 +310,6 @@ const ChatView: React.FC<ChatViewProps> = ({
               messages={currentConversation?.messages || []}
               streamingMessageId={streamingState.currentMessageId}
               // onStopStreaming={stopStreaming}
-              animationsDisabled={animationsDisabled}
               isLoadingMoreMessages={isLoadingMoreMessages}
               hasMoreMessages={hasMoreMessages}
               onLoadMoreMessages={() => {}}
