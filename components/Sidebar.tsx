@@ -6,7 +6,7 @@ import { User as FirebaseUser } from "firebase/auth";
 import Button from "./ui/Button";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../contexts/AuthContext";
-import LoadingState from "./ui/LoadingState";
+import { SkeletonConversationGroup } from "./ui/Skeleton";
 import { Tab as SettingsTab } from "./SettingsPage";
 
 interface SidebarProps {
@@ -103,7 +103,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
       // Search functionality
       // setSearchQuery,
       filteredConversations,
-      isSearching,
+      // isSearching,
       // searchConversations,
       clearSearch,
     } = chat;
@@ -143,13 +143,13 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     // };
 
     // Clear search
-    const handleClearSearch = () => {
-      setLocalSearchQuery("");
-      clearSearch();
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
+    // const handleClearSearch = () => {
+    //   setLocalSearchQuery("");
+    //   clearSearch();
+    //   if (searchTimeoutRef.current) {
+    //     clearTimeout(searchTimeoutRef.current);
+    //   }
+    // };
 
     // Cleanup timeouts on unmount
     useEffect(() => {
@@ -351,25 +351,16 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           }}
         >
           {isLoading ? (
-            <div className="px-2 h-full flex flex-col items-center justify-center py-2">
-              <LoadingState
-                message="Loading conversations..."
-                size="sm"
-                centerContent={true}
-              />
+            <div className="px-2 py-2">
             </div>
           ) : (
             <>
               {/* Show search loading indicator */}
-              {isSearching && (
-                <div className="px-4 flex flex-col items-center justify-center py-4">
-                  <LoadingState
-                    message="Searching..."
-                    size="sm"
-                    centerContent={true}
-                  />
+              {/* {isSearching && (
+                <div className="px-2">
+                  <SkeletonConversationGroup title="Searching..." count={3} />
                 </div>
-              )}
+              )} */}
 
               {/* Show search results or all conversations */}
               {orderedGroups.map(([dateGroup, convs]) => (
@@ -456,18 +447,17 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
               ))}
 
               {/* Loading more indicator - only show when not searching */}
-              {!localSearchQuery.trim() && isLoadingMore && (
-                <div className="px-4 flex flex-col items-center justify-center py-4 text-zinc-500 dark:text-zinc-400">
-                  <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-                  <div className="text-xs">Loading more...</div>
+              {/* {!localSearchQuery.trim() && isLoadingMore && (
+                <div className="px-2">
+                  <SkeletonConversationGroup count={2} />
                 </div>
-              )}
+              )} */}
 
               {/* No results messages */}
-              {localSearchQuery.trim() &&
+              {/* {localSearchQuery.trim() &&
                 filteredConversations.length === 0 &&
                 !isSearching && (
-                  <div className="text-center text-zinc-500 dark:text-zinc-400 text-sm py-8 px-4">
+                  <div className="flex items-center justify-center h-full text-center text-zinc-500 dark:text-zinc-400 text-sm py-8 px-4">
                     No conversations found for "
                     <span className="font-medium">{localSearchQuery}</span>".
                     <br />
@@ -478,10 +468,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                       Clear search
                     </button>
                   </div>
-                )}
+                )} */}
 
               {!localSearchQuery.trim() && conversations.length === 0 && (
-                <div className="px-4 text-center text-zinc-500 dark:text-zinc-400 text-sm py-8">
+                <div className="flex items-center justify-center px-4 h-full text-center text-zinc-500 dark:text-zinc-400 text-sm py-8">
                   No conversations yet.
                   <br />
                   Start a new chat to begin!

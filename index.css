@@ -337,3 +337,13 @@ h6 {
 .dark .katex-container.katex-display::-webkit-scrollbar-thumb:hover {
   background: #777;
 }
+
+/* Skeleton wave animation */
+@keyframes wave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
