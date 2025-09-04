@@ -178,85 +178,83 @@ interface MessageProps {
 }
 
 // Mermaid diagram component with memoization
-const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(({ code, isDark }) => {
-  const [mermaidLib, setMermaidLib] = useState<any>(null);
+const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(
+  ({ code, isDark }) => {
+    const [mermaidLib, setMermaidLib] = useState<any>(null);
 
-  useEffect(() => {
-    loadMermaid().then((module: any) => {
-      setMermaidLib(module.default);
-    });
-  }, []);
+    useEffect(() => {
+      loadMermaid().then((module: any) => {
+        setMermaidLib(module.default);
+      });
+    }, []);
 
-  const ref = useRef<HTMLDivElement>(null);
-  const [svg, setSvg] = React.useState<string>("");
-  const [error, setError] = React.useState<string>("");
+    const ref = useRef<HTMLDivElement>(null);
+    const [svg, setSvg] = React.useState<string>("");
+    const [error, setError] = React.useState<string>("");
 
-  useEffect(() => {
-    const renderDiagram = async () => {
-      if (!mermaidLib) return;
+    useEffect(() => {
+      const renderDiagram = async () => {
+        if (!mermaidLib) return;
 
-      try {
-        // Initialize mermaid with the current theme
-        mermaidLib.initialize({
-          startOnLoad: false,
-          theme: isDark ? "dark" : "default",
-          securityLevel: "loose",
-          fontFamily: "ui-sans-serif, system-ui, sans-serif",
-        });
+        try {
+          // Initialize mermaid with the current theme
+          mermaidLib.initialize({
+            startOnLoad: false,
+            theme: isDark ? "dark" : "default",
+            securityLevel: "loose",
+            fontFamily: "ui-sans-serif, system-ui, sans-serif",
+          });
 
-        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg: renderedSvg } = await mermaidLib.render(id, code);
-        setSvg(renderedSvg);
-        setError("");
-      } catch (err) {
-        setError("Failed to render Mermaid diagram");
-        console.error("Mermaid render error:", err);
-      }
-    };
+          const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+          const { svg: renderedSvg } = await mermaidLib.render(id, code);
+          setSvg(renderedSvg);
+          setError("");
+        } catch (err) {
+          setError("Failed to render Mermaid diagram");
+          console.error("Mermaid render error:", err);
+        }
+      };
 
-    renderDiagram();
-  }, [code, mermaidLib, isDark]);
+      renderDiagram();
+    }, [code, mermaidLib, isDark]);
 
-  if (error) {
+    if (error) {
+      return (
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 my-4">
+          <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>
+          <pre className="mt-2 text-xs text-red-700 dark:text-red-300 overflow-x-auto thin-scrollbar">
+            {code}
+          </pre>
+        </div>
+      );
+    }
+
+    if (!svg) {
+      return (
+        <div className="my-4 flex justify-center bg-white dark:bg-zinc-900 rounded-lg p-4 text-zinc-500">
+          Loading diagram...
+        </div>
+      );
+    }
+
     return (
-      <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 my-4">
-        <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>
-        <pre className="mt-2 text-xs text-red-700 dark:text-red-300 overflow-x-auto thin-scrollbar">
-          {code}
-        </pre>
-      </div>
+      <div
+        ref={ref}
+        className="my-4 flex justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-lg p-4"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
     );
   }
-
-  if (!svg) {
-    return (
-      <div className="my-4 flex justify-center bg-white dark:bg-zinc-900 rounded-lg p-4 text-zinc-500">
-        Loading diagram...
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={ref}
-      className="my-4 flex justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-lg p-4"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
-  );
-});
+);
 
 MermaidDiagram.displayName = "MermaidDiagram";
 
 const Message: React.FC<MessageProps> = memo(
-  ({
-    message,
-    isStreaming = false,
-    isLastMessage = false,
-  }) => {
+  ({ message, isStreaming = false, isLastMessage = false }) => {
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [isDark, setIsDark] = useState(false);
-    
+
     // Get animationsDisabled from settings context
     const { settings } = useSettingsContext();
     const animationsDisabled = settings.animationsDisabled;
@@ -280,7 +278,7 @@ const Message: React.FC<MessageProps> = memo(
       if (typeof message.content === "string") {
         return message.content;
       }
-      
+
       return message.content
         .filter((item) => item.type === "text")
         .map((item) => item.text)
@@ -292,11 +290,11 @@ const Message: React.FC<MessageProps> = memo(
       const mermaidRegex = /```mermaid\n([\s\S]*?)\n```/g;
       const blocks: string[] = [];
       let match;
-      
+
       while ((match = mermaidRegex.exec(textContent)) !== null) {
         blocks.push(match[1]);
       }
-      
+
       return blocks;
     }, [textContent]);
 
@@ -321,31 +319,50 @@ const Message: React.FC<MessageProps> = memo(
     };
 
     // Format timestamp
+    // Format timestamp
     const formatTime = (date: Date) => {
       if (isNaN(date.getTime())) {
         return "Invalid date";
       }
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const messageDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      );
 
-      if (messageDate.getTime() === today.getTime()) {
-        return `Today at ${date.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`;
+      // Calculate the difference in days
+      const diffTime = today.getTime() - messageDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      const timeString = date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      if (diffDays === 0) {
+        return `Today at ${timeString}`;
+      } else if (diffDays === 1) {
+        return `Yesterday at ${timeString}`;
       } else {
-        return `${date.toLocaleDateString()} at ${date.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`;
+        return `${date.toLocaleDateString()} at ${timeString}`;
       }
     };
 
     // Get message styles
     const getMessageStyles = () => {
+      // Check if user message contains image attachments
+      const hasImageAttachments =
+        isUser && message.attachments && message.attachments.length > 0;
+
       if (isUser) {
-        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[95%] sm:max-w-[85%] md:max-w-[75%] border border-zinc-300/50 dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
+        // For messages with image attachments, use responsive width scaling
+        if (hasImageAttachments) {
+          return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 w-[100%] sm:w-[85%] md:w-[75%] lg:w-[50%] border border-zinc-300/50 dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
+        }
+        // For text-only messages, keep original styling
+        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[100%] sm:max-w-[85%] md:max-w-[75%] border border-zinc-300/50 dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
       }
       if (message.isError) {
         return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full break-words overflow-wrap-anywhere";
@@ -608,8 +625,8 @@ const Message: React.FC<MessageProps> = memo(
               <div className="space-y-3">
                 {/* Assistant messages: full markdown rendering */}
                 <div className="prose prose-zinc dark:prose-invert max-w-none">
-                  <MemoizedMarkdown 
-                    content={textContent} 
+                  <MemoizedMarkdown
+                    content={textContent}
                     id={message.id}
                     isDark={isDark}
                   />
@@ -617,9 +634,9 @@ const Message: React.FC<MessageProps> = memo(
 
                 {/* Mermaid Diagrams */}
                 {mermaidBlocks.map((diagramCode, index) => (
-                  <MermaidDiagram 
-                    key={`${message.id}-mermaid-${index}`} 
-                    code={diagramCode} 
+                  <MermaidDiagram
+                    key={`${message.id}-mermaid-${index}`}
+                    code={diagramCode}
                     isDark={isDark}
                   />
                 ))}
@@ -632,27 +649,26 @@ const Message: React.FC<MessageProps> = memo(
                 )}
 
                 {/* Model name and timestamp for AI responses - only show when streaming is complete */}
-                {!isUser &&
-                  !isStreaming && (
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
-                      {formatTime(message.timestamp)}
-                      {(message.model || message.modelName) && isAssistant && (
-                        <>
-                          <span className="ml-2">•</span>
-                          <span className="ml-2">
-                            {message.modelName || message.model}
-                          </span>
-                        </>
-                      )}
-                      {/* AI disclaimer for last message */}
-                      {isLastMessage && !message.isError && (
-                        <div className="mt-4 md:mt-2 mb-0 sm:mb-4 text-zinc-400 dark:text-zinc-500 text-xs text-right">
-                          AI can make mistakes. Please verify important
-                          information.
-                        </div>
-                      )}
-                    </div>
-                  )}
+                {!isUser && !isStreaming && (
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
+                    {formatTime(message.timestamp)}
+                    {(message.model || message.modelName) && isAssistant && (
+                      <>
+                        <span className="ml-2">•</span>
+                        <span className="ml-2">
+                          {message.modelName || message.model}
+                        </span>
+                      </>
+                    )}
+                    {/* AI disclaimer for last message */}
+                    {isLastMessage && !message.isError && (
+                      <div className="mt-4 md:mt-2 mb-0 sm:mb-4 text-zinc-400 dark:text-zinc-500 text-xs text-right">
+                        AI can make mistakes. Please verify important
+                        information.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

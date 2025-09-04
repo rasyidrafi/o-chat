@@ -203,9 +203,23 @@ export const Codeblock = memo<CodeblockProps>(({
         className={`relative ${!expanded && lineCount > 15 ? 'max-h-80 overflow-hidden' : ''}`}
       >
         {isHighlighting ? (
-          <div className="p-4 text-sm text-zinc-500">Highlighting...</div>
+          <motion.div
+            initial={animationsDisabled ? {} : { opacity: 0 }}
+            animate={animationsDisabled ? {} : { opacity: 1 }}
+            exit={animationsDisabled ? {} : { opacity: 0 }}
+            transition={animationsDisabled ? {} : { duration: 0.2 }}
+            className="p-4"
+          >
+            <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400 text-sm">
+              <div className="w-2 h-2 bg-current rounded-full animate-pulse" />
+              <span>Processing...</span>
+            </div>
+          </motion.div>
         ) : (
-          <div
+          <motion.div
+            initial={animationsDisabled ? {} : { opacity: 0 }}
+            animate={animationsDisabled ? {} : { opacity: 1 }}
+            transition={animationsDisabled ? {} : { duration: 0.3 }}
             dangerouslySetInnerHTML={{ __html: highlightedCode }}
             className={`shiki-container font-mono text-sm ${isWrapped ? 'text-wrap-enabled' : 'text-wrap-disabled'}`}
             style={{

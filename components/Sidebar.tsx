@@ -225,12 +225,19 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
 
     const formatDate = useCallback((date: Date) => {
       const now = new Date();
-      const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-      const diffInDays = diffInHours / 24;
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Today at 00:00
+      const messageDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+      ); // Message date at 00:00
 
-      if (diffInHours < 24) {
+      const diffInMs = today.getTime() - messageDate.getTime();
+      const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+      if (diffInDays === 0) {
         return "Today";
-      } else if (diffInHours < 48) {
+      } else if (diffInDays === 1) {
         return "Yesterday";
       } else if (diffInDays < 7) {
         return "Last 7 days";
