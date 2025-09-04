@@ -115,6 +115,30 @@ const preProcessLatex = (text: string): string => {
     }
   );
 
+  // Remove horizontal rules that immediately follow code blocks
+  processedText = processedText.replace(
+    /(```[\s\S]*?```)\s*\n\s*---+\s*\n/g,
+    '$1\n\n'
+  );
+
+  // Remove horizontal rules that immediately follow code blocks (alternative pattern)
+  processedText = processedText.replace(
+    /(```[\s\S]*?```)\s*\n\s*\*\*\*+\s*\n/g,
+    '$1\n\n'
+  );
+
+  // // Remove horizontal rules that immediately follow tables
+  processedText = processedText.replace(
+    /(\|.*\|[\s\S]*?\|.*\|)\s*\n\s*---+\s*\n/g,
+    '$1\n\n'
+  );
+
+  // Remove horizontal rules that immediately follow tables (alternative pattern)
+  processedText = processedText.replace(
+    /(\|.*\|[\s\S]*?\|.*\|)\s*\n\s*\*\*\*+\s*\n/g,
+    '$1\n\n'
+  );
+
   // Intelligently determine if we should escape currency
   const hasCurrency = containsCurrency(processedText);
   const hasLatex = containsLatexMath(processedText);
@@ -250,7 +274,7 @@ const MemoizedMarkdownBlock = memo<MemoizedMarkdownBlockProps>(
 
           // Table components for GFM - Restored original responsive design
           table: ({ children, ...props }: any) => (
-            <div className="overflow-x-auto my-4 border border-zinc-300 dark:border-zinc-600 rounded-lg">
+            <div className="overflow-x-auto my-4 border-none thin-scrollbar">
               <table className="min-w-full text-xs sm:text-sm" {...props}>
                 {children}
               </table>
@@ -258,7 +282,7 @@ const MemoizedMarkdownBlock = memo<MemoizedMarkdownBlockProps>(
           ),
 
           thead: ({ children, ...props }: any) => (
-            <thead className="bg-zinc-100 dark:bg-zinc-800" {...props}>
+            <thead {...props}>
               {children}
             </thead>
           ),
@@ -266,14 +290,14 @@ const MemoizedMarkdownBlock = memo<MemoizedMarkdownBlockProps>(
           tbody: ({ children, ...props }: any) => <tbody {...props}>{children}</tbody>,
 
           tr: ({ children, ...props }: any) => (
-            <tr className="border-b border-zinc-200 dark:border-zinc-700" {...props}>
+            <tr className="border-t first:border-t-0 border-zinc-200 dark:border-zinc-700/80" {...props}>
               {children}
             </tr>
           ),
 
           th: ({ children, ...props }: any) => (
             <th
-              className="px-2 py-2 text-center font-semibold text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
+              className="pr-2 pl-2 first:pl-0 py-2 text-left font-semibold text-xs sm:text-sm border-none"
               {...props}
             >
               {children}
@@ -283,7 +307,7 @@ const MemoizedMarkdownBlock = memo<MemoizedMarkdownBlockProps>(
           td: ({ children, ...props }: any) => {
             return (
               <td
-                className="px-2 py-2 text-xs sm:text-sm border-r border-zinc-300 dark:border-zinc-600 last:border-r-0"
+                className="pr-2 pl-2 first:pl-0 py-2 text-left text-xs sm:text-sm border-none"
                 {...props}
               >
                 {children}

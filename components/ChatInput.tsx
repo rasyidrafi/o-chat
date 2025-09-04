@@ -1351,8 +1351,6 @@ const ChatInput = ({
         />
       </div>
 
-      {/* <HorizontalRuleDefault /> */}
-
       {/* Controls Section */}
       <div className="flex items-stretch justify-between flex-wrap gap-2 mt-2">
         <div className="flex items-stretch flex-wrap gap-2">

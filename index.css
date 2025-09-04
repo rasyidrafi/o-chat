@@ -264,43 +264,6 @@ h6 {
   overflow-x: auto !important;
 }
 
-/* Thin scrollbar for codeblocks and LaTeX math */
-.code-thin-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #c1c1c1 transparent;
-}
-
-.code-thin-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.code-thin-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.code-thin-scrollbar::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.code-thin-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* Dark mode for code thin scrollbar */
-.dark .code-thin-scrollbar {
-  scrollbar-color: #555 transparent;
-}
-
-.dark .code-thin-scrollbar::-webkit-scrollbar-thumb {
-  background: #555;
-}
-
-.dark .code-thin-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #777;
-}
-
 /* Apply thin scrollbar to specific elements when they overflow */
 .shiki-container.text-wrap-disabled {
   scrollbar-width: thin;
@@ -308,8 +271,8 @@ h6 {
 }
 
 .shiki-container.text-wrap-disabled::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 .shiki-container.text-wrap-disabled::-webkit-scrollbar-track {
@@ -345,8 +308,8 @@ h6 {
 }
 
 .katex-container.katex-display::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 .katex-container.katex-display::-webkit-scrollbar-track {

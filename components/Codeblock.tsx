@@ -141,7 +141,7 @@ export const Codeblock = memo<CodeblockProps>(({
   return (
     <div 
       ref={codeBlockRef}
-      className="relative mt-1 mb-1 flex flex-col overflow-hidden rounded-lg border border-zinc-300 dark:border-zinc-700 w-full"
+      className="relative mt-1 mb-4 flex flex-col overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700/80 w-full"
       style={{
         marginLeft: negativeMargin > 0 ? `-${negativeMargin}px` : '0',
         marginRight: negativeMargin > 0 ? `-${negativeMargin}px` : '0',
@@ -149,7 +149,7 @@ export const Codeblock = memo<CodeblockProps>(({
       }}
     >
       {/* Header with three buttons */}
-      <div className="flex items-center gap-2 rounded-t-md border-b border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 px-3 py-2">
+      <div className="flex items-center gap-2 rounded-t-md border-b border-zinc-200 dark:border-zinc-700/80 bg-zinc-100 dark:bg-zinc-800 px-3 py-2">
         <span className="font-mono text-zinc-600 dark:text-zinc-400 text-xs">
           {language}
         </span>
@@ -167,7 +167,7 @@ export const Codeblock = memo<CodeblockProps>(({
           {lineCount > 15 && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="p-1 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              className="p-1 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
               title={expanded ? "Show less" : "Show more"}
             >
               {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -177,7 +177,7 @@ export const Codeblock = memo<CodeblockProps>(({
           {/* Text wrap toggle button (middle) */}
           <button
             onClick={() => setIsWrapped(!isWrapped)}
-            className={`p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 ${
+            className={`p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer ${
               isWrapped ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-600 dark:text-zinc-400'
             }`}
             title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
@@ -190,7 +190,7 @@ export const Codeblock = memo<CodeblockProps>(({
           {/* Copy button (right) */}
           <button
             onClick={copyToClipboard}
-            className="p-1 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            className="p-1 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
             title={copied ? "Copied!" : "Copy code"}
           >
             {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -225,11 +225,11 @@ export const Codeblock = memo<CodeblockProps>(({
               animate={animationsDisabled ? {} : { opacity: 1 }}
               exit={animationsDisabled ? {} : { opacity: 0 }}
               transition={animationsDisabled ? {} : { duration: 0.2 }}
-              className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-zinc-900 to-transparent flex items-end justify-center pb-2"
+              className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-zinc-900 to-transparent flex items-end justify-center pb-4"
             >
               <button
                 onClick={() => setExpanded(true)}
-                className="px-3 py-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md text-sm hover:bg-zinc-300 dark:hover:bg-zinc-600"
+                className="px-3 py-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md text-xs hover:bg-zinc-300 dark:hover:bg-zinc-600 cursor-pointer"
               >
                 Show {lineCount - 15} more lines
               </button>

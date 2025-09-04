@@ -221,7 +221,7 @@ const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(({ code
     return (
       <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 my-4">
         <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>
-        <pre className="mt-2 text-xs text-red-700 dark:text-red-300 overflow-x-auto">
+        <pre className="mt-2 text-xs text-red-700 dark:text-red-300 overflow-x-auto thin-scrollbar">
           {code}
         </pre>
       </div>
@@ -239,7 +239,7 @@ const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(({ code
   return (
     <div
       ref={ref}
-      className="my-4 flex justify-center bg-white dark:bg-zinc-900 rounded-lg p-4"
+      className="my-4 flex justify-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/80 rounded-lg p-4"
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );

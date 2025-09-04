@@ -329,7 +329,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: animationsDisabled ? 0 : 0.2 }}
-              className="absolute -top-16 left-0 right-0 flex justify-center pointer-events-auto"
+              className="absolute -top-14 left-0 right-0 flex justify-center pointer-events-auto"
               style={chatInputPadding}
             >
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
