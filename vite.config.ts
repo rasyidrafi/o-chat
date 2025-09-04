@@ -13,7 +13,7 @@ export default defineConfig(() => {
               'react-vendor': ['react', 'react-dom'],
               'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
               'ui-vendor': ['framer-motion'],
-              'markdown-vendor': ['unified', 'remark-parse', 'remark-gfm', 'remark-math', 'remark-rehype', 'rehype-react', 'katex', 'rehype-katex', 'react-markdown', 'marked'],
+              'markdown-vendor': ['remark-gfm', 'remark-math', 'rehype-katex', 'react-markdown', 'marked'],
               'syntax-vendor': ['shiki'],
               'chart-vendor': ['mermaid'],
               'openai-vendor': ['openai']

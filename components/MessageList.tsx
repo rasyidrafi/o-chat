@@ -7,7 +7,6 @@ import { useSettingsContext } from "../contexts/SettingsContext";
 interface MessageListProps {
   messages: ChatMessage[];
   streamingMessageId: string | null;
-  animationsDisabled: boolean;
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
   onLoadMoreMessages: () => void;
@@ -31,7 +30,6 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
     {
       messages,
       streamingMessageId,
-      animationsDisabled,
       onScrollStateChange,
       isLoadingMoreMessages,
       // hasMoreMessages,
