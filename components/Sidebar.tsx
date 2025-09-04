@@ -377,7 +377,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                         })`
                       : dateGroup}
                   </div>
-                  <ul className="space-y-0 pl-2">
+                  <ul className="space-y-0 px-2">
                     {convs.map((conversation) => (
                       <li
                         key={conversation.id}
