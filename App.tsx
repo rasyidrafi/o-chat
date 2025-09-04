@@ -161,7 +161,7 @@ const AppContent: React.FC<{
 
   return (
     <>
-      <div className="flex h-screen w-full bg-white dark:bg-[#1c1c1c] text-zinc-900 dark:text-zinc-200 font-sans overflow-hidden">
+      <div className="flex h-screen w-full overflow-hidden">
         <Sidebar
           ref={sidebarRef}
           isMobileMenuOpen={ui.isMobileMenuOpen}

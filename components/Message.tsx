@@ -73,7 +73,7 @@ const ImageContentComponent: React.FC<{
   }, [gcsPath, url]);
 
   useEffect(() => {
-    setImageLoading(true);
+    // setImageLoading(true);
     setImageError(false);
     setShowExpiredPlaceholder(false);
   }, [currentUrl]);
@@ -91,7 +91,7 @@ const ImageContentComponent: React.FC<{
   if (isLoading) {
     return (
       <div
-        className={`bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center ${displayDimensions.containerClass}`}
+        className={`bg-dark dark:bg-zinc-800 rounded-lg flex items-center justify-center ${displayDimensions.containerClass}`}
         style={{ aspectRatio: displayDimensions.aspectRatio }}
       >
         <div className="text-zinc-500 text-xs">Loading...</div>
@@ -103,7 +103,7 @@ const ImageContentComponent: React.FC<{
   if (showExpiredPlaceholder) {
     return (
       <div
-        className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
+        className={`bg-[#e3dedb] dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
         style={{ aspectRatio: displayDimensions.aspectRatio }}
       >
         <div className="text-zinc-500 text-xs text-center px-2">
@@ -115,13 +115,13 @@ const ImageContentComponent: React.FC<{
 
   return (
     <div
-      className={`relative flex items-center justify-center rounded-lg bg-zinc-200 dark:bg-black ${displayDimensions.containerClass}`}
+      className={`relative flex items-center justify-center rounded-lg bg-[#e3dedb] dark:bg-black ${displayDimensions.containerClass}`}
       style={{ aspectRatio: displayDimensions.aspectRatio }}
     >
       {/* Loading placeholder */}
       {imageLoading && !imageError && !showExpiredPlaceholder && (
         <div
-          className={`absolute inset-0 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
+          className={`absolute inset-0 bg-[#e3dedb] dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
         >
           <div className="flex items-center space-x-2 text-zinc-500">
             <div className="w-3 h-3 bg-zinc-400 rounded-full animate-bounce"></div>
@@ -157,7 +157,7 @@ const ImageContentComponent: React.FC<{
         />
       ) : imageError && !showExpiredPlaceholder ? (
         <div
-          className={`bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
+          className={`bg-[#e3dedb] dark:bg-zinc-800 flex items-center justify-center rounded-lg ${displayDimensions.containerClass}`}
           style={{ aspectRatio: displayDimensions.aspectRatio }}
         >
           <div className="text-zinc-500 text-xs text-center px-2">
@@ -359,10 +359,10 @@ const Message: React.FC<MessageProps> = memo(
       if (isUser) {
         // For messages with image attachments, use responsive width scaling
         if (hasImageAttachments) {
-          return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 w-[100%] sm:w-[85%] md:w-[75%] lg:w-[50%] border border-zinc-300/50 dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
+          return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 w-[100%] sm:w-[85%] md:w-[75%] lg:w-[50%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
         }
         // For text-only messages, keep original styling
-        return "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[100%] sm:max-w-[85%] md:max-w-[75%] border border-zinc-300/50 dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
+        return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[100%] sm:max-w-[85%] md:max-w-[75%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
       }
       if (message.isError) {
         return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full break-words overflow-wrap-anywhere";
@@ -442,6 +442,29 @@ const Message: React.FC<MessageProps> = memo(
                     const isAsyncJob = message.isAsyncImageGeneration;
                     const job = message.imageGenerationJob;
 
+                    // Check if non-async job has timed out (more than 1 hour)
+                    const messageAge = Date.now() - message.timestamp.getTime();
+                    const oneHourInMs = 60 * 60 * 1000; // 1 hour in milliseconds
+                    const hasTimedOut = !isAsyncJob && messageAge > oneHourInMs;
+
+                    if (hasTimedOut) {
+                      // Show timeout error state instead of loading
+                      return (
+                        <div
+                          className="bg-[#e3dedb] dark:bg-zinc-800 flex items-center justify-center rounded-lg w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg"
+                          style={{
+                            aspectRatio: dimensions.aspectRatio,
+                          }}
+                        >
+                          <div className="text-zinc-500 text-xs text-center px-2">
+                            {isAsyncJob
+                              ? "Async job timed out"
+                              : "Image generation timed out"}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     let loadingText = "Generating image...";
 
                     if (isAsyncJob && job) {
@@ -466,10 +489,8 @@ const Message: React.FC<MessageProps> = memo(
 
                     return (
                       <div
-                        className="bg-zinc-100 dark:bg-zinc-800 rounded-lg flex items-center justify-center relative overflow-hidden"
+                        className="bg-[#e3dedb] dark:bg-zinc-800 rounded-lg flex items-center justify-center relative overflow-hidden w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg"
                         style={{
-                          width: dimensions.width,
-                          height: dimensions.height,
                           aspectRatio: dimensions.aspectRatio,
                         }}
                       >

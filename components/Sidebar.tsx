@@ -82,7 +82,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
       setIsMobileMenuOpen,
       isCollapsed,
       onLoginClick,
-      onSignOutClick,
+      // onSignOutClick,
       onOpenSearchCenter,
       onOpenSettings,
       chat,
@@ -101,10 +101,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
       hasMoreConversations,
       loadMoreConversations,
       // Search functionality
-      setSearchQuery,
+      // setSearchQuery,
       filteredConversations,
       isSearching,
-      searchConversations,
+      // searchConversations,
       clearSearch,
     } = chat;
     const [confirmingDelete, setConfirmingDelete] = useState<string | null>(
@@ -115,32 +115,32 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Debounced search function
-    const debouncedSearch = useCallback(
-      (query: string) => {
-        if (searchTimeoutRef.current) {
-          clearTimeout(searchTimeoutRef.current);
-        }
+    // const debouncedSearch = useCallback(
+    //   (query: string) => {
+    //     if (searchTimeoutRef.current) {
+    //       clearTimeout(searchTimeoutRef.current);
+    //     }
 
-        searchTimeoutRef.current = setTimeout(() => {
-          // Only update search query state, let searchConversations handle the actual search
-          setSearchQuery(query);
-          if (query.trim()) {
-            searchConversations(query);
-          } else {
-            // If query is empty, clear search immediately
-            clearSearch();
-          }
-        }, 300); // 300ms debounce
-      },
-      [setSearchQuery, searchConversations, clearSearch]
-    );
+    //     searchTimeoutRef.current = setTimeout(() => {
+    //       // Only update search query state, let searchConversations handle the actual search
+    //       setSearchQuery(query);
+    //       if (query.trim()) {
+    //         searchConversations(query);
+    //       } else {
+    //         // If query is empty, clear search immediately
+    //         clearSearch();
+    //       }
+    //     }, 300); // 300ms debounce
+    //   },
+    //   [setSearchQuery, searchConversations, clearSearch]
+    // );
 
     // Handle search input change
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const query = e.target.value;
-      setLocalSearchQuery(query);
-      debouncedSearch(query);
-    };
+    // const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    //   const query = e.target.value;
+    //   setLocalSearchQuery(query);
+    //   debouncedSearch(query);
+    // };
 
     // Clear search
     const handleClearSearch = () => {
@@ -300,19 +300,16 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     return (
       <aside
         ref={ref}
-        className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-zinc-100 dark:bg-[#181818] text-zinc-600 dark:text-zinc-400 z-60
-                 transition-all duration-300 ease-in-out
-                 md:translate-x-0 ${
-                   isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-                 }
-                 w-64 ${isCollapsed ? "md:w-20" : ""}`}
+        className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-[#efeae7] dark:bg-[#181818] text-zinc-600 dark:text-zinc-400 z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } w-64 ${isCollapsed ? "md:w-20" : ""}`}
       >
         <div className="flex-shrink-0 flex flex-col">
           <Button
             variant="ghost"
             onClick={handleNewChat}
             disabled={isCreatingNewChat}
-            className={`truncate text-sm py-2 mx-2 mt-2 px-2 text-zinc-700 dark:text-zinc-300`}
+            className={`truncate text-sm py-2 mx-2 mt-2 px-2 text-zinc-700 dark:text-zinc-300 hover:bg-[#e3dedb]`}
             size="none"
           >
             {isCollapsed ? (
@@ -327,7 +324,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           <Button
             variant="ghost"
             onClick={onOpenSearchCenter}
-            className={`truncate text-sm py-2 mx-2 px-2 text-zinc-700 dark:text-zinc-300`}
+            className={`truncate text-sm py-2 mx-2 px-2 text-zinc-700 dark:text-zinc-300 hover:bg-[#e3dedb]`}
             size="none"
           >
             {isCollapsed ? (
@@ -389,9 +386,9 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                       <li
                         key={conversation.id}
                         onClick={() => handleConversationSelect(conversation)}
-                        className={`p-2 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg cursor-pointer transition-colors group relative hover:bg-zinc-100 dark:hover:bg-zinc-800/50 ${
+                        className={`p-2 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg cursor-pointer transition-colors group relative hover:bg-[#e3dedb] dark:hover:bg-zinc-800/50 ${
                           activeConversationId === conversation.id
-                            ? "bg-zinc-200 dark:bg-zinc-800"
+                            ? "bg-[#e3dedb] dark:bg-zinc-800"
                             : ""
                         }`}
                       >
@@ -421,7 +418,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
 
                         {/* Delete confirmation buttons */}
                         {confirmingDelete === conversation.id ? (
-                          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-zinc-200 dark:bg-zinc-700 rounded p-1">
+                          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-zinc-200 dark:bg-zinc-700 rounded-lg p-1">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -437,16 +434,16 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                                 e.stopPropagation();
                                 handleDeleteConfirm(conversation.id);
                               }}
-                              className="p-1 hover:bg-red-500 hover:text-white rounded transition-colors cursor-pointer"
+                              className="p-1 hover:bg-red-500 hover:text-white rounded transition-colors cursor-pointer text-red-500 hover:text-white"
                               aria-label="Confirm delete"
                             >
-                              <Check className="w-3 h-3 text-red-500 hover:text-white" />
+                              <Check className="w-3 h-3" />
                             </button>
                           </div>
                         ) : (
                           <button
                             onClick={(e) => handleDeleteClick(e, conversation)}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded transition-all shadow-sm cursor-pointer"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-lg transition-all shadow-sm cursor-pointer"
                             aria-label="Delete conversation"
                           >
                             <X className="w-3 h-3" />
@@ -498,7 +495,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           {isSignedIn ? (
             <div className="flex flex-col">
               <div
-                className="flex truncate justify-center px-2 py-1 items-center rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"
+                className="flex truncate justify-center px-2 py-1 items-center rounded-lg hover:bg-[#e3dedb] dark:hover:bg-zinc-800 cursor-pointer"
                 onClick={() => onOpenSettings?.("Account")}
               >
                 <UserAvatar user={user!} size={32} />
@@ -519,7 +516,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           ) : (
             <button
               onClick={onLoginClick}
-              className={`truncate flex items-center justify-center w-full text-zinc-900 dark:text-white font-semibold py-3.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors ${
+              className={`truncate flex items-center justify-center w-full text-zinc-900 dark:text-white font-semibold py-3.5 rounded-lg hover:bg-[#e3dedb] dark:hover:bg-zinc-700 transition-colors ${
                 isCollapsed ? "px-2.5" : "px-4 gap-2"
               }`}
             >

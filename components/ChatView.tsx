@@ -159,25 +159,25 @@ const ChatView: React.FC<ChatViewProps> = ({
       case "light":
         return (
           <motion.div key="moon" {...themeIconProps}>
-            <Moon className="w-5 h-5" />
+            <Moon className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
           </motion.div>
         );
       case "dark":
         return (
           <motion.div key="sun" {...themeIconProps}>
-            <Sun className="w-5 h-5" />
+            <Sun className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
           </motion.div>
         );
       case "system":
         return (
           <motion.div key="desktop" {...themeIconProps}>
-            <Desktop className="w-5 h-5" />
+            <Desktop className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
           </motion.div>
         );
       default:
         return (
           <motion.div key="sun" {...themeIconProps}>
-            <Sun className="w-5 h-5" />
+            <Sun className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
           </motion.div>
         );
     }
@@ -224,7 +224,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   );
 
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-[#1c1c1c] relative">
+    <div className="flex-1 flex flex-col bg-[#f8f4f1] dark:bg-[#1c1c1c] relative">
       {/* Top-left positioned collapse button for desktop */}
       <motion.div
         className="fixed z-50 hidden md:block"
@@ -236,7 +236,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={toggleSidebar}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white md:bg-white/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700/80 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Toggle sidebar"
         >
@@ -253,7 +253,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={onMenuClick}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white md:bg-white/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700/80 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Open menu"
         >
@@ -263,19 +263,19 @@ const ChatView: React.FC<ChatViewProps> = ({
 
       {/* Top-right positioned buttons */}
       <div
-        className="fixed z-10 flex items-center"
+        className="fixed z-10 flex items-center rounded-lg border-none"
         style={topRightButtonsStyle}
       >
         <button
           onClick={() => onOpenSettings()}
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white md:bg-white/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700/80 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
           style={buttonSizeStyle}
           aria-label="Settings"
         >
           <SlidersHorizontal className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
         </button>
         <button
-          className="flex items-center justify-center hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 bg-white md:bg-white/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
+          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700/80 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
           onClick={toggleTheme}
           aria-label={`Switch to ${
             theme === "light" ? "dark" : theme === "dark" ? "system" : "light"
@@ -334,10 +334,10 @@ const ChatView: React.FC<ChatViewProps> = ({
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
                 <button
                   onClick={handleScrollToBottom}
-                  className="w-10 h-10 bg-white md:bg-white/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group cursor-pointer"
+                  className="w-10 h-10 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-full transition-all duration-200 flex items-center justify-center group cursor-pointer hover:bg-[#eeece9] dark:hover:bg-zinc-700/80"
                   aria-label="Scroll to bottom"
                 >
-                  <ArrowDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-800 dark:group-hover:text-zinc-200" />
+                  <ArrowDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
                 </button>
               </div>
             </motion.div>

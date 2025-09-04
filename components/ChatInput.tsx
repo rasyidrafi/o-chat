@@ -1256,14 +1256,11 @@ const ChatInput = ({
 
   return (
     <div
-      className="bg-white md:bg-white/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-zinc-200/50 dark:border-zinc-700/50 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg"
+      className="bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg"
     >
       {/* Image Preview Section */}
       {inputMode === "image_generation" && uploadedImageForEditing && (
         <div className="mb-3">
-          <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-            <span>Image ready for editing:</span>
-          </div>
           <div className="relative group inline-block">
             <img
               src={uploadedImageForEditing}
@@ -1303,36 +1300,6 @@ const ChatInput = ({
         </div>
       )}
 
-      {inputMode === "chat" &&
-        persistentUploadedImage &&
-        attachments.length === 0 &&
-        (() => {
-          const capabilities = getCurrentModelCapabilities();
-          return capabilities?.hasVision && !capabilities?.hasImageEditing;
-        })() && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 mb-1 w-full">
-              <span>Image ready for vision analysis:</span>
-            </div>
-            <div className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24">
-              <img
-                src={persistentUploadedImage}
-                alt="Image for vision"
-                className="w-16 h-16 object-cover rounded"
-              />
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
-                <span className="text-[8px]">👁️</span>
-              </div>
-              <button
-                onClick={clearAllImages}
-                className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        )}
-
       {/* Text Input */}
       <div className="relative">
         <textarea
@@ -1361,7 +1328,7 @@ const ChatInput = ({
                 if (isLoadingSystemModels || isLoadingModelFromConversation) return;
                 setIsModelDropdownOpen(!isModelDropdownOpen);
               }}
-              className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48 cursor-pointer`}
+              className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48 cursor-pointer`}
             >
               <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
                 {selectedModelLabel}
@@ -1383,7 +1350,7 @@ const ChatInput = ({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                  className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
+                  className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-[#fbf9f7] dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                 >
                   {/* Search Input */}
                   <div className="p-3 border-b border-zinc-200 dark:border-zinc-700">
@@ -1503,7 +1470,7 @@ const ChatInput = ({
             <div ref={sizeDropdownRef} className="flex items-stretch relative">
               <button
                 onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                className="flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer"
+                className="flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer"
                 disabled={disabled || isImageGenerating}
                 title={selectedImageSize}
               >
@@ -1524,7 +1491,7 @@ const ChatInput = ({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                    className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
+                    className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none bg-[#fbf9f7] dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                   >
                     <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
                       {ImageGenerationService.getImageSizeOptions().map((option) => {
@@ -1576,7 +1543,7 @@ const ChatInput = ({
                 ? inputMode === "image_generation"
                   ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
                   : "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
-                : "bg-zinc-200/80 dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
+                : "bg-[#eeece9] dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
             }`}
             disabled={(() => {
               const capabilities = getCurrentModelCapabilities();

@@ -1,4 +1,5 @@
 import React from 'react';
+import { twMerge } from 'tailwind-merge';
 
 type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost' | 'none';
 type ButtonSize = 'default' | 'sm' | 'lg' | 'icon' | 'none';
@@ -34,12 +35,12 @@ const Button: React.FC<ButtonProps> = ({
     none: ''
   };
 
-  const combinedClasses = [
+  const combinedClasses = twMerge(
     baseClasses,
     variantClasses[variant],
     sizeClasses[size],
-    className,
-  ].filter(Boolean).join(' ');
+    className
+  );
 
   return (
     <button className={combinedClasses} {...props}>

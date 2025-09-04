@@ -147,6 +147,67 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     };
   }, []);
 
+  // Check for timed-out non-async image generation messages
+  React.useEffect(() => {
+    if (!user) return;
+
+    const checkTimeouts = () => {
+      const oneHourInMs = 60 * 60 * 1000; // 1 hour in milliseconds
+      const now = Date.now();
+
+      setConversations(prev => {
+        let hasChanges = false;
+        const updatedConversations = prev.map(conv => {
+          const updatedMessages = conv.messages.map(msg => {
+            // Check if message is a non-async image generation that's been loading for more than 1 hour
+            if (
+              msg.messageType === 'image_generation' &&
+              msg.isGeneratingImage &&
+              !msg.isAsyncImageGeneration &&
+              msg.role === 'assistant' &&
+              now - msg.timestamp.getTime() > oneHourInMs
+            ) {
+              hasChanges = true;
+              console.log(`⏰ Timing out image generation message ${msg.id} in conversation ${conv.id} - ${Math.round((now - msg.timestamp.getTime()) / (60 * 1000))} minutes old`);
+              
+              return {
+                ...msg,
+                isGeneratingImage: false,
+                content: 'Image generation timed out after 1 hour',
+                isError: true,
+              };
+            }
+            return msg;
+          });
+
+          if (hasChanges && updatedMessages !== conv.messages) {
+            const updatedConv = {
+              ...conv,
+              messages: updatedMessages,
+              updatedAt: new Date(),
+            };
+
+            // Save the updated conversation to database
+            ChatStorageService.saveConversation(updatedConv, user).catch(error => {
+              console.error('Error saving timed-out conversation:', error);
+            });
+
+            return updatedConv;
+          }
+          return conv;
+        });
+
+        return hasChanges ? updatedConversations : prev;
+      });
+    };
+
+    // Check immediately, then every 5 minutes
+    checkTimeouts();
+    const interval = setInterval(checkTimeouts, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   // Listen to auth state changes
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
