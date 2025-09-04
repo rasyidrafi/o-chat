@@ -178,17 +178,11 @@ interface MessageProps {
 }
 
 // Mermaid diagram component with memoization
-const MermaidDiagram: React.FC<{ code: string }> = memo(({ code }) => {
+const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(({ code, isDark }) => {
   const [mermaidLib, setMermaidLib] = useState<any>(null);
 
   useEffect(() => {
     loadMermaid().then((module: any) => {
-      module.default.initialize({
-        startOnLoad: false,
-        theme: "dark",
-        securityLevel: "loose",
-        fontFamily: "ui-sans-serif, system-ui, sans-serif",
-      });
       setMermaidLib(module.default);
     });
   }, []);
@@ -202,6 +196,14 @@ const MermaidDiagram: React.FC<{ code: string }> = memo(({ code }) => {
       if (!mermaidLib) return;
 
       try {
+        // Initialize mermaid with the current theme
+        mermaidLib.initialize({
+          startOnLoad: false,
+          theme: isDark ? "dark" : "default",
+          securityLevel: "loose",
+          fontFamily: "ui-sans-serif, system-ui, sans-serif",
+        });
+
         const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
         const { svg: renderedSvg } = await mermaidLib.render(id, code);
         setSvg(renderedSvg);
@@ -213,7 +215,7 @@ const MermaidDiagram: React.FC<{ code: string }> = memo(({ code }) => {
     };
 
     renderDiagram();
-  }, [code, mermaidLib]);
+  }, [code, mermaidLib, isDark]);
 
   if (error) {
     return (
@@ -618,6 +620,7 @@ const Message: React.FC<MessageProps> = memo(
                   <MermaidDiagram 
                     key={`${message.id}-mermaid-${index}`} 
                     code={diagramCode} 
+                    isDark={isDark}
                   />
                 ))}
 
