@@ -13,6 +13,7 @@ import CustomizationTab from "./settings/Tab/CustomizationTab";
 import ModelsTab from "./settings/Tab/ModelsTab";
 import AttachmentsTab from "./settings/Tab/AttachmentsTab";
 import ContactUsTab from "./settings/Tab/ContactUsTab";
+import UsageTab from "./settings/Tab/UsageTab";
 import { User } from "firebase/auth";
 import Button from "./ui/Button";
 import LoadingState from "./ui/LoadingState";
@@ -24,6 +25,7 @@ import { useLocalStorageData } from "../hooks/useLocalStorageData";
 import { 
   AVATAR_COLORS, 
   TABS, 
+  MOBILE_TABS,
   DEBOUNCE_DELAY,
   LOADING_ANIMATION_DURATION,
   CONTENT_ANIMATION_DURATION,
@@ -88,6 +90,7 @@ const UserAvatar = React.memo<{
 });
 
 export type Tab =
+  | "Usage"
   | "Account"
   | "Customization"
   | "Models"
@@ -131,8 +134,22 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   // Use custom hook for localStorage operations
   const { getUserMessagesBySource } = useLocalStorageData();
 
+  // Mobile detection hook
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Memoize tabs configuration to prevent unnecessary re-renders using constants
-  const tabs = useMemo(() => TABS, []);
+  const tabs = useMemo(() => isMobile ? MOBILE_TABS : TABS, [isMobile]);
 
   // Enhanced debounced loading function with error handling
   const debouncedLoadUsageData = useCallback(() => {
@@ -188,6 +205,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   // Memoized content rendering to prevent unnecessary re-renders
   const renderContent = useCallback(() => {
     const contentMap = {
+      Usage: () => (
+        <UsageTab
+          usageData={usageData}
+          loadingState={loadingState}
+          onRetry={debouncedLoadUsageData}
+          animationsDisabled={settings.animationsDisabled}
+        />
+      ),
       Account: () => (
         <AccountTab
           onOpenAuthModal={onOpenAuthModal}
@@ -235,6 +260,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     onSignOutClick,
     settings,
     updateSettings,
+    usageData,
+    loadingState,
+    debouncedLoadUsageData,
   ]);
 
   return (
@@ -291,7 +319,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 </div>
               )}
 
-              <div className="p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl">
+              {/* Hide usage section on mobile since it's now in Usage tab */}
+              {!isMobile && (
+                <div className="p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl">
                 <div>
                   <div className="flex items-center mb-2">
                     <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">
@@ -429,6 +459,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                   )}
                 </div>
               </div>
+              )}
             </div>
           </aside>
           <main className="lg:col-span-9">

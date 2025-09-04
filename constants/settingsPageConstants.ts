@@ -21,6 +21,16 @@ export const TABS = [
   'Contact Us'
 ] as const;
 
+export const MOBILE_TABS = [
+  'Usage',
+  'Account', 
+  'Customization', 
+  'Models', 
+  'API Keys', 
+  'Attachments', 
+  'Contact Us'
+] as const;
+
 export const USAGE_METRICS = {
   CONVERSATIONS_SCALE: 30,
   SERVER_MESSAGES_SCALE: 50,
