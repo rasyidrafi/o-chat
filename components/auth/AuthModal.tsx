@@ -8,16 +8,20 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { useSettingsContext } from "../../contexts/SettingsContext";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  animationsDisabled?: boolean;
 }
 
 type AuthTab = "Login" | "Register";
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, animationsDisabled = false }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+  // Get animationsDisabled from settings context
+  const { settings } = useSettingsContext();
+  const animationsDisabled = settings.animationsDisabled;
+  
   const [activeTab, setActiveTab] = useState<AuthTab>("Login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -113,13 +117,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, animationsDisabl
                   title="Login"
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  animationsDisabled={animationsDisabled}
                 />
                 <Tab
                   title="Register"
                   activeTab={activeTab}
                   setActiveTab={handleTabChange}
-                  animationsDisabled={animationsDisabled}
                 />
               </div>
             </div>
@@ -198,10 +200,13 @@ interface TabProps {
   title: AuthTab;
   activeTab: AuthTab;
   setActiveTab: (tab: AuthTab) => void;
-  animationsDisabled: boolean;
 }
 
-const Tab: React.FC<TabProps> = ({ title, activeTab, setActiveTab, animationsDisabled }) => {
+const Tab: React.FC<TabProps> = ({ title, activeTab, setActiveTab }) => {
+  // Get animationsDisabled from settings context
+  const { settings } = useSettingsContext();
+  const animationsDisabled = settings.animationsDisabled;
+  
   const isActive = activeTab === title;
   return (
     <button

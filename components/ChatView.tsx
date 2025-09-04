@@ -27,7 +27,6 @@ interface ChatViewProps {
   onOpenSettings: (tab?: SettingsTab) => void;
   theme: Theme;
   toggleTheme: () => void;
-  animationsDisabled: boolean;
   chat: ReturnType<typeof useChat>;
 }
 
@@ -38,7 +37,6 @@ const ChatView: React.FC<ChatViewProps> = ({
   onOpenSettings,
   theme,
   toggleTheme,
-  animationsDisabled,
   chat,
 }) => {
   const location = useLocation();
@@ -53,8 +51,9 @@ const ChatView: React.FC<ChatViewProps> = ({
     hasMoreMessages,
   } = chat;
 
-  // Get isMobile from SettingsContext
-  const { isMobile } = useSettingsContext();
+  // Get isMobile and animationsDisabled from SettingsContext
+  const { isMobile, settings } = useSettingsContext();
+  const animationsDisabled = settings.animationsDisabled;
 
   // MessageList ref and scroll state
   const messageListRef = useRef<{ scrollToBottom: (smooth?: boolean) => void }>(

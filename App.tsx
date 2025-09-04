@@ -196,7 +196,6 @@ const AppContent: React.FC<{
                 onOpenSettings={openSettings}
                 theme={settings.theme}
                 toggleTheme={toggleTheme}
-                animationsDisabled={settings.animationsDisabled}
                 chat={chat}
               />
             }
@@ -220,7 +219,6 @@ const AppContent: React.FC<{
                   onOpenSettings={openSettings}
                   theme={settings.theme}
                   toggleTheme={toggleTheme}
-                  animationsDisabled={settings.animationsDisabled}
                   chat={chat}
                 />
               </>
@@ -254,7 +252,6 @@ const AppContent: React.FC<{
       <AuthModal
         isOpen={ui.isAuthModalOpen}
         onClose={() => setUi((prev) => ({ ...prev, isAuthModalOpen: false }))}
-        animationsDisabled={settings.animationsDisabled}
       />
       <ConfirmationDialog
         isOpen={isConfirmDialogOpen}
@@ -265,7 +262,6 @@ const AppContent: React.FC<{
         confirmVariant={modal.confirmDialogProps.confirmVariant}
         onCancel={modal.confirmDialogProps.onCancel}
         cancelText={modal.confirmDialogProps.cancelText}
-        animationsDisabled={settings.animationsDisabled}
       >
         {modal.confirmDialogProps.description}
       </ConfirmationDialog>
@@ -275,7 +271,6 @@ const AppContent: React.FC<{
           setUi((prev) => ({ ...prev, isSearchCenterOpen: false }))
         }
         chat={chat}
-        animationsDisabled={settings.animationsDisabled}
       />
     </>
   );

@@ -27,26 +27,9 @@ const loadMermaid = () => {
   return mermaidPromise;
 };
 
-// highlight.js imports
-import hljs from "highlight.js/lib/core";
-import javascript from "highlight.js/lib/languages/javascript";
-import typescript from "highlight.js/lib/languages/typescript";
-import python from "highlight.js/lib/languages/python";
-import xml from "highlight.js/lib/languages/xml";
-import json from "highlight.js/lib/languages/json";
-import bash from "highlight.js/lib/languages/bash";
-import css from "highlight.js/lib/languages/css";
-import markdown from "highlight.js/lib/languages/markdown";
-
-// Register languages you want to support
-hljs.registerLanguage("javascript", javascript);
-hljs.registerLanguage("typescript", typescript);
-hljs.registerLanguage("python", python);
-hljs.registerLanguage("xml", xml);
-hljs.registerLanguage("json", json);
-hljs.registerLanguage("bash", bash);
-hljs.registerLanguage("css", css);
-hljs.registerLanguage("markdown", markdown);
+// Import the new Shiki-based Codeblock component
+import { Codeblock } from "./Codeblock";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
 const getImageUrlFromPath = async (gcsPath: string): Promise<string> => {
   try {
@@ -194,265 +177,8 @@ ImageContentComponent.displayName = "ImageContentComponent";
 interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
-  animationsDisabled: boolean;
   isLastMessage?: boolean;
 }
-
-const CodeBlock: React.FC<{
-  children: string;
-  className?: string;
-  forceAscii?: boolean;
-  isInlineMultiLine?: boolean;
-}> = memo(({ children, className, isInlineMultiLine = false }) => {
-  const [copied, setCopied] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-  const [isWrapped, setIsWrapped] = useState(false);
-  const codeRef = useRef<HTMLElement>(null);
-
-  // Check if it's a single line inline code (no newlines and no language)
-  const isSingleLineInline =
-    !className && !isInlineMultiLine && !children.includes("\n");
-
-  // Show header for everything EXCEPT single line inline code
-  const showHeader = !isSingleLineInline;
-
-  // Dynamically load highlight.js theme based on isDark
-  useEffect(() => {
-    const darkHref =
-      "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-dark.min.css";
-    const lightHref =
-      "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.0/styles/panda-syntax-light.min.css";
-    const themeId = "hljs-theme-dynamic";
-
-    // Helper to add or update theme link
-    const setTheme = (dark: boolean) => {
-      let link = document.getElementById(themeId) as HTMLLinkElement | null;
-      if (!link) {
-        link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.id = themeId;
-        document.head.appendChild(link);
-      }
-      link.href = dark ? darkHref : lightHref;
-    };
-
-    setTheme(isDark);
-
-    return () => {
-      // Optionally remove theme link on unmount
-      // const link = document.getElementById(themeId);
-      // if (link) link.remove();
-    };
-  }, [isDark]);
-
-  // Detect dark mode
-  useEffect(() => {
-    const checkDarkMode = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    };
-    checkDarkMode();
-    const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => observer.disconnect();
-  }, []);
-
-  // Highlight code using highlight.js
-  const [highlighted, setHighlighted] = useState<string>("");
-  useEffect(() => {
-    let lang = className?.replace("language-", "") || "";
-    if (!hljs.getLanguage(lang)) lang = "plaintext";
-    try {
-      const result =
-        lang === "plaintext"
-          ? hljs.highlightAuto(children)
-          : hljs.highlight(children, { language: lang });
-      setHighlighted(result.value);
-    } catch {
-      setHighlighted(children);
-    }
-  }, [children, className]);
-
-  const copyToClipboard = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(children);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  }, [children]);
-
-  const renderContent = () => {
-    // if (viewMode === "ascii") {
-    //   return (
-    //     <div
-    //       className={`${showHeader ? "p-4" : "px-1.5 py-0.5"} ${
-    //         showHeader ? "" : "rounded"
-    //       }`}
-    //       style={{
-    //         backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
-    //       }}
-    //     >
-    //       <code
-    //         className="text-zinc-800 dark:text-zinc-200 text-xs font-mono block"
-    //         style={{
-    //           lineHeight: "1.2",
-    //           fontSize: "0.85em",
-    //           fontFamily:
-    //             'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-    //           whiteSpace: isWrapped ? "pre-wrap" : "pre",
-    //         }}
-    //       >
-    //         {children}
-    //       </code>
-    //     </div>
-    //   );
-    // }
-
-    return (
-      <div
-        className={`${showHeader ? "" : "rounded-lg"} overflow-hidden`}
-        style={{
-          backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
-        }}
-      >
-        <div
-          className={`${
-            isWrapped ? "overflow-x-visible" : "overflow-x-auto"
-          } thin-scrollbar`}
-          style={{
-            maxWidth: "100%",
-            width: "100%",
-          }}
-        >
-          <code
-            ref={codeRef}
-            className={`${
-              className ? className + " hljs" : "hljs"
-            } block p-2 sm:p-4 text-xs sm:text-sm leading-[1.4] ${
-              isWrapped ? "whitespace-pre-wrap" : "whitespace-pre"
-            }`}
-            style={{
-              margin: 0,
-              width: isWrapped ? "100%" : "max-content",
-              minWidth: isWrapped ? "auto" : "100%",
-              maxWidth: isWrapped ? "100%" : "none",
-            }}
-            dangerouslySetInnerHTML={{ __html: highlighted }}
-          />
-        </div>
-      </div>
-    );
-  };
-
-  if (!showHeader) {
-    // Simple inline code without header (only for single-line inline)
-    return (
-      <code className="bg-zinc-200 dark:bg-zinc-700 px-1 sm:px-1.5 py-0.5 rounded text-xs font-mono break-all">
-        {children}
-      </code>
-    );
-  }
-
-  // Code block or multi-line with header
-  return (
-    <div className="relative group my-4 w-full max-w-full overflow-hidden">
-      <div
-        className="relative w-full rounded-lg"
-        style={{
-          maxWidth: "100%",
-          width: "100%",
-          overflow: "hidden",
-          backgroundColor: isDark ? "#2a2c2d" : "#e6e6e6",
-        }}
-      >
-        {/* Header with controls */}
-        <div className="flex items-center justify-between px-2 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 flex-shrink-0">
-          {/* Left side: Language indicator */}
-          <div className="flex items-center">
-            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-              {className ? className.replace("language-", "") : "text"}
-            </span>
-          </div>
-
-          {/* Right side: Controls - Stack vertically on mobile */}
-          <div className="flex items-center space-x-1 sm:space-x-2">
-            {/* Text wrap toggle */}
-            <button
-              onClick={() => setIsWrapped(!isWrapped)}
-              className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
-              title={isWrapped ? "Disable text wrap" : "Enable text wrap"}
-            >
-              <svg
-                className={`w-4 h-4 transition-colors duration-150 ${
-                  isWrapped
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-zinc-600 dark:text-zinc-400"
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h8m-8 6h16"
-                />
-              </svg>
-            </button>
-
-            {/* Copy button */}
-            <button
-              onClick={copyToClipboard}
-              className="p-1.5 bg-white/90 dark:bg-zinc-700/90 hover:bg-white dark:hover:bg-zinc-700 rounded transition-colors duration-150 shadow-sm"
-              title={copied ? "Copied!" : "Copy to clipboard"}
-            >
-              {copied ? (
-                <svg
-                  className="w-4 h-4 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Content container with proper flex layout */}
-        <div className="flex-1 min-h-0">{renderContent()}</div>
-      </div>
-    </div>
-  );
-});
-
-// Set display names for debugging
-CodeBlock.displayName = "CodeBlock";
 
 // Custom components for rehype-react
 const MarkdownComponents = {
@@ -526,9 +252,9 @@ const MarkdownComponents = {
     // If there's a className (language specified), always render as code block
     if (className) {
       return (
-        <CodeBlock className={className} {...props}>
+        <Codeblock className={className} {...props}>
           {children}
-        </CodeBlock>
+        </Codeblock>
       );
     }
 
@@ -548,27 +274,11 @@ const MarkdownComponents = {
       );
     }
 
-    // // Multi-line code - check if it's ASCII art/table
-    // const isAsciiArt =
-    //   /[+\-|═│┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬]/.test(text) || // Box drawing chars
-    //   /^\s*[+\-|]+\s*$/.test(text.split("\n")[0]) || // ASCII table headers
-    //   /\+[-=]+\+/.test(text) || // Table borders like +---+
-    //   /\|.*\|/.test(text); // Content between pipes
-
-    // if (isAsciiArt) {
-    //   // Multi-line ASCII art -> render with header and view options
-    //   return (
-    //     <CodeBlock forceAscii={true} isInlineMultiLine={true} {...props}>
-    //       {children}
-    //     </CodeBlock>
-    //   );
-    // }
-
-    // Multi-line regular code -> render as code block with header
+    // Multi-line regular code -> render as code block
     return (
-      <CodeBlock isInlineMultiLine={true} {...props}>
+      <Codeblock {...props}>
         {children}
-      </CodeBlock>
+      </Codeblock>
     );
   },
 
@@ -787,7 +497,6 @@ const Message: React.FC<MessageProps> = memo(
   ({
     message,
     isStreaming = false,
-    animationsDisabled,
     isLastMessage = false,
   }) => {
     const isUser = message.role === "user";
@@ -795,6 +504,10 @@ const Message: React.FC<MessageProps> = memo(
     const [processor, setProcessor] = useState<any>(null);
     const [isProcessorReady, setIsProcessorReady] = useState(false);
     const [isContentReady, setIsContentReady] = useState(false);
+    
+    // Get animationsDisabled from settings context
+    const { settings } = useSettingsContext();
+    const animationsDisabled = settings.animationsDisabled;
 
     // Memoized markdown processor creation
     const createProcessorMemo = useMemo(() => {

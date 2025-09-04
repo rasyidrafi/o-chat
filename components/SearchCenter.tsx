@@ -3,19 +3,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from './Icons';
 import { useChat } from '../hooks/useChat';
 import { ChatConversation } from '../types/chat';
+import { useSettingsContext } from '../contexts/SettingsContext';
 
 interface SearchCenterProps {
   isOpen: boolean;
   onClose: () => void;
   chat: ReturnType<typeof useChat>;
-  animationsDisabled?: boolean;
 }
 
 interface GroupedConversations {
   [key: string]: ChatConversation[];
 }
 
-const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat, animationsDisabled = false }) => {
+const SearchCenter: React.FC<SearchCenterProps> = ({ isOpen, onClose, chat }) => {
+  // Get animationsDisabled from settings context
+  const { settings } = useSettingsContext();
+  const animationsDisabled = settings.animationsDisabled;
+  
   const {
     conversations,
     currentConversation,

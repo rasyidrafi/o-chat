@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './Button';
 import { X } from '../Icons';
+import { useSettingsContext } from '../../contexts/SettingsContext';
 
 interface ConfirmationDialogProps {
     isOpen: boolean;
@@ -13,7 +14,6 @@ interface ConfirmationDialogProps {
     confirmVariant?: 'primary' | 'destructive';
     cancelText?: string;
     onCancel?: () => void;
-    animationsDisabled?: boolean;
 }
 
 const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -26,8 +26,11 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
     confirmVariant = 'primary',
     cancelText = 'Cancel',
     onCancel,
-    animationsDisabled = false,
 }) => {
+    // Get animationsDisabled from settings context
+    const { settings } = useSettingsContext();
+    const animationsDisabled = settings.animationsDisabled;
+    
     const handleCancelClick = onCancel || onClose;
 
     return (

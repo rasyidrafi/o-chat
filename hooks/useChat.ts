@@ -13,6 +13,7 @@ import { auth } from '../firebase';
 import { AppSettings } from '../hooks/useSettings';
 import { getSystemModels } from '../services/modelService';
 import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from '../constants/models';
+import { buildSystemPrompt } from '../constants/systemPrompt';
 
 
 // Add conversation cache interface
@@ -679,15 +680,15 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         content: msg.content
       }));
 
-      // Add custom instruction as system message if it exists
+      // Add system message with default prompt and custom instruction combined
       let messagesToSend: ServiceChatMessage[] = historyMessages;
 
-      if (settings && settings.customInstruction && settings.customInstruction.trim()) {
-        messagesToSend = [
-          { role: 'system', content: settings.customInstruction.trim() },
-          ...historyMessages
-        ];
-      }
+      // Always add system prompt - combines default prompt with user custom instruction
+      const systemPrompt = buildSystemPrompt(settings?.customInstruction);
+      messagesToSend = [
+        { role: 'system', content: systemPrompt },
+        ...historyMessages
+      ];
 
       // Define callback functions separately
       const onChunkCallback = (chunk: string) => {
