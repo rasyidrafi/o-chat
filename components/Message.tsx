@@ -254,9 +254,10 @@ const Message: React.FC<MessageProps> = memo(
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [isDark, setIsDark] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
-    // Get animationsDisabled from settings context
-    const { settings } = useSettingsContext();
+    // Get animationsDisabled and isMobile from settings context
+    const { settings, isMobile } = useSettingsContext();
     const animationsDisabled = settings.animationsDisabled;
 
     // Detect dark mode
@@ -706,6 +707,8 @@ const Message: React.FC<MessageProps> = memo(
           animate="animate"
           exit={animationsDisabled ? {} : "exit"}
           className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}
+          onMouseEnter={isUser ? () => setIsHovered(true) : undefined}
+          onMouseLeave={isUser ? () => setIsHovered(false) : undefined}
         >
           <div
             className={`mt-4 flex flex-col w-full ${
@@ -714,29 +717,64 @@ const Message: React.FC<MessageProps> = memo(
           >
             <div className={getMessageStyles()}>{renderContent()}</div>
 
-            <motion.div
-              variants={fadeVariants}
-              initial={animationsDisabled ? {} : "initial"}
-              animate="animate"
-              className={`text-xs text-zinc-500 dark:text-zinc-400 ${
-                isUser ? "text-right mt-2" : "text-left mt-4"
-              }`}
-            >
-              {/* Only show timestamp and model for user messages, AI messages have it inside renderContent */}
-              {isUser && (
-                <>
-                  {formatTime(message.timestamp)}
-                  {(message.model || message.modelName) && isAssistant && (
-                    <>
-                      <span className="ml-2">•</span>
-                      <span className="ml-2">
-                        {message.modelName || message.model}
-                      </span>
-                    </>
-                  )}
-                </>
-              )}
-            </motion.div>
+            {/* Timestamp for user messages - responsive display with hover on desktop */}
+            {isUser && (
+              <motion.div
+                variants={
+                  !animationsDisabled
+                    ? {
+                        hidden: { opacity: 0 },
+                        visible: { opacity: 1 },
+                      }
+                    : {}
+                }
+                initial={!animationsDisabled ? (isMobile ? "visible" : "hidden") : {}}
+                animate={
+                  !animationsDisabled
+                    ? isMobile || isHovered
+                      ? "visible"
+                      : "hidden"
+                    : {}
+                }
+                transition={
+                  !animationsDisabled
+                    ? { duration: 0.2, ease: "easeInOut" }
+                    : {}
+                }
+                className={`text-xs text-zinc-500 dark:text-zinc-400 text-right mt-2`}
+                style={
+                  animationsDisabled
+                    ? {
+                        opacity: isMobile || isHovered ? 1 : 0,
+                        pointerEvents: isMobile || isHovered ? "auto" : "none",
+                        transition: "opacity 0.2s ease-in-out",
+                      }
+                    : {}
+                }
+              >
+                {formatTime(message.timestamp)}
+                {(message.model || message.modelName) && isAssistant && (
+                  <>
+                    <span className="ml-2">•</span>
+                    <span className="ml-2">
+                      {message.modelName || message.model}
+                    </span>
+                  </>
+                )}
+              </motion.div>
+            )}
+
+            {/* Timestamp for AI messages - keep existing behavior */}
+            {!isUser && (
+              <motion.div
+                variants={fadeVariants}
+                initial={animationsDisabled ? {} : "initial"}
+                animate="animate"
+                className="text-xs text-zinc-500 dark:text-zinc-400 text-left mt-4"
+              >
+                {/* AI messages timestamp is handled inside renderContent */}
+              </motion.div>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>
