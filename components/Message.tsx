@@ -657,7 +657,7 @@ const Message: React.FC<MessageProps> = memo(
               animate="animate"
               className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
             >
-              <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
+              <div className="mt-4 flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
                 <TypingIndicator />
               </div>
             </motion.div>
@@ -689,7 +689,7 @@ const Message: React.FC<MessageProps> = memo(
 
                 {/* Show typing indicator at the end when streaming with content */}
                 {isStreaming && !isUser && (
-                  <div className="flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
+                  <div className="mt-4 flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
                     <TypingIndicator />
                   </div>
                 )}
@@ -811,8 +811,17 @@ const Message: React.FC<MessageProps> = memo(
                     onClick={() => {
                       /* TODO: Implement retry */
                     }}
-                    className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
-                    title="Retry message"
+                    disabled={message.messageType === "image_generation"}
+                    className={`p-1.5 rounded transition-colors ${
+                      message.messageType === "image_generation"
+                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                    }`}
+                    title={
+                      message.messageType === "image_generation"
+                        ? "Retry not available for image generation"
+                        : "Retry message"
+                    }
                   >
                     <RotateCcw size={14} />
                   </button>
@@ -822,8 +831,17 @@ const Message: React.FC<MessageProps> = memo(
                     onClick={() => {
                       /* TODO: Implement branch off */
                     }}
-                    className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
-                    title="Branch off"
+                    disabled={message.messageType === "image_generation"}
+                    className={`p-1.5 rounded transition-colors ${
+                      message.messageType === "image_generation"
+                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                    }`}
+                    title={
+                      message.messageType === "image_generation"
+                        ? "Branch off not available for image generation"
+                        : "Branch off"
+                    }
                   >
                     <GitBranch size={14} />
                   </button>
@@ -833,8 +851,17 @@ const Message: React.FC<MessageProps> = memo(
                     onClick={() => {
                       /* TODO: Implement edit */
                     }}
-                    className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
-                    title="Edit message"
+                    disabled={message.messageType === "image_generation"}
+                    className={`p-1.5 rounded transition-colors ${
+                      message.messageType === "image_generation"
+                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                    }`}
+                    title={
+                      message.messageType === "image_generation"
+                        ? "Edit not available for image generation"
+                        : "Edit message"
+                    }
                   >
                     <Edit size={14} />
                   </button>

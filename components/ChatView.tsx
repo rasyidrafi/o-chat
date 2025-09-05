@@ -248,7 +248,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   );
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f8f4f1] dark:bg-[#1c1c1c] relative">
+    <div className="flex-1 flex flex-col bg-[#f9f9f9] dark:bg-[#1c1c1c] relative">
       {/* Top-left positioned collapse button for desktop */}
       <motion.div
         className="fixed z-50 hidden md:block"
@@ -377,7 +377,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               WebkitMaskImage:
                 "linear-gradient(to bottom, transparent 0px, black 16px, black 100%)",
             }}
-            className="bg-[#f8f4f1] dark:bg-[#1c1c1c] text-center absolute bottom-0 pb-2 pt-6 left-0 right-0 text-zinc-400 dark:text-zinc-500 text-xs"
+            className="bg-[#f9f9f9] dark:bg-[#1c1c1c] text-center absolute bottom-0 pb-2 pt-6 left-0 right-0 text-zinc-400 dark:text-zinc-500 text-xs"
           >
             AI can make mistakes. Please verify important information.
           </div>

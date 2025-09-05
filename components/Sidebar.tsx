@@ -300,39 +300,38 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     return (
       <aside
         ref={ref}
-        className={`fixed md:relative top-0 left-0 h-full flex flex-col bg-[#efeae7] dark:bg-[#181818] text-zinc-600 dark:text-zinc-400 z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
+        className={`shadow-sm p-2 fixed md:relative top-0 left-0 h-full flex flex-col bg-[#fcfcfc] dark:bg-[#121212] z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         } w-64 ${isCollapsed ? "md:w-20" : ""}`}
       >
-        <div className="flex-shrink-0 flex flex-col">
+        <div className="flex-shrink-0 flex flex-col mb-2">
           <Button
-            variant="ghost"
+            variant="primary"
             onClick={handleNewChat}
             disabled={isCreatingNewChat}
-            className={`truncate text-sm py-2 mx-2 mt-2 px-2 text-zinc-700 dark:text-zinc-300 hover:bg-[#e3dedb]`}
+            className={`truncate py-2 mx-2 my-2 px-2 text-[#fafafa]`}
             size="none"
           >
             {isCollapsed ? (
               <Plus className="w-4 h-4" />
             ) : (
-              <div className="flex items-center justify-start gap-2 w-full">
-                <Edit className="w-4 h-4 flex-shrink-0" />
-                <span>New chat</span>
+              <div className="text-[.875rem] font-[500] flex items-center justify-center gap-4 w-full">
+                <span>New Chat</span>
               </div>
             )}
           </Button>
           <Button
             variant="ghost"
             onClick={onOpenSearchCenter}
-            className={`truncate text-sm py-2 mx-2 px-2 text-zinc-700 dark:text-zinc-300 hover:bg-[#e3dedb]`}
+            className={`shadow-sm text-[#707070] hover:text-[#202020] dark:text-[#898989] bg-[#fcfcfc] hover:bg-[#ededed] dark:bg-[#171717] hover:dark:bg-[#1b1b1b] hover:dark:text-[#fafafa] truncate text-sm py-2 mx-2 px-4 border-1 border-[#dfdfdf] dark:border-[#242424]`}
             size="none"
           >
             {isCollapsed ? (
               <Search className="w-4 h-4" />
             ) : (
-              <div className="flex items-center justify-start gap-2 w-full">
+              <div className="text-[.875rem] font-[500] flex items-center justify-start gap-2 w-full">
                 <Search className="w-4 h-4 flex-shrink-0" />
-                <span>Search chat</span>
+                <span>Search chats</span>
               </div>
             )}
           </Button>
@@ -365,7 +364,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
               {/* Show search results or all conversations */}
               {orderedGroups.map(([dateGroup, convs]) => (
                 <div key={dateGroup} className="mb-4 last:mb-0">
-                  <div className="text-xs text-zinc-700 dark:text-zinc-300/50 mb-2 px-4">
+                  <div className="font-[500] text-[#9a9a9a] text-[.75rem] dark:text-[#656565] mb-1.5 px-4">
                     {localSearchQuery.trim()
                       ? `${dateGroup} (${convs.length} result${
                           convs.length !== 1 ? "s" : ""
@@ -377,10 +376,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                       <li
                         key={conversation.id}
                         onClick={() => handleConversationSelect(conversation)}
-                        className={`p-2 text-zinc-700 dark:text-zinc-300 text-sm rounded-lg cursor-pointer transition-colors group relative hover:bg-[#e3dedb] dark:hover:bg-zinc-800/50 ${
+                        className={`mb-[4px] last:mb-0 text-[.875rem] hover:text-[#202020] hover:dark:text-[#fafafa] capitalize py-[6px] px-[8px] leading-[20px] rounded-lg cursor-pointer transition-colors group relative hover:bg-[#f4f4f4] hover:dark:bg-[#252525] ${
                           activeConversationId === conversation.id
-                            ? "bg-[#e3dedb] dark:bg-zinc-800"
-                            : ""
+                            ? "text-[#202020] dark:text-[#fafafa] bg-[#f4f4f4] dark:bg-[#252525]"
+                            : "text-[#707070] dark:text-[#898989]"
                         }`}
                       >
                         <div className="truncate">
@@ -494,10 +493,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                     isCollapsed ? "md:hidden" : ""
                   }`}
                 >
-                  <div className="text-zinc-900 text-sm dark:text-white truncate">
+                  <div className="text-[#202020] dark:text-[#fafafa] text-[.875rem] truncate">
                     {user!.displayName || user!.email}
                   </div>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <div className="dark:text-[#898989] text-[#707070] text-[.75rem] truncate">
                     Signed In
                   </div>
                 </div>
