@@ -23,8 +23,8 @@ export const Codeblock = memo<CodeblockProps>(({
   const codeBlockRef = useRef<HTMLDivElement>(null);
   const [negativeMargin, setNegativeMargin] = useState(0);
   
-  // Get animationsDisabled from settings context
-  const { settings } = useSettingsContext();
+  // Get animationsDisabled and isMobile from settings context
+  const { settings, isMobile } = useSettingsContext();
   const animationsDisabled = settings.animationsDisabled;
 
   // Extract language from className
@@ -131,7 +131,7 @@ export const Codeblock = memo<CodeblockProps>(({
   // Inline code
   if (inline || isSingleLineInline) {
     return (
-      <code className="rounded-md border border-primary/20 bg-primary/10 px-1 py-0.5 font-medium font-mono text-foreground/80 text-sm leading-4">
+      <code className={`rounded-md border border-primary/20 bg-primary/10 px-1 py-0.5 font-medium font-mono text-foreground/80 ${isMobile ? 'text-xs' : 'text-sm'} leading-4`}>
         {children}
       </code>
     );
@@ -221,7 +221,7 @@ export const Codeblock = memo<CodeblockProps>(({
             animate={animationsDisabled ? {} : { opacity: 1 }}
             transition={animationsDisabled ? {} : { duration: 0.3 }}
             dangerouslySetInnerHTML={{ __html: highlightedCode }}
-            className={`shiki-container font-mono text-sm ${isWrapped ? 'text-wrap-enabled' : 'text-wrap-disabled'}`}
+            className={`shiki-container font-mono ${isMobile ? 'text-xs' : 'text-sm'} ${isWrapped ? 'text-wrap-enabled' : 'text-wrap-disabled'}`}
             style={{
               whiteSpace: isWrapped ? 'pre-wrap' : 'pre',
               wordWrap: isWrapped ? 'break-word' : 'normal',
@@ -233,7 +233,7 @@ export const Codeblock = memo<CodeblockProps>(({
         
         {/* Gradient overlay for collapsed long code with AnimatePresence */}
         <AnimatePresence>
-          {!expanded && lineCount > 15 && (
+          {!expanded && !isHighlighting && lineCount > 15 && (
             <motion.div
               initial={animationsDisabled ? {} : { opacity: 0 }}
               animate={animationsDisabled ? {} : { opacity: 1 }}
