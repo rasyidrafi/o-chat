@@ -15,6 +15,7 @@ import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import { MemoizedMarkdown } from "./MemoizedMarkdown";
+import { Copy, RotateCcw, GitBranch, Edit, Check } from "./Icons";
 import "katex/dist/katex.min.css"; // Import KaTeX CSS
 
 // Lazy load heavy dependencies only when needed
@@ -255,10 +256,34 @@ const Message: React.FC<MessageProps> = memo(
     const isAssistant = message.role === "assistant";
     const [isDark, setIsDark] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     // Get animationsDisabled and isMobile from settings context
     const { settings, isMobile } = useSettingsContext();
     const animationsDisabled = settings.animationsDisabled;
+
+    // Copy function for user messages
+    const copyMessageToClipboard = useCallback(async () => {
+      try {
+        let textToCopy = "";
+
+        if (typeof message.content === "string") {
+          textToCopy = message.content;
+        } else {
+          // Extract text content from complex content
+          textToCopy = message.content
+            .filter((item) => item.type === "text")
+            .map((item) => item.text)
+            .join("");
+        }
+
+        await navigator.clipboard.writeText(textToCopy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy message: ", err);
+      }
+    }, [message.content]);
 
     // Detect dark mode
     useEffect(() => {
@@ -319,7 +344,6 @@ const Message: React.FC<MessageProps> = memo(
       },
     };
 
-    // Format timestamp
     // Format timestamp
     const formatTime = (date: Date) => {
       if (isNaN(date.getTime())) {
@@ -644,7 +668,7 @@ const Message: React.FC<MessageProps> = memo(
               animate="animate"
               className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
             >
-              <div className={(isStreaming && !isUser) ? "" : "space-y-3"}>
+              <div className={isStreaming && !isUser ? "" : "space-y-3"}>
                 {/* Assistant messages: full markdown rendering */}
                 <div className="prose prose-zinc dark:prose-invert max-w-none">
                   <MemoizedMarkdown
@@ -711,8 +735,8 @@ const Message: React.FC<MessageProps> = memo(
           onMouseLeave={isUser ? () => setIsHovered(false) : undefined}
         >
           <div
-            className={`mt-4 flex flex-col w-full ${
-              isUser ? "max-w-full items-end" : "max-w-full items-start min-w-0"
+            className={`flex flex-col w-full ${
+              isUser ? "max-w-full items-end mt-4 pb-4" : "max-w-full items-start min-w-0"
             }`}
           >
             <div className={getMessageStyles()}>{renderContent()}</div>
@@ -728,7 +752,9 @@ const Message: React.FC<MessageProps> = memo(
                       }
                     : {}
                 }
-                initial={!animationsDisabled ? (isMobile ? "visible" : "hidden") : {}}
+                initial={
+                  !animationsDisabled ? (isMobile ? "visible" : "hidden") : {}
+                }
                 animate={
                   !animationsDisabled
                     ? isMobile || isHovered
@@ -741,7 +767,7 @@ const Message: React.FC<MessageProps> = memo(
                     ? { duration: 0.2, ease: "easeInOut" }
                     : {}
                 }
-                className={`text-xs text-zinc-500 dark:text-zinc-400 text-right mt-2`}
+                className="text-xs text-zinc-500 dark:text-zinc-400 text-right mt-2 flex items-center justify-end gap-2"
                 style={
                   animationsDisabled
                     ? {
@@ -752,27 +778,87 @@ const Message: React.FC<MessageProps> = memo(
                     : {}
                 }
               >
-                {formatTime(message.timestamp)}
-                {(message.model || message.modelName) && isAssistant && (
-                  <>
-                    <span className="ml-2">•</span>
-                    <span className="ml-2">
-                      {message.modelName || message.model}
-                    </span>
-                  </>
-                )}
-              </motion.div>
-            )}
+                {/* Action buttons */}
+                <motion.div
+                  variants={
+                    !animationsDisabled
+                      ? {
+                          hidden: { opacity: 0 },
+                          visible: { opacity: 1 },
+                        }
+                      : {}
+                  }
+                  initial={
+                    !animationsDisabled ? (isMobile ? "visible" : "hidden") : {}
+                  }
+                  animate={
+                    !animationsDisabled
+                      ? isMobile || isHovered
+                        ? "visible"
+                        : "hidden"
+                      : {}
+                  }
+                  transition={
+                    !animationsDisabled
+                      ? { duration: 0.2, ease: "easeInOut" }
+                      : {}
+                  }
+                  className="flex items-center gap-2"
+                  style={
+                    animationsDisabled
+                      ? {
+                          opacity: isMobile || isHovered ? 1 : 0,
+                          transition: "opacity 0.2s ease-in-out",
+                        }
+                      : {}
+                  }
+                >
+                  {/* Retry button */}
+                  <button
+                    onClick={() => {
+                      /* TODO: Implement retry */
+                    }}
+                    className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
+                    title="Retry message"
+                  >
+                    <RotateCcw size={14} />
+                  </button>
 
-            {/* Timestamp for AI messages - keep existing behavior */}
-            {!isUser && (
-              <motion.div
-                variants={fadeVariants}
-                initial={animationsDisabled ? {} : "initial"}
-                animate="animate"
-                className="text-xs text-zinc-500 dark:text-zinc-400 text-left mt-4"
-              >
-                {/* AI messages timestamp is handled inside renderContent */}
+                  {/* Branch off button */}
+                  <button
+                    onClick={() => {
+                      /* TODO: Implement branch off */
+                    }}
+                    className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
+                    title="Branch off"
+                  >
+                    <GitBranch size={14} />
+                  </button>
+
+                  {/* Edit button */}
+                  <button
+                    onClick={() => {
+                      /* TODO: Implement edit */
+                    }}
+                    className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
+                    title="Edit message"
+                  >
+                    <Edit size={14} />
+                  </button>
+
+                  {/* Copy button */}
+                  <button
+                    onClick={copyMessageToClipboard}
+                    className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
+                    title={copied ? "Copied!" : "Copy message"}
+                  >
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+                </motion.div>
+
+                <span className="">•</span>
+                {/* Timestamp */}
+                <span>{formatTime(message.timestamp)}</span>
               </motion.div>
             )}
           </div>
