@@ -68,14 +68,8 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
 
       const now = performance.now();
       
-      // Reduce throttling during streaming for better responsiveness
-      const isStreaming = streamingMessageId !== null;
-      const throttleTime = isStreaming 
-        ? (isMobile ? 50 : 25)  // More frequent checks during streaming
-        : SCROLL_UPDATE_THROTTLE;
-      
-      // Throttle updates, but be more responsive during streaming
-      if (now - lastUpdateTime.current < throttleTime) {
+      // Throttle updates
+      if (now - lastUpdateTime.current < SCROLL_UPDATE_THROTTLE) {
         rafId.current = null;
         return;
       }
@@ -83,12 +77,9 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       const { scrollTop, scrollHeight, clientHeight } = container;
 
       // During streaming, always check even with smaller changes
-      const scrollDiff = Math.abs(scrollTop - scrollState.current.scrollTop);
       const heightChanged = scrollHeight !== scrollState.current.scrollHeight;
       
       if (
-        !isStreaming && 
-        scrollDiff < 10 && // Only update if scroll changed by more than 10px (non-streaming)
         !heightChanged &&
         clientHeight === scrollState.current.clientHeight
       ) {
