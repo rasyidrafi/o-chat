@@ -214,74 +214,29 @@ export class ChatStorageService {
       const q = query(conversationsRef, orderBy('updatedAt', 'desc'));
 
       const snapshot = await getDocs(q);
+      const conversations: ChatConversation[] = [];
 
-      if (snapshot.docs.length === 0) {
-        return [];
-      }
-
-      // If not including messages, batch fetch last messages for proper sorting
-      if (!includeMessages) {
-        // Batch fetch last messages for all conversations in parallel
-        const lastMessageQueries = snapshot.docs.map(docSnap => {
-          const conversationRef = doc(collection(chatRef, 'conversations'), docSnap.id);
-          const messagesRef = collection(conversationRef, 'messages');
-          return getDocs(query(messagesRef, orderBy('timestamp', 'desc'), firestoreLimit(1)));
-        });
-
-        // Execute all queries in parallel
-        const lastMessageSnapshots = await Promise.all(lastMessageQueries);
-
-        // Build conversations with last message timestamps
-        const conversations: ChatConversation[] = [];
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
         
-        snapshot.docs.forEach((docSnap, index) => {
-          const data = docSnap.data();
-          const lastMessageSnapshot = lastMessageSnapshots[index];
-          
-          // Get the last message timestamp, fallback to conversation updatedAt if no messages
-          let lastMessageTimestamp = data.updatedAt.toDate();
-          if (!lastMessageSnapshot.empty) {
-            const lastMessageData = lastMessageSnapshot.docs[0].data();
-            lastMessageTimestamp = lastMessageData.timestamp.toDate();
-          }
+        // Only load messages if explicitly requested (for search functionality)
+        const messages = includeMessages 
+          ? await this.getMessagesFromFirestore(userId, data.id)
+          : [];
 
-          conversations.push({
-            id: data.id,
-            title: data.title,
-            model: data.model,
-            source: data.source || 'server',
-            createdAt: data.createdAt.toDate(),
-            updatedAt: lastMessageTimestamp, // Use last message timestamp for grouping
-            messages: []
-          });
+        // @ts-ignore
+        conversations.push({
+          id: data.id,
+          title: data.title,
+          model: data.model,
+          source: data.source || 'server',
+          createdAt: data.createdAt.toDate(),
+          updatedAt: data.updatedAt.toDate(),
+          messages
         });
-
-        // Sort by last message timestamp
-        return conversations.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-      } else {
-        // If including messages, load them all (for search functionality)
-        const conversations: ChatConversation[] = [];
-
-        for (const docSnap of snapshot.docs) {
-          const data = docSnap.data();
-          
-          const messages = await this.getMessagesFromFirestore(userId, data.id);
-          const lastMessage = messages[messages.length - 1];
-
-          conversations.push({
-            id: data.id,
-            title: data.title,
-            model: data.model,
-            source: data.source || 'server',
-            createdAt: data.createdAt.toDate(),
-            updatedAt: lastMessage ? lastMessage.timestamp : data.updatedAt.toDate(),
-            messages
-          });
-        }
-
-        // Sort by last message timestamp
-        return conversations.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
       }
+
+      return conversations;
     } catch (error) {
       console.error('Error loading conversations from Firestore:', error);
       return [];
@@ -483,29 +438,17 @@ export class ChatStorageService {
     } else {
       const conversations = this.getConversationsFromLocal();
       
-      // For local storage, update updatedAt with last message timestamp
-      const conversationsWithLastMessage = conversations.map(conv => {
-        const messages = this.getMessagesFromLocal(conv.id);
-        const lastMessage = messages[messages.length - 1];
-        
-        return {
-          ...conv,
-          updatedAt: lastMessage ? lastMessage.timestamp : conv.updatedAt,
-          messages: [] // Don't load messages initially
-        };
-      });
-
-      // Sort by the actual last message timestamp
-      conversationsWithLastMessage.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-      
       // For local storage, we'll simulate pagination
       const startIndex = lastDoc ? lastDoc.index + 1 : 0;
       const endIndex = startIndex + limit;
-      const paginatedConversations = conversationsWithLastMessage.slice(startIndex, endIndex);
+      const paginatedConversations = conversations.slice(startIndex, endIndex);
 
       const result = {
-        conversations: paginatedConversations,
-        hasMore: endIndex < conversationsWithLastMessage.length,
+        conversations: paginatedConversations.map(conv => ({
+          ...conv,
+          messages: [] // Don't load messages initially
+        })),
+        hasMore: endIndex < conversations.length,
         lastDoc: paginatedConversations.length > 0 ? { index: endIndex - 1 } : null
       };
       
@@ -513,7 +456,7 @@ export class ChatStorageService {
     }
   }
 
-  // Get conversations from Firestore with pagination and batch fetch last messages
+  // Get conversations from Firestore with pagination
   private static async getConversationsFromFirestorePaginated(userId: string, limit: number, lastDoc?: any): Promise<{ conversations: ChatConversation[], hasMore: boolean, lastDoc: any }> {
     try {
       const chatRef = doc(db, 'chats', userId);
@@ -526,42 +469,17 @@ export class ChatStorageService {
       }
 
       const snapshot = await getDocs(q);
-      
-      if (snapshot.docs.length === 0) {
-        return { conversations: [], hasMore: false, lastDoc: null };
-      }
-
-      // Batch fetch last messages for all conversations in parallel
-      const lastMessageQueries = snapshot.docs.map(docSnap => {
-        const conversationRef = doc(collection(chatRef, 'conversations'), docSnap.id);
-        const messagesRef = collection(conversationRef, 'messages');
-        return getDocs(query(messagesRef, orderBy('timestamp', 'desc'), firestoreLimit(1)));
-      });
-
-      // Execute all queries in parallel
-      const lastMessageSnapshots = await Promise.all(lastMessageQueries);
-
-      // Build conversations with last message timestamps
       const conversations: ChatConversation[] = [];
-      
-      snapshot.docs.forEach((docSnap, index) => {
-        const data = docSnap.data();
-        const lastMessageSnapshot = lastMessageSnapshots[index];
-        
-        // Get the last message timestamp, fallback to conversation updatedAt if no messages
-        let lastMessageTimestamp = data.updatedAt.toDate();
-        if (!lastMessageSnapshot.empty) {
-          const lastMessageData = lastMessageSnapshot.docs[0].data();
-          lastMessageTimestamp = lastMessageData.timestamp.toDate();
-        }
 
+      snapshot.docs.forEach(docSnap => {
+        const data = docSnap.data();
         conversations.push({
           id: data.id,
           title: data.title,
           model: data.model,
           source: data.source || 'server',
           createdAt: data.createdAt.toDate(),
-          updatedAt: lastMessageTimestamp, // Use last message timestamp for grouping
+          updatedAt: data.updatedAt.toDate(),
           messages: [] // Don't load messages initially
         });
       });

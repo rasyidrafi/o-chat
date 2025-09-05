@@ -24,6 +24,7 @@ import { ImageGenerationService } from "../services/imageGenerationService";
 import { ImageGenerationJobService } from "../services/imageGenerationJobService";
 import { MessageAttachment, ChatConversation } from "../types/chat";
 import { useAuth } from "../contexts/AuthContext";
+import { useSettingsContext } from "@/contexts/SettingsContext";
 
 interface ModelOption {
   label: string;
@@ -39,7 +40,7 @@ interface ChatInputProps {
     model: string,
     source: string,
     providerId?: string,
-    attachments?: MessageAttachment[],
+    attachments?: MessageAttachment[]
   ) => void;
   onImageGenerate?: (
     prompt: string,
@@ -53,7 +54,6 @@ interface ChatInputProps {
   disabled?: boolean;
   animationsDisabled?: boolean;
   currentConversation?: ChatConversation | null;
-  isMobile?: boolean;
 }
 
 const ChatInput = ({
@@ -63,7 +63,6 @@ const ChatInput = ({
   disabled = false,
   animationsDisabled = false,
   currentConversation,
-  isMobile
 }: ChatInputProps) => {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState("");
@@ -73,7 +72,8 @@ const ChatInput = ({
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
-  const [isLoadingModelFromConversation, setIsLoadingModelFromConversation] = useState(false);
+  const [isLoadingModelFromConversation, setIsLoadingModelFromConversation] =
+    useState(false);
   const [attachments, setAttachments] = useState<MessageAttachment[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [inputMode, setInputMode] = useState<"chat" | "image_generation">(
@@ -91,7 +91,8 @@ const ChatInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const currentAttachmentsRef = useRef<MessageAttachment[]>(attachments);
   const isCheckingCapabilitiesRef = useRef(false);
-  
+  const { isMobile } = useSettingsContext();
+
   // Track if model selection should be automatic or manual
   const hasAutoSelectedModelRef = useRef(false);
   const userHasManuallySelectedModelRef = useRef(false);
@@ -99,58 +100,63 @@ const ChatInput = ({
 
   // Function to get the last message's model information from conversation
   const getLastMessageModel = useCallback(() => {
-    if (!currentConversation || !currentConversation.messages || currentConversation.messages.length === 0) {
+    if (
+      !currentConversation ||
+      !currentConversation.messages ||
+      currentConversation.messages.length === 0
+    ) {
       return null;
     }
 
     // Find the last assistant message that has model info
     for (let i = currentConversation.messages.length - 1; i >= 0; i--) {
       const message = currentConversation.messages[i];
-      
+
       // Check assistant messages first
-      if (message.role === 'assistant' && message.model) {
+      if (message.role === "assistant" && message.model) {
         // Determine source and providerId based on available information
-        let source = 'system';
-        let providerId = '';
-        
+        let source = "system";
+        let providerId = "";
+
         // Check if it has image generation params (which stores original source info)
         if (message.imageGenerationParams) {
-          source = message.imageGenerationParams.originalSource || 'system';
-          providerId = message.imageGenerationParams.originalProviderId || '';
+          source = message.imageGenerationParams.originalSource || "system";
+          providerId = message.imageGenerationParams.originalProviderId || "";
         } else {
           // For regular chat messages, use source field or deduce from model name
           if (message.source) {
-            source = message.source === 'server' ? 'system' : 'custom';
+            source = message.source === "server" ? "system" : "custom";
           }
           // If has modelName, it's likely a custom model
           if (message.modelName && message.modelName !== message.model) {
-            source = 'custom';
+            source = "custom";
             providerId = message.modelName; // Use modelName as providerId for custom models
           }
         }
-        
+
         return {
           model: message.model,
           source,
           providerId,
         };
       }
-      
+
       // Check user messages for image generation params
-      if (message.role === 'user' && message.imageGenerationParams) {
+      if (message.role === "user" && message.imageGenerationParams) {
         const params = message.imageGenerationParams;
         if (params.originalSource) {
           // Get the model from the corresponding assistant message or conversation
-          const assistantMessage = currentConversation.messages.find(m => 
-            m.role === 'assistant' && 
-            m.messageType === 'image_generation' &&
-            m.imageGenerationParams?.prompt === params.prompt
+          const assistantMessage = currentConversation.messages.find(
+            (m) =>
+              m.role === "assistant" &&
+              m.messageType === "image_generation" &&
+              m.imageGenerationParams?.prompt === params.prompt
           );
-          
+
           return {
             model: assistantMessage?.model || currentConversation.model,
             source: params.originalSource,
-            providerId: params.originalProviderId || '',
+            providerId: params.originalProviderId || "",
           };
         }
       }
@@ -160,8 +166,8 @@ const ChatInput = ({
     if (currentConversation.model) {
       return {
         model: currentConversation.model,
-        source: currentConversation.source === 'server' ? 'system' : 'custom',
-        providerId: '',
+        source: currentConversation.source === "server" ? "system" : "custom",
+        providerId: "",
       };
     }
 
@@ -594,12 +600,13 @@ const ChatInput = ({
     if (!currentConversation || modelOptions.length === 0) return;
 
     const conversationId = currentConversation.id;
-    
+
     // Check if this is a new conversation or if we haven't auto-selected for this conversation yet
-    const isNewConversation = lastProcessedConversationIdRef.current !== conversationId;
-    
+    const isNewConversation =
+      lastProcessedConversationIdRef.current !== conversationId;
+
     // Only auto-select model if:
-    // 1. It's a new conversation AND 
+    // 1. It's a new conversation AND
     // 2. User hasn't manually selected a model for this conversation yet
     if (!isNewConversation && userHasManuallySelectedModelRef.current) {
       // User has manually selected a model for this conversation, don't override
@@ -614,10 +621,10 @@ const ChatInput = ({
     }
 
     const { model, source, providerId } = lastMessageModelInfo;
-    
+
     // Check if the model from the conversation is different from currently selected
-    const isDifferentModel = selectedModel !== model || 
-                            selectedProviderId !== (providerId || '');
+    const isDifferentModel =
+      selectedModel !== model || selectedProviderId !== (providerId || "");
 
     // console.log('Model auto-selection check:', {
     //   conversation: conversationId,
@@ -633,11 +640,12 @@ const ChatInput = ({
       setIsLoadingModelFromConversation(true);
 
       // Check if the model exists in our available models
-      const modelExists = modelOptions.some(option => {
+      const modelExists = modelOptions.some((option) => {
         let found = true;
         if (selectedProviderId) {
           if (!option?.providerId) return false;
-          found = found && (option.providerId || '') === (selectedProviderId || '');
+          found =
+            found && (option.providerId || "") === (selectedProviderId || "");
         }
 
         found = found && option.value === model;
@@ -649,11 +657,11 @@ const ChatInput = ({
       if (modelExists) {
         // Model exists, select it
         setSelectedModel(model);
-        setSelectedProviderId(providerId || '');
-        
+        setSelectedProviderId(providerId || "");
+
         // Mark that we've auto-selected for this conversation
         hasAutoSelectedModelRef.current = true;
-        
+
         // Notify parent component
         if (onModelSelect) {
           onModelSelect(model, source, providerId);
@@ -663,10 +671,10 @@ const ChatInput = ({
         const fallbackModel = DEFAULT_MODEL_ID;
         // console.log('Model not found, falling back to:', fallbackModel);
         setSelectedModel(fallbackModel);
-        setSelectedProviderId('');
-        
+        setSelectedProviderId("");
+
         if (onModelSelect) {
-          onModelSelect(fallbackModel, 'system', '');
+          onModelSelect(fallbackModel, "system", "");
         }
       }
 
@@ -678,12 +686,19 @@ const ChatInput = ({
 
     // Update the processed conversation ID
     lastProcessedConversationIdRef.current = conversationId;
-    
+
     // Reset manual selection flag for new conversations
     if (isNewConversation) {
       userHasManuallySelectedModelRef.current = false;
     }
-  }, [currentConversation, modelOptions, selectedModel, selectedProviderId, getLastMessageModel, onModelSelect]);
+  }, [
+    currentConversation,
+    modelOptions,
+    selectedModel,
+    selectedProviderId,
+    getLastMessageModel,
+    onModelSelect,
+  ]);
 
   // Handle image upload
   const handleImageUpload = useCallback(
@@ -801,7 +816,10 @@ const ChatInput = ({
           if (inputMode === "chat") {
             // Use chat mode logic
             const capabilities = getCurrentModelCapabilities();
-            if (!capabilities || (!capabilities.hasVision && !capabilities.hasImageEditing)) {
+            if (
+              !capabilities ||
+              (!capabilities.hasVision && !capabilities.hasImageEditing)
+            ) {
               return; // Silently ignore
             }
             e.preventDefault();
@@ -814,7 +832,12 @@ const ChatInput = ({
         }
       }
     },
-    [inputMode, getCurrentModelCapabilities, handleImageUpload, handleImagePasteInGeneration]
+    [
+      inputMode,
+      getCurrentModelCapabilities,
+      handleImageUpload,
+      handleImagePasteInGeneration,
+    ]
   );
 
   // Handle image generation click
@@ -1097,9 +1120,10 @@ const ChatInput = ({
     };
   }, [inputMode, handleImageGenerateClick]);
 
-  const selectedModelLabel = isLoadingModelFromConversation 
+  const selectedModelLabel = isLoadingModelFromConversation
     ? "Loading model..."
-    : (modelOptions.find((model) => model.value === selectedModel)?.label || "Gemini 1.5 Flash");
+    : modelOptions.find((model) => model.value === selectedModel)?.label ||
+      "Gemini 1.5 Flash";
 
   // Animation transition class helper
   const transitionClass = animationsDisabled
@@ -1255,9 +1279,7 @@ const ChatInput = ({
   };
 
   return (
-    <div
-      className="bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg"
-    >
+    <div className="bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg">
       {/* Image Preview Section */}
       {inputMode === "image_generation" && uploadedImageForEditing && (
         <div className="mb-3">
@@ -1313,7 +1335,10 @@ const ChatInput = ({
               ? "Describe the image you want to generate..."
               : "Type your message here..."
           }
-          className="w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 text-sm max-h-32 overflow-y-auto thin-scrollbar min-h-12"
+          className={`w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 ${isMobile ? "text-sm" : ""} max-h-32 overflow-y-auto thin-scrollbar min-h-12`}
+          style={isMobile ? {} : {
+            fontSize: ".875rem",
+          }}
           rows={1}
         />
       </div>
@@ -1325,16 +1350,24 @@ const ChatInput = ({
           <div ref={dropdownRef} className="relative">
             <button
               onClick={() => {
-                if (isLoadingSystemModels || isLoadingModelFromConversation) return;
+                if (isLoadingSystemModels || isLoadingModelFromConversation)
+                  return;
                 setIsModelDropdownOpen(!isModelDropdownOpen);
               }}
-              className={`flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48 cursor-pointer`}
+              className={`flex items-center gap-2 py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48 cursor-pointer ${isMobile ? "text-sm" : ""}`}
+              style={isMobile ? {} : {
+                fontSize: ".875rem",
+              }}
             >
               <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
                 {selectedModelLabel}
               </span>
               {isLoadingSystemModels || isLoadingModelFromConversation ? (
-                <LoadingIndicator size="sm" color="primary" className="text-zinc-500 dark:text-zinc-400" />
+                <LoadingIndicator
+                  size="sm"
+                  color="primary"
+                  className="text-zinc-500 dark:text-zinc-400"
+                />
               ) : (
                 <ChevronDown
                   className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
@@ -1361,7 +1394,10 @@ const ChatInput = ({
                         placeholder="Search models..."
                         value={modelSearchQuery}
                         onChange={(e) => setModelSearchQuery(e.target.value)}
-                        className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                        className={`w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors ${isMobile ? "text-sm" : ""}`}
+                        style={isMobile ? {} : {
+                          fontSize: ".875rem",
+                        }}
                         autoFocus={!isMobile}
                       />
                     </div>
@@ -1379,15 +1415,21 @@ const ChatInput = ({
                   >
                     <div className="py-1">
                       {isLoadingSystemModels &&
-                        modelOptions.filter((opt) => opt.source === "system").length === 0 && (
-                          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                        modelOptions.filter((opt) => opt.source === "system")
+                          .length === 0 && (
+                          <div className={`px-3 py-2 text-zinc-500 dark:text-zinc-400 flex items-center gap-2 ${isMobile ? "text-sm" : ""}`}
+                               style={isMobile ? {} : {
+                                 fontSize: ".875rem",
+                               }}>
                             <LoadingIndicator size="sm" color="primary" />
                             Loading models...
                           </div>
                         )}
                       {modelOptions
                         .filter((option) =>
-                          option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                          option.label
+                            .toLowerCase()
+                            .includes(modelSearchQuery.toLowerCase())
                         )
                         .map((option) => {
                           const isSelected =
@@ -1395,16 +1437,23 @@ const ChatInput = ({
                             selectedProviderId === (option.providerId || "");
                           return (
                             <button
-                              key={`${option.value}-${option.providerId || "system"}`}
+                              key={`${option.value}-${
+                                option.providerId || "system"
+                              }`}
                               onClick={() => handleModelSelect(option)}
-                              className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                              className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors ${
                                 isSelected
                                   ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
                                   : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                              }`}
+                              } ${isMobile ? "text-sm" : ""}`}
+                              style={isMobile ? {} : {
+                                fontSize: ".875rem",
+                              }}
                               title={option.label}
                             >
-                              <span className="truncate flex-1 mr-2">{option.label}</span>
+                              <span className="truncate flex-1 mr-2">
+                                {option.label}
+                              </span>
                               <div className="flex items-center gap-2">
                                 {getCapabilityIcons(option)}
                               </div>
@@ -1412,10 +1461,15 @@ const ChatInput = ({
                           );
                         })}
                       {modelOptions.filter((option) =>
-                        option.label.toLowerCase().includes(modelSearchQuery.toLowerCase())
+                        option.label
+                          .toLowerCase()
+                          .includes(modelSearchQuery.toLowerCase())
                       ).length === 0 &&
                         modelSearchQuery && (
-                          <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 text-center">
+                          <div className={`px-3 py-2 text-zinc-500 dark:text-zinc-400 text-center ${isMobile ? "text-sm" : ""}`}
+                               style={isMobile ? {} : {
+                                 fontSize: ".875rem",
+                               }}>
                             No models found matching "{modelSearchQuery}"
                           </div>
                         )}
@@ -1433,8 +1487,11 @@ const ChatInput = ({
             const capabilities = getCurrentModelCapabilities();
             return (
               capabilities &&
-              ((inputMode === "image_generation" && capabilities.hasImageEditing) ||
-                (inputMode === "chat" && capabilities.hasVision && !capabilities.hasImageEditing))
+              ((inputMode === "image_generation" &&
+                capabilities.hasImageEditing) ||
+                (inputMode === "chat" &&
+                  capabilities.hasVision &&
+                  !capabilities.hasImageEditing))
             );
           })() && (
             <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2.5 rounded-lg">
@@ -1470,7 +1527,10 @@ const ChatInput = ({
             <div ref={sizeDropdownRef} className="flex items-stretch relative">
               <button
                 onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                className="flex items-center gap-2 text-sm py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer"
+                className={`flex items-center gap-2 py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer ${isMobile ? "text-sm" : ""}`}
+                style={isMobile ? {} : {
+                  fontSize: ".875rem",
+                }}
                 disabled={disabled || isImageGenerating}
                 title={selectedImageSize}
               >
@@ -1494,25 +1554,30 @@ const ChatInput = ({
                     className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none bg-[#fbf9f7] dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
                   >
                     <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
-                      {ImageGenerationService.getImageSizeOptions().map((option) => {
-                        const isSelected = selectedImageSize === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            onClick={() => {
-                              setSelectedImageSize(option.value);
-                              setIsSizeDropdownOpen(false);
-                            }}
-                            className={`cursor-pointer w-full text-left px-3 py-2 text-sm transition-colors ${
-                              isSelected
-                                ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
-                                : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
+                      {ImageGenerationService.getImageSizeOptions().map(
+                        (option) => {
+                          const isSelected = selectedImageSize === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              onClick={() => {
+                                setSelectedImageSize(option.value);
+                                setIsSizeDropdownOpen(false);
+                              }}
+                              className={`cursor-pointer w-full text-left px-3 py-2 transition-colors ${
+                                isSelected
+                                  ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
+                                  : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
+                              } ${isMobile ? "text-sm" : ""}`}
+                              style={isMobile ? {} : {
+                                fontSize: ".875rem",
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        }
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -1528,13 +1593,22 @@ const ChatInput = ({
                 const capabilities = getCurrentModelCapabilities();
                 if (inputMode === "image_generation") {
                   if (capabilities?.hasImageEditing) {
-                    return prompt.trim() && uploadedImageForEditing && !disabled && !isImageGenerating;
+                    return (
+                      prompt.trim() &&
+                      uploadedImageForEditing &&
+                      !disabled &&
+                      !isImageGenerating
+                    );
                   } else {
                     return prompt.trim() && !disabled && !isImageGenerating;
                   }
                 } else {
                   if (capabilities?.hasVision) {
-                    return (prompt.trim() || attachments.length > 0) && !disabled && !isUploadingImage;
+                    return (
+                      (prompt.trim() || attachments.length > 0) &&
+                      !disabled &&
+                      !isUploadingImage
+                    );
                   } else {
                     return prompt.trim() && !disabled && !isUploadingImage;
                   }
@@ -1549,13 +1623,22 @@ const ChatInput = ({
               const capabilities = getCurrentModelCapabilities();
               if (inputMode === "image_generation") {
                 if (capabilities?.hasImageEditing) {
-                  return !prompt.trim() || !uploadedImageForEditing || disabled || isImageGenerating;
+                  return (
+                    !prompt.trim() ||
+                    !uploadedImageForEditing ||
+                    disabled ||
+                    isImageGenerating
+                  );
                 } else {
                   return !prompt.trim() || disabled || isImageGenerating;
                 }
               } else {
                 if (capabilities?.hasVision) {
-                  return (!prompt.trim() && attachments.length === 0) || disabled || isUploadingImage;
+                  return (
+                    (!prompt.trim() && attachments.length === 0) ||
+                    disabled ||
+                    isUploadingImage
+                  );
                 } else {
                   return !prompt.trim() || disabled || isUploadingImage;
                 }

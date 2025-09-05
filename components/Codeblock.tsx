@@ -131,7 +131,7 @@ export const Codeblock = memo<CodeblockProps>(({
   // Inline code
   if (inline || isSingleLineInline) {
     return (
-      <code className={`rounded-md border border-primary/20 bg-primary/10 px-1 py-0.5 font-medium font-mono text-foreground/80 ${isMobile ? 'text-xs' : 'text-sm'} leading-4`}>
+      <code className={`rounded-md border border-primary/20 bg-primary/10 px-1 py-0.5 font-medium font-mono text-foreground/80 text-sm leading-4`}>
         {children}
       </code>
     );

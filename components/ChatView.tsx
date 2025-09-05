@@ -377,7 +377,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               WebkitMaskImage:
                 "linear-gradient(to bottom, transparent 0px, black 16px, black 100%)",
             }}
-            className="bg-[#f9f9f9] dark:bg-[#1c1c1c] text-center absolute bottom-0 pb-2 pt-6 left-0 right-0 text-zinc-400 dark:text-zinc-500 text-xs"
+            className="bg-[#f9f9f9] dark:bg-[#1c1c1c] text-[.875rem] text-center absolute bottom-0 pb-[6px] pt-6 left-0 right-0 text-zinc-400 dark:text-zinc-500"
           >
             AI can make mistakes. Please verify important information.
           </div>
@@ -394,7 +394,6 @@ const ChatView: React.FC<ChatViewProps> = ({
             disabled={streamingState.isStreaming || isLoading}
             animationsDisabled={animationsDisabled}
             currentConversation={currentConversation}
-            isMobile={isMobile}
           />
         </div>
       </div>

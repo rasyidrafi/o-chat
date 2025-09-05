@@ -8,6 +8,7 @@ import { useChat } from "../hooks/useChat";
 import { useAuth } from "../contexts/AuthContext";
 import { SkeletonConversationGroup } from "./ui/Skeleton";
 import { Tab as SettingsTab } from "./SettingsPage";
+import { useSettingsContext } from "../contexts/SettingsContext";
 
 interface SidebarProps {
   isMobileMenuOpen: boolean;
@@ -91,6 +92,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
   ) => {
     const location = useLocation();
     const { user, isSignedIn } = useAuth();
+    const { isMobile } = useSettingsContext();
 
     const {
       conversations,
@@ -300,7 +302,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     return (
       <aside
         ref={ref}
-        className={`shadow-sm p-2 fixed md:relative top-0 left-0 h-full flex flex-col bg-[#fcfcfc] dark:bg-[#121212] z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
+        className={`shadow-sm ${isMobile ? "p-1" : "p-2"} fixed md:relative top-0 left-0 h-full flex flex-col bg-[#fcfcfc] dark:bg-[#121212] z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         } w-64 ${isCollapsed ? "md:w-20" : ""}`}
       >
@@ -470,7 +472,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                 )} */}
 
               {!localSearchQuery.trim() && conversations.length === 0 && (
-                <div className="flex items-center justify-center px-4 h-full text-center text-zinc-500 dark:text-zinc-400 text-sm py-8">
+                <div className="text-[.875rem] font-[500] flex items-center justify-center px-4 h-full text-center text-zinc-500 dark:text-zinc-400 py-8">
                   No conversations yet.
                   <br />
                   Start a new chat to begin!
@@ -505,16 +507,16 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           ) : (
             <button
               onClick={onLoginClick}
-              className={`truncate flex items-center justify-center w-full text-zinc-900 dark:text-white font-semibold py-3.5 rounded-lg hover:bg-[#e3dedb] dark:hover:bg-zinc-700 transition-colors ${
+              className={`text-[#202020] dark:text-[#fafafa] truncate flex items-center justify-center w-full py-3.5 rounded-lg transition-colors hover:bg-[#e3dedb] dark:hover:bg-zinc-800 cursor-pointer ${
                 isCollapsed ? "px-2.5" : "px-4 gap-2"
               }`}
             >
               {isCollapsed ? (
-                <User className="w-5 h-5" />
+                <User className="w-4 h-4" />
               ) : (
                 <>
-                  <LogIn className="w-5 h-5" />
-                  Login
+                  <LogIn className="w-4 h-4" />
+                  <span className="text-[.875rem] font-[500]">Login</span>
                 </>
               )}
             </button>
