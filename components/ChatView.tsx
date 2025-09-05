@@ -77,7 +77,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       attachments?: any[]
     ) => {
       sendMessage(message, model, source, providerId, attachments);
-      
+
       // Force scroll to bottom after sending a message with a slight delay
       // to ensure the message is added to the DOM
       setTimeout(() => {
@@ -99,7 +99,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       params?: any
     ) => {
       generateImage(prompt, imageUrl, model, source, providerId, params);
-      
+
       // Force scroll to bottom after generating image
       setTimeout(() => {
         if (messageListRef.current) {
@@ -118,7 +118,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         selectedModelInfo.source,
         selectedModelInfo.providerId
       );
-      
+
       // Force scroll to bottom after prompt selection
       setTimeout(() => {
         if (messageListRef.current) {
@@ -239,7 +239,9 @@ const ChatView: React.FC<ChatViewProps> = ({
 
   const chatInputPadding = useMemo(
     () => ({
-      paddingLeft: isMobile ? "0" : `${sidebarWidth + 16 + (isSidebarCollapsed ? 80 : 0)}px`,
+      paddingLeft: isMobile
+        ? "0"
+        : `${sidebarWidth + 16 + (isSidebarCollapsed ? 80 : 0)}px`,
       paddingRight: isMobile ? "0" : `${16 + (isSidebarCollapsed ? 80 : 0)}px`,
     }),
     [isMobile, sidebarWidth, isSidebarCollapsed]
@@ -366,8 +368,23 @@ const ChatView: React.FC<ChatViewProps> = ({
           )}
         </AnimatePresence>
 
+        {!isMobile && (
+          <div
+            style={{
+              ...chatInputPadding,
+              maskImage:
+                "linear-gradient(to bottom, transparent 0px, black 16px, black 100%)",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0px, black 16px, black 100%)",
+            }}
+            className="bg-[#f8f4f1] dark:bg-[#1c1c1c] text-center absolute bottom-0 pb-2 pt-6 left-0 right-0 text-zinc-400 dark:text-zinc-500 text-xs"
+          >
+            AI can make mistakes. Please verify important information.
+          </div>
+        )}
+
         <div
-          className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"
+          className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-7.5"
           style={chatInputPadding}
         >
           <ChatInput

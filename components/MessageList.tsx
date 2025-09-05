@@ -56,7 +56,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
     });
     const rafId = useRef<number | null>(null);
     const prevMessages = usePrevious(messages);
-    
+
     // Add throttling for scroll state updates to reduce button flickering
     const lastUpdateTime = useRef<number>(0);
     const SCROLL_UPDATE_THROTTLE = isMobile ? 100 : 50; // Less frequent updates on mobile
@@ -67,13 +67,15 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       if (!container || !onScrollStateChange) return;
 
       const now = performance.now();
-      
+
       // Reduce throttling during streaming for better responsiveness
       const isStreaming = streamingMessageId !== null;
-      const throttleTime = isStreaming 
-        ? (isMobile ? 50 : 25)  // More frequent checks during streaming
+      const throttleTime = isStreaming
+        ? isMobile
+          ? 50
+          : 25 // More frequent checks during streaming
         : SCROLL_UPDATE_THROTTLE;
-      
+
       // Throttle updates, but be more responsive during streaming
       if (now - lastUpdateTime.current < throttleTime) {
         rafId.current = null;
@@ -85,9 +87,9 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       // During streaming, always check even with smaller changes
       const scrollDiff = Math.abs(scrollTop - scrollState.current.scrollTop);
       const heightChanged = scrollHeight !== scrollState.current.scrollHeight;
-      
+
       if (
-        !isStreaming && 
+        !isStreaming &&
         scrollDiff < 10 && // Only update if scroll changed by more than 10px (non-streaming)
         !heightChanged &&
         clientHeight === scrollState.current.clientHeight
@@ -119,7 +121,12 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       }
 
       rafId.current = null;
-    }, [isMobile, onScrollStateChange, SCROLL_UPDATE_THROTTLE, streamingMessageId]);
+    }, [
+      isMobile,
+      onScrollStateChange,
+      SCROLL_UPDATE_THROTTLE,
+      streamingMessageId,
+    ]);
 
     const handleScroll = useCallback(() => {
       if (!rafId.current) {
@@ -175,7 +182,6 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       scrollToBottom,
     ]);
 
-
     // --- Content Growth Detection During Streaming ---
     useEffect(() => {
       // When content is streaming, we need to continuously check scroll position
@@ -220,14 +226,17 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
             ))}
           </AnimatePresence>
           {/* Bottom padding + sentinel for scroll tracking */}
-          <div ref={sentinelRef} className="h-32 md:h-36">
-            {" "}
-          </div>
+          {isMobile && (
+            <div className="mt-4 text-zinc-400 -mb-4 dark:text-zinc-500 text-xs text-right">
+              AI can make mistakes. Please verify important information.
+            </div>
+          )}
+          <div ref={sentinelRef} className="h-40 md:h-45"></div>
 
           {/* Load more messages indicator (if needed) */}
-          {isLoadingMoreMessages && (
+          {/* {isLoadingMoreMessages && (
             <div className="text-center p-4"> Loading more...</div>
-          )}
+          )} */}
         </div>
       </div>
     );
