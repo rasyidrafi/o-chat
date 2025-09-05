@@ -11,6 +11,7 @@ import {
   Desktop,
   Menu,
   ArrowDown,
+  Search,
 } from "./Icons";
 import { Theme } from "../hooks/useSettings";
 import { Tab as SettingsTab } from "./SettingsPage";
@@ -25,6 +26,7 @@ interface ChatViewProps {
   toggleSidebar: () => void;
   isSidebarCollapsed: boolean;
   onOpenSettings: (tab?: SettingsTab) => void;
+  onOpenSearchCenter: () => void;
   theme: Theme;
   toggleTheme: () => void;
   chat: ReturnType<typeof useChat>;
@@ -35,6 +37,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   toggleSidebar,
   isSidebarCollapsed,
   onOpenSettings,
+  onOpenSearchCenter,
   theme,
   toggleTheme,
   chat,
@@ -241,8 +244,8 @@ const ChatView: React.FC<ChatViewProps> = ({
     () => ({
       paddingLeft: isMobile
         ? "0"
-        : `${sidebarWidth + 16 + (isSidebarCollapsed ? 80 : 0)}px`,
-      paddingRight: isMobile ? "0" : `${16 + (isSidebarCollapsed ? 80 : 0)}px`,
+        : `${sidebarWidth + 16 + (isSidebarCollapsed ? 90 : 0)}px`,
+      paddingRight: isMobile ? "0" : `${16 + (isSidebarCollapsed ? 90 : 0)}px`,
     }),
     [isMobile, sidebarWidth, isSidebarCollapsed]
   );
@@ -275,14 +278,24 @@ const ChatView: React.FC<ChatViewProps> = ({
           left: "10px",
         }}
       >
-        <button
-          onClick={onMenuClick}
-          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
-          style={buttonSizeStyle}
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-        </button>
+        <div className="flex items-center rounded-lg border-none">
+          <button
+            onClick={onMenuClick}
+            className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
+            style={buttonSizeStyle}
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+          </button>
+          <button
+            onClick={onOpenSearchCenter}
+            className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
+            style={buttonSizeStyle}
+            aria-label="Search conversations"
+          >
+            <Search className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+          </button>
+        </div>
       </div>
 
       {/* Top-right positioned buttons */}
@@ -316,7 +329,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         {isLoading || isLoadingMessages ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <LoadingState
-              message={"Loading conversation..."}
+              message={""}
               size="md"
               centerContent={true}
             />
@@ -352,7 +365,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: animationsDisabled ? 0 : 0.2 }}
-              className="absolute -top-14 left-0 right-0 flex justify-center pointer-events-auto"
+              className="absolute -top-13 left-0 right-0 flex justify-center pointer-events-auto"
               style={chatInputPadding}
             >
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
@@ -368,23 +381,8 @@ const ChatView: React.FC<ChatViewProps> = ({
           )}
         </AnimatePresence>
 
-        {!isMobile && (
-          <div
-            style={{
-              ...chatInputPadding,
-              maskImage:
-                "linear-gradient(to bottom, transparent 0px, black 16px, black 100%)",
-              WebkitMaskImage:
-                "linear-gradient(to bottom, transparent 0px, black 16px, black 100%)",
-            }}
-            className="bg-[#f9f9f9] dark:bg-[#1c1c1c] text-[.875rem] text-center absolute bottom-0 pb-[6px] pt-6 left-0 right-0 text-zinc-400 dark:text-zinc-500"
-          >
-            AI can make mistakes. Please verify important information.
-          </div>
-        )}
-
         <div
-          className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-7.5"
+          className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-[8px]"
           style={chatInputPadding}
         >
           <ChatInput

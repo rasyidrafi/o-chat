@@ -1,12 +1,11 @@
 import React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { Search, User, X, LogIn, Plus, Check, Edit } from "./Icons";
+import { Search, User, X, LogIn, Plus, Check, CommandK } from "./Icons";
 import { User as FirebaseUser } from "firebase/auth";
 import Button from "./ui/Button";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../contexts/AuthContext";
-import { SkeletonConversationGroup } from "./ui/Skeleton";
 import { Tab as SettingsTab } from "./SettingsPage";
 import { useSettingsContext } from "../contexts/SettingsContext";
 
@@ -107,12 +106,11 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
       filteredConversations,
       // isSearching,
       // searchConversations,
-      clearSearch,
     } = chat;
     const [confirmingDelete, setConfirmingDelete] = useState<string | null>(
       null
     );
-    const [localSearchQuery, setLocalSearchQuery] = useState("");
+    const [localSearchQuery] = useState("");
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -162,10 +160,34 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
       };
     }, []);
 
+    // Keyboard shortcut handler for Command/Ctrl + K
+    useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+        if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+          event.preventDefault();
+          onOpenSearchCenter();
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+      
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [onOpenSearchCenter]);
+
     // Determine which conversations to display (memoized)
     const displayConversations = React.useMemo(() => {
       return localSearchQuery.trim() ? filteredConversations : conversations;
     }, [localSearchQuery, filteredConversations, conversations]);
+
+    // Platform detection for keyboard shortcut display
+    const [isMac, setIsMac] = React.useState(false);
+    
+    React.useEffect(() => {
+      setIsMac(navigator?.platform?.toLowerCase().includes('mac') || false);
+    }, []);
 
     // Handle scroll to load more conversations
     useEffect(() => {
@@ -331,9 +353,14 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
             {isCollapsed ? (
               <Search className="w-4 h-4" />
             ) : (
-              <div className="text-[.875rem] font-[500] flex items-center justify-start gap-2 w-full">
-                <Search className="w-4 h-4 flex-shrink-0" />
-                <span>Search chats</span>
+              <div className="text-[.875rem] font-[500] flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <Search className="w-4 h-4 flex-shrink-0" />
+                  <span>Search chats</span>
+                </div>
+                <div className="flex items-center gap-1 text-[.75rem]">
+                  <CommandK isMac={isMac} />
+                </div>
               </div>
             )}
           </Button>

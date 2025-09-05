@@ -20,9 +20,9 @@ const LoadingState: React.FC<LoadingStateProps> = ({
     : 'flex flex-col items-center';
 
   const textSizeClasses = {
-    sm: 'text-xs',
-    md: 'text-sm', 
-    lg: 'text-base'
+    sm: 'text-[.875rem]',
+    md: 'text-[.875rem]', 
+    lg: 'text-[.875rem]'
   };
 
   const spinnerSizeClasses = {
@@ -46,9 +46,9 @@ const LoadingState: React.FC<LoadingStateProps> = ({
 
       {/* Text content */}
       <div className="space-y-1 text-center">
-        <h3 className={`${textSizeClasses[size]} font-medium text-zinc-900 dark:text-zinc-100`}>
+        <span className={`${textSizeClasses[size]} text-zinc-900 dark:text-zinc-100`}>
           {message}
-        </h3>
+        </span>
         {subtitle && (
           <p className={`${size === 'sm' ? 'text-xs' : 'text-sm'} text-zinc-500 dark:text-zinc-400 max-w-xs`}>
             {subtitle}

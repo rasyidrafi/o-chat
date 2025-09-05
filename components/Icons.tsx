@@ -327,3 +327,20 @@ export const ArrowDown: React.FC<IconProps> = ({ size = 24, ...props }) => (
     <polyline points="19 12 12 19 5 12" />
   </svg>
 );
+
+export const Chat: React.FC<IconProps> = ({ size = 24, ...props }) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+export const CommandK: React.FC<IconProps & { isMac?: boolean }> = ({ isMac = true, ...props }) => (
+  <div className="flex items-center gap-0.5 text-[10px] font-mono opacity-70" {...props}>
+    <span className="px-1 py-0.5 bg-gray-200 dark:bg-[#1f1f1f] border border-gray-300 dark:border-gray-600 rounded text-[10px] font-medium leading-none">
+      {isMac ? '⌘' : 'Ctrl'}
+    </span>
+    <span className="px-1 py-0.5 bg-gray-200 dark:bg-[#1f1f1f] border border-gray-300 dark:border-gray-600 rounded text-[10px] font-medium leading-none">
+      K
+    </span>
+  </div>
+);

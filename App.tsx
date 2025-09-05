@@ -135,7 +135,7 @@ const AppContent: React.FC<{
       await signOut();
       // Clear current conversation to show welcome page
       chat.selectConversation(null);
-      setUi((prev) => ({ ...prev, isConfirmDialogOpen: false }));
+      setIsConfirmDialogOpen(false);
       closeSettings();
     } catch (error) {
       console.error("Error signing out:", error);
@@ -194,6 +194,9 @@ const AppContent: React.FC<{
                 }
                 isSidebarCollapsed={ui.isSidebarCollapsed}
                 onOpenSettings={openSettings}
+                onOpenSearchCenter={() =>
+                  setUi((prev) => ({ ...prev, isSearchCenterOpen: true }))
+                }
                 theme={settings.theme}
                 toggleTheme={toggleTheme}
                 chat={chat}
@@ -217,6 +220,9 @@ const AppContent: React.FC<{
                   }
                   isSidebarCollapsed={ui.isSidebarCollapsed}
                   onOpenSettings={openSettings}
+                  onOpenSearchCenter={() =>
+                    setUi((prev) => ({ ...prev, isSearchCenterOpen: true }))
+                  }
                   theme={settings.theme}
                   toggleTheme={toggleTheme}
                   chat={chat}
@@ -269,6 +275,9 @@ const AppContent: React.FC<{
         isOpen={ui.isSearchCenterOpen}
         onClose={() =>
           setUi((prev) => ({ ...prev, isSearchCenterOpen: false }))
+        }
+        onCloseMobileSidebar={() =>
+          setUi((prev) => ({ ...prev, isMobileMenuOpen: false }))
         }
         chat={chat}
       />
