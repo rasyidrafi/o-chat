@@ -42,32 +42,29 @@ const UserAvatar: React.FC<{
     return "U";
   };
 
-  // Generate a consistent background color based on user info
+  // Generate a consistent background color based on user info using theme colors
   const getBackgroundColor = () => {
-    const colors = [
-      "bg-red-500",
-      "bg-blue-500",
-      "bg-green-500",
-      "bg-yellow-500",
-      "bg-purple-500",
-      "bg-pink-500",
-      "bg-indigo-500",
-      "bg-teal-500",
-    ];
     const userString = user.displayName || user.email || user.uid;
     const hash = userString.split("").reduce((a, b) => {
       a = (a << 5) - a + b.charCodeAt(0);
       return a & a;
     }, 0);
-    return colors[Math.abs(hash) % colors.length];
+    // Use a deterministic hue based on user data
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 50%)`;
   };
 
   // Always show initials to avoid Google's rate limiting issues
   // This provides a consistent, professional look without API dependency
   return (
     <div
-      className={`${className} ${getBackgroundColor()} flex items-center justify-center text-white font-semibold rounded-full`}
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
+      className={`${className} flex items-center justify-center text-white font-semibold rounded-full`}
+      style={{ 
+        width: size, 
+        height: size, 
+        fontSize: size * 0.4,
+        backgroundColor: getBackgroundColor()
+      }}
       title={`${user.displayName || user.email}`}
     >
       {getInitials()}
@@ -324,7 +321,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     return (
       <aside
         ref={ref}
-        className={`shadow-sm ${isMobile ? "p-1" : "p-2"} fixed md:relative top-0 left-0 h-full flex flex-col bg-[#fcfcfc] dark:bg-[#121212] z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
+        className={`shadow-sm ${isMobile ? "p-1" : "p-2"} fixed md:relative top-0 left-0 h-full flex flex-col bg-background z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         } w-64 ${isCollapsed ? "md:w-20" : ""}`}
       >
@@ -333,7 +330,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
             variant="primary"
             onClick={handleNewChat}
             disabled={isCreatingNewChat}
-            className={`truncate py-2 mx-2 my-2 px-2 text-[#fafafa]`}
+            className={`truncate py-2 mx-2 my-2 px-2 text-white`}
             size="none"
           >
             {isCollapsed ? (
@@ -347,7 +344,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           <Button
             variant="ghost"
             onClick={onOpenSearchCenter}
-            className={`shadow-sm text-[#707070] hover:text-[#202020] dark:text-[#898989] bg-[#fcfcfc] hover:bg-[#ededed] dark:bg-[#171717] hover:dark:bg-[#1b1b1b] hover:dark:text-[#fafafa] truncate text-sm py-2 mx-2 px-4 border-1 border-[#dfdfdf] dark:border-[#242424]`}
+            className={`shadow-sm text-foreground/70 hover:text-foreground bg-background hover:bg-muted truncate text-sm py-2 mx-2 px-4 border border-border`}
             size="none"
           >
             {isCollapsed ? (
@@ -393,7 +390,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
               {/* Show search results or all conversations */}
               {orderedGroups.map(([dateGroup, convs]) => (
                 <div key={dateGroup} className="mb-4 last:mb-0">
-                  <div className="font-[500] text-[#9a9a9a] text-[.75rem] dark:text-[#656565] mb-1.5 px-4">
+                  <div className="font-[500] text-foreground/60 text-[.75rem] mb-1.5 px-4">
                     {localSearchQuery.trim()
                       ? `${dateGroup} (${convs.length} result${
                           convs.length !== 1 ? "s" : ""
@@ -405,10 +402,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                       <li
                         key={conversation.id}
                         onClick={() => handleConversationSelect(conversation)}
-                        className={`mb-[4px] last:mb-0 text-[.875rem] hover:text-[#202020] hover:dark:text-[#fafafa] capitalize py-[6px] px-[8px] leading-[20px] rounded-lg cursor-pointer transition-colors group relative hover:bg-[#f4f4f4] hover:dark:bg-[#252525] ${
+                        className={`mb-[4px] last:mb-0 text-[.875rem] hover:text-foreground capitalize py-[6px] px-[8px] leading-[20px] rounded-lg cursor-pointer transition-colors group relative hover:bg-muted ${
                           activeConversationId === conversation.id
-                            ? "text-[#202020] dark:text-[#fafafa] bg-[#f4f4f4] dark:bg-[#252525]"
-                            : "text-[#707070] dark:text-[#898989]"
+                            ? "text-foreground bg-muted"
+                            : "text-foreground/70"
                         }`}
                       >
                         <div className="truncate">
@@ -453,7 +450,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                                 e.stopPropagation();
                                 handleDeleteConfirm(conversation.id);
                               }}
-                              className="p-1 hover:bg-red-500 hover:text-white rounded transition-colors cursor-pointer text-red-500 hover:text-white"
+                              className="p-1 hover:bg-red-500 hover:text-white rounded-[var(--radius)] transition-colors cursor-pointer text-red-500 hover:text-white"
                               aria-label="Confirm delete"
                             >
                               <Check className="w-3 h-3" />
@@ -462,7 +459,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                         ) : (
                           <button
                             onClick={(e) => handleDeleteClick(e, conversation)}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-lg transition-all shadow-sm cursor-pointer"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-muted hover:bg-muted/80 rounded-lg transition-all shadow-sm cursor-pointer"
                             aria-label="Delete conversation"
                           >
                             <X className="w-3 h-3" />
@@ -499,7 +496,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                 )} */}
 
               {!localSearchQuery.trim() && conversations.length === 0 && (
-                <div className="text-[.875rem] font-[500] flex items-center justify-center px-4 h-full text-center text-zinc-500 dark:text-zinc-400 py-8">
+                <div className="text-[.875rem] font-[500] flex items-center justify-center px-4 h-full text-center text-foreground/60 py-8">
                   No conversations yet.
                   <br />
                   Start a new chat to begin!
@@ -513,7 +510,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           {isSignedIn ? (
             <div className="flex flex-col">
               <div
-                className="flex truncate justify-center px-2 py-1 items-center rounded-lg hover:bg-[#e3dedb] dark:hover:bg-zinc-800 cursor-pointer"
+                className="flex truncate justify-center px-2 py-1 items-center rounded-lg hover:bg-muted cursor-pointer"
                 onClick={() => onOpenSettings?.("Account")}
               >
                 <UserAvatar user={user!} size={32} />
@@ -522,10 +519,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                     isCollapsed ? "md:hidden" : ""
                   }`}
                 >
-                  <div className="text-[#202020] dark:text-[#fafafa] text-[.875rem] truncate">
+                  <div className="text-foreground text-[.875rem] truncate">
                     {user!.displayName || user!.email}
                   </div>
-                  <div className="dark:text-[#898989] text-[#707070] text-[.75rem] truncate">
+                  <div className="text-foreground/70 text-[.75rem] truncate">
                     Signed In
                   </div>
                 </div>
@@ -534,7 +531,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           ) : (
             <button
               onClick={onLoginClick}
-              className={`text-[#202020] dark:text-[#fafafa] truncate flex items-center justify-center w-full py-3.5 rounded-lg transition-colors hover:bg-[#e3dedb] dark:hover:bg-zinc-800 cursor-pointer ${
+              className={`text-foreground truncate flex items-center justify-center w-full py-3.5 rounded-lg transition-colors hover:bg-muted cursor-pointer ${
                 isCollapsed ? "px-2.5" : "px-4 gap-2"
               }`}
             >

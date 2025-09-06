@@ -22,7 +22,7 @@ const AccountTab: React.FC<AccountTabProps> = ({ onOpenAuthModal, onSignOutClick
 
     return (
         <div>
-            <h2 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-white">Account</h2>
+            <h2 className="text-2xl font-bold mb-6 text-foreground">Account</h2>
             {isSignedIn ? (
                 <div className="space-y-4">
                     <p>You are signed in as <span className="font-semibold">{user?.email}</span>.</p>

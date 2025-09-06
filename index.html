@@ -36,6 +36,30 @@
           font + ", sans-serif"
         );
 
+        // Theme initialization
+        const themeData = localStorage.getItem("o-chat-theme");
+        if (themeData) {
+          try {
+            const parsedTheme = JSON.parse(themeData);
+            const { currentMode, config } = parsedTheme;
+            const colors = config.colors[currentMode];
+            
+            // Apply theme colors
+            Object.entries(colors).forEach(([key, value]) => {
+              document.documentElement.style.setProperty(`--color-${key}`, value);
+            });
+            
+            // Apply other theme properties
+            document.documentElement.style.setProperty('--radius', config.radius);
+            document.documentElement.style.setProperty('--shadow-sm', config.shadows.sm);
+            document.documentElement.style.setProperty('--shadow-md', config.shadows.md);
+            document.documentElement.style.setProperty('--shadow-lg', config.shadows.lg);
+            document.documentElement.style.setProperty('--spacing', config.spacing);
+          } catch (e) {
+            console.warn('Failed to parse theme data:', e);
+          }
+        }
+
         // Listen for system theme changes when using 'system' preference
         if (theme === "system") {
           window

@@ -17,17 +17,17 @@ const TabButtonGroup = <T extends string | number | boolean>({
     animationsDisabled = false 
 }: TabButtonGroupProps<T>) => {
     return (
-        <div className="inline-flex rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1">
+        <div className="inline-flex rounded-lg bg-muted p-1">
             {options.map((option) => (
                 <button
                     key={String(option.value)}
                     onClick={() => onChange(option.value)}
-                    className={`px-4 py-2 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-zinc-100 dark:focus:ring-offset-zinc-800 cursor-pointer ${
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-muted cursor-pointer ${
                         !animationsDisabled ? 'transition-all duration-200' : ''
                     } ${
                         value === option.value
-                            ? 'bg-white dark:bg-zinc-700 text-pink-500 shadow-sm'
-                            : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-700/50'
+                            ? 'bg-card text-primary shadow-sm'
+                            : 'text-foreground/60 hover:text-foreground hover:bg-card/50'
                     }`}
                 >
                     {option.label}

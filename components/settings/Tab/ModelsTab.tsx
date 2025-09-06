@@ -352,7 +352,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       {/* Server Models Section */}
       <section>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">
             Server Models
           </h2>
           <div className="flex flex-wrap gap-1.5 sm:gap-2">

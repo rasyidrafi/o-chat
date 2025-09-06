@@ -6,6 +6,7 @@ import FontPreview from "../FontPreview";
 import Button from "../../ui/Button";
 import { AppSettings } from "../../../hooks/useSettings";
 import HorizontalRule from "@/components/ui/HorizontalRule";
+import { ThemeSwitcher } from "../../ui/ThemeSwitcher";
 
 interface CustomizationTabProps {
   settings: AppSettings;
@@ -44,7 +45,7 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({
     <div>
       {/* Customization Section */}
       <div>
-        <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+        <h2 className="text-2xl font-bold mb-1 text-foreground">
           Customize O-Chat
         </h2>
         <div className="space-y-6 mt-6">
@@ -66,19 +67,33 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({
       {/* @ts-ignore */}
       <HorizontalRule className="my-8" />
 
+      {/* Theme Section */}
+      <div>
+        <h2 className="text-2xl font-bold mb-1 text-foreground">
+          Theme & Colors
+        </h2>
+        <p className="text-sm text-foreground/60 mb-6">
+          Customize the appearance and colors of your interface.
+        </p>
+        <ThemeSwitcher />
+      </div>
+
+      {/* @ts-ignore */}
+      <HorizontalRule className="my-8" />
+
       {/* Visual Options Section */}
       <div>
-        <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+        <h2 className="text-2xl font-bold mb-1 text-foreground">
           Visual Options
         </h2>
         <div className="space-y-6 mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
             <div className="space-y-6">
               <div className="space-y-2">
-                <h4 className="font-medium text-zinc-900 dark:text-white">
+                <h4 className="font-medium text-foreground">
                   Disable Animation
                 </h4>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-sm text-foreground/60">
                   Disables all animations throughout the app for a simpler
                   experience.
                 </p>
@@ -101,10 +116,10 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
             <div className="space-y-6">
               <div className="space-y-2">
-                <h4 className="font-medium text-zinc-900 dark:text-white">
+                <h4 className="font-medium text-foreground">
                   Font Size
                 </h4>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-sm text-foreground/60">
                   Adjust the overall text size throughout the app.
                 </p>
               </div>

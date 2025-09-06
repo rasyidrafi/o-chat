@@ -69,18 +69,18 @@ const ApiProviderCard = React.memo<{
   onChange: (value: string) => void;
 }>(({ title, consoleUrl, placeholder, consoleName, value, onChange }) => {
   return (
-    <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 space-y-4">
+    <div className="p-6 space-y-4 bg-muted rounded-lg">
       {/* Title line */}
       <div className="flex items-center gap-3">
-        <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-        <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+        <Key className="w-6 h-6 opacity-60" />
+        <h3 className="text-xl font-bold text-foreground">
           {title}
         </h3>
       </div>
 
       {/* Input line */}
       <div className="flex items-center gap-4">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[80px]">
+        <label className="text-sm font-medium min-w-[80px] text-foreground/80">
           API Key:
         </label>
         <input
@@ -88,7 +88,7 @@ const ApiProviderCard = React.memo<{
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+          className="w-full border py-2 px-3 text-sm focus:outline-none focus:ring-1 bg-background border-border rounded-lg text-foreground"
           autoComplete="new-password"
         />
       </div>
@@ -368,10 +368,10 @@ const ApiKeysTab: React.FC = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+      <h2 className="text-2xl font-bold mb-1 text-foreground">
         API Keys
       </h2>
-      <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+      <p className="opacity-70 mb-6">
         This app offers free chats using provided models. For other
         models, like those from Anthropic or OpenAI, you will need to provide
         your own API key below. Your keys are stored securely on your device and
@@ -406,13 +406,13 @@ const ApiKeysTab: React.FC = () => {
         />
 
         {/* OpenAI Compatible Providers Section */}
-        <div className="border-t border-zinc-200 dark:border-zinc-800 pt-6">
+        <div className="pt-6 border-t border-border">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+              <h3 className="text-xl font-bold text-foreground">
                 OpenAI Compatible Providers
               </h3>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+              <p className="text-sm text-foreground/60 mt-1">
                 Add custom API endpoints that are compatible with OpenAI's API
                 format.
               </p>
