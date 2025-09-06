@@ -87,13 +87,19 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     );
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Keyboard shortcut handler for Command/Ctrl + K
+    // Keyboard shortcut handler for Command/Ctrl + K and Ctrl + Shift + O
     useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
         // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
         if ((event.metaKey || event.ctrlKey) && event.key === "k") {
           event.preventDefault();
           onOpenSearchCenter();
+        }
+        
+        // Check for Ctrl + Shift + O to navigate to root
+        if (event.ctrlKey && event.shiftKey && event.key === "O") {
+          event.preventDefault();
+          handleNewChat();
         }
       };
 
