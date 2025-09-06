@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O-Chat Theme Demo</title>
+    <style>
+        :root {
+            /* Theme colors */
+            --color-primary: hsl(262.1 83.3% 57.8%);
+            --color-secondary: hsl(220 14.3% 95.9%);
+            --color-accent: hsl(220 14.3% 95.9%);
+            --color-background: hsl(0 0% 100%);
+            --color-foreground: hsl(222.2 84% 4.9%);
+            --color-muted: hsl(220 14.3% 95.9%);
+            --color-border: hsl(220 13% 91%);
+            --color-destructive: hsl(0 84.2% 60.2%);
+            --color-card: hsl(0 0% 100%);
+            --color-popover: hsl(0 0% 100%);
+            --color-input: hsl(220 13% 91%);
+            --color-ring: hsl(262.1 83.3% 57.8%);
+            
+            /* Theme properties */
+            --radius: 0.5rem;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --spacing: 0.25rem;
+        }
+
+        .dark {
+            --color-primary: hsl(263.4 70% 50.4%);
+            --color-secondary: hsl(215 27.9% 16.9%);
+            --color-accent: hsl(215 27.9% 16.9%);
+            --color-background: hsl(222.2 84% 4.9%);
+            --color-foreground: hsl(210 40% 98%);
+            --color-muted: hsl(215 27.9% 16.9%);
+            --color-border: hsl(215 27.9% 16.9%);
+            --color-destructive: hsl(0 62.8% 30.6%);
+            --color-card: hsl(222.2 84% 4.9%);
+            --color-popover: hsl(222.2 84% 4.9%);
+            --color-input: hsl(215 27.9% 16.9%);
+            --color-ring: hsl(263.4 70% 50.4%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--color-background);
+            color: var(--color-foreground);
+            font-family: "Outfit", sans-serif;
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .theme-demo {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--color-card);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .button {
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+            font-weight: 500;
+        }
+
+        .button:hover {
+            opacity: 0.9;
+        }
+
+        .button.secondary {
+            background: var(--color-secondary);
+            color: var(--color-foreground);
+            border: 1px solid var(--color-border);
+        }
+
+        .input {
+            background: var(--color-input);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 0.75rem;
+            color: var(--color-foreground);
+            width: 100%;
+        }
+
+        .theme-controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .theme-card {
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .theme-card:hover {
+            border-color: var(--color-primary);
+        }
+
+        .theme-card.active {
+            border-color: var(--color-primary);
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .colors-preview {
+            display: flex;
+            height: 1rem;
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .color-strip {
+            flex: 1;
+        }
+
+        h1, h2, h3 {
+            margin-bottom: 1rem;
+        }
+
+        .alert {
+            background: var(--color-muted);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .destructive {
+            background: var(--color-destructive);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="theme-demo">
+            <div class="card">
+                <h1>O-Chat Global Theming System Demo</h1>
+                <p>This demonstrates the global theming system with CSS variables that change colors, backgrounds, borders, radius, and shadows throughout the interface.</p>
+            </div>
+
+            <div class="card">
+                <h2>Theme Controls</h2>
+                <div class="theme-controls">
+                    <button class="button" onclick="toggleMode()">Toggle Light/Dark</button>
+                    <button class="button secondary" onclick="setTheme('ocean')">Ocean Theme</button>
+                    <button class="button secondary" onclick="setTheme('forest')">Forest Theme</button>
+                    <button class="button secondary" onclick="setTheme('sunset')">Sunset Theme</button>
+                    <button class="button secondary" onclick="setTheme('rose')">Rose Theme</button>
+                    <button class="button secondary" onclick="setTheme('default')">Default Theme</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>UI Components</h2>
+                <div style="display: grid; gap: 1rem;">
+                    <input type="text" class="input" placeholder="This input uses theme colors" />
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="button">Primary Button</button>
+                        <button class="button secondary">Secondary Button</button>
+                        <button class="button destructive">Destructive Button</button>
+                    </div>
+
+                    <div class="alert">
+                        This is an alert that uses muted background and border colors.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Border Radius Controls</h2>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button class="button secondary" onclick="setRadius('0rem')">No Radius</button>
+                    <button class="button secondary" onclick="setRadius('0.25rem')">Small</button>
+                    <button class="button secondary" onclick="setRadius('0.5rem')">Medium</button>
+                    <button class="button secondary" onclick="setRadius('0.75rem')">Large</button>
+                    <button class="button secondary" onclick="setRadius('1rem')">Extra Large</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Theme Preview Cards</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="theme-card" onclick="setTheme('default')">
+                        <strong>Default</strong>
+                        <div class="colors-preview">
+                            <div class="color-strip" style="background: hsl(262.1 83.3% 57.8%)"></div>
+                            <div class="color-strip" style="background: hsl(220 14.3% 95.9%)"></div>
+                            <div class="color-strip" style="background: hsl(0 0% 100%)"></div>
+                            <div class="color-strip" style="background: hsl(222.2 84% 4.9%)"></div>
+                        </div>
+                    </div>
+
+                    <div class="theme-card" onclick="setTheme('ocean')">
+                        <strong>Ocean</strong>
+                        <div class="colors-preview">
+                            <div class="color-strip" style="background: hsl(198 93% 60%)"></div>
+                            <div class="color-strip" style="background: hsl(195 20% 96%)"></div>
+                            <div class="color-strip" style="background: hsl(210 20% 98%)"></div>
+                            <div class="color-strip" style="background: hsl(207 90% 8%)"></div>
+                        </div>
+                    </div>
+
+                    <div class="theme-card" onclick="setTheme('forest')">
+                        <strong>Forest</strong>
+                        <div class="colors-preview">
+                            <div class="color-strip" style="background: hsl(142 76% 36%)"></div>
+                            <div class="color-strip" style="background: hsl(138 20% 96%)"></div>
+                            <div class="color-strip" style="background: hsl(135 20% 98%)"></div>
+                            <div class="color-strip" style="background: hsl(140 90% 8%)"></div>
+                        </div>
+                    </div>
+
+                    <div class="theme-card" onclick="setTheme('sunset')">
+                        <strong>Sunset</strong>
+                        <div class="colors-preview">
+                            <div class="color-strip" style="background: hsl(24 95% 53%)"></div>
+                            <div class="color-strip" style="background: hsl(25 20% 96%)"></div>
+                            <div class="color-strip" style="background: hsl(30 20% 98%)"></div>
+                            <div class="color-strip" style="background: hsl(20 90% 8%)"></div>
+                        </div>
+                    </div>
+
+                    <div class="theme-card" onclick="setTheme('rose')">
+                        <strong>Rose</strong>
+                        <div class="colors-preview">
+                            <div class="color-strip" style="background: hsl(330 81% 60%)"></div>
+                            <div class="color-strip" style="background: hsl(330 20% 96%)"></div>
+                            <div class="color-strip" style="background: hsl(335 20% 98%)"></div>
+                            <div class="color-strip" style="background: hsl(330 90% 8%)"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const themes = {
+            default: {
+                light: {
+                    primary: 'hsl(262.1 83.3% 57.8%)',
+                    secondary: 'hsl(220 14.3% 95.9%)',
+                    accent: 'hsl(220 14.3% 95.9%)',
+                    background: 'hsl(0 0% 100%)',
+                    foreground: 'hsl(222.2 84% 4.9%)',
+                    muted: 'hsl(220 14.3% 95.9%)',
+                    border: 'hsl(220 13% 91%)',
+                    destructive: 'hsl(0 84.2% 60.2%)',
+                    card: 'hsl(0 0% 100%)',
+                    popover: 'hsl(0 0% 100%)',
+                    input: 'hsl(220 13% 91%)',
+                    ring: 'hsl(262.1 83.3% 57.8%)',
+                },
+                dark: {
+                    primary: 'hsl(263.4 70% 50.4%)',
+                    secondary: 'hsl(215 27.9% 16.9%)',
+                    accent: 'hsl(215 27.9% 16.9%)',
+                    background: 'hsl(222.2 84% 4.9%)',
+                    foreground: 'hsl(210 40% 98%)',
+                    muted: 'hsl(215 27.9% 16.9%)',
+                    border: 'hsl(215 27.9% 16.9%)',
+                    destructive: 'hsl(0 62.8% 30.6%)',
+                    card: 'hsl(222.2 84% 4.9%)',
+                    popover: 'hsl(222.2 84% 4.9%)',
+                    input: 'hsl(215 27.9% 16.9%)',
+                    ring: 'hsl(263.4 70% 50.4%)',
+                }
+            },
+            ocean: {
+                light: {
+                    primary: 'hsl(198 93% 60%)',
+                    secondary: 'hsl(195 20% 96%)',
+                    accent: 'hsl(195 20% 92%)',
+                    background: 'hsl(210 20% 98%)',
+                    foreground: 'hsl(207 90% 8%)',
+                    muted: 'hsl(195 20% 92%)',
+                    border: 'hsl(195 20% 88%)',
+                    destructive: 'hsl(0 84.2% 60.2%)',
+                    card: 'hsl(210 20% 98%)',
+                    popover: 'hsl(210 20% 98%)',
+                    input: 'hsl(195 20% 88%)',
+                    ring: 'hsl(198 93% 60%)',
+                },
+                dark: {
+                    primary: 'hsl(198 93% 60%)',
+                    secondary: 'hsl(207 20% 12%)',
+                    accent: 'hsl(207 20% 15%)',
+                    background: 'hsl(207 30% 6%)',
+                    foreground: 'hsl(195 20% 95%)',
+                    muted: 'hsl(207 20% 15%)',
+                    border: 'hsl(207 20% 18%)',
+                    destructive: 'hsl(0 62.8% 30.6%)',
+                    card: 'hsl(207 30% 8%)',
+                    popover: 'hsl(207 30% 8%)',
+                    input: 'hsl(207 20% 18%)',
+                    ring: 'hsl(198 93% 60%)',
+                }
+            },
+            forest: {
+                light: {
+                    primary: 'hsl(142 76% 36%)',
+                    secondary: 'hsl(138 20% 96%)',
+                    accent: 'hsl(138 20% 92%)',
+                    background: 'hsl(135 20% 98%)',
+                    foreground: 'hsl(140 90% 8%)',
+                    muted: 'hsl(138 20% 92%)',
+                    border: 'hsl(138 20% 88%)',
+                    destructive: 'hsl(0 84.2% 60.2%)',
+                    card: 'hsl(135 20% 98%)',
+                    popover: 'hsl(135 20% 98%)',
+                    input: 'hsl(138 20% 88%)',
+                    ring: 'hsl(142 76% 36%)',
+                },
+                dark: {
+                    primary: 'hsl(142 76% 50%)',
+                    secondary: 'hsl(140 20% 12%)',
+                    accent: 'hsl(140 20% 15%)',
+                    background: 'hsl(140 30% 6%)',
+                    foreground: 'hsl(138 20% 95%)',
+                    muted: 'hsl(140 20% 15%)',
+                    border: 'hsl(140 20% 18%)',
+                    destructive: 'hsl(0 62.8% 30.6%)',
+                    card: 'hsl(140 30% 8%)',
+                    popover: 'hsl(140 30% 8%)',
+                    input: 'hsl(140 20% 18%)',
+                    ring: 'hsl(142 76% 50%)',
+                }
+            },
+            sunset: {
+                light: {
+                    primary: 'hsl(24 95% 53%)',
+                    secondary: 'hsl(25 20% 96%)',
+                    accent: 'hsl(25 20% 92%)',
+                    background: 'hsl(30 20% 98%)',
+                    foreground: 'hsl(20 90% 8%)',
+                    muted: 'hsl(25 20% 92%)',
+                    border: 'hsl(25 20% 88%)',
+                    destructive: 'hsl(0 84.2% 60.2%)',
+                    card: 'hsl(30 20% 98%)',
+                    popover: 'hsl(30 20% 98%)',
+                    input: 'hsl(25 20% 88%)',
+                    ring: 'hsl(24 95% 53%)',
+                },
+                dark: {
+                    primary: 'hsl(24 95% 53%)',
+                    secondary: 'hsl(20 20% 12%)',
+                    accent: 'hsl(20 20% 15%)',
+                    background: 'hsl(20 30% 6%)',
+                    foreground: 'hsl(25 20% 95%)',
+                    muted: 'hsl(20 20% 15%)',
+                    border: 'hsl(20 20% 18%)',
+                    destructive: 'hsl(0 62.8% 30.6%)',
+                    card: 'hsl(20 30% 8%)',
+                    popover: 'hsl(20 30% 8%)',
+                    input: 'hsl(20 20% 18%)',
+                    ring: 'hsl(24 95% 53%)',
+                }
+            },
+            rose: {
+                light: {
+                    primary: 'hsl(330 81% 60%)',
+                    secondary: 'hsl(330 20% 96%)',
+                    accent: 'hsl(330 20% 92%)',
+                    background: 'hsl(335 20% 98%)',
+                    foreground: 'hsl(330 90% 8%)',
+                    muted: 'hsl(330 20% 92%)',
+                    border: 'hsl(330 20% 88%)',
+                    destructive: 'hsl(0 84.2% 60.2%)',
+                    card: 'hsl(335 20% 98%)',
+                    popover: 'hsl(335 20% 98%)',
+                    input: 'hsl(330 20% 88%)',
+                    ring: 'hsl(330 81% 60%)',
+                },
+                dark: {
+                    primary: 'hsl(330 81% 60%)',
+                    secondary: 'hsl(330 20% 12%)',
+                    accent: 'hsl(330 20% 15%)',
+                    background: 'hsl(330 30% 6%)',
+                    foreground: 'hsl(330 20% 95%)',
+                    muted: 'hsl(330 20% 15%)',
+                    border: 'hsl(330 20% 18%)',
+                    destructive: 'hsl(0 62.8% 30.6%)',
+                    card: 'hsl(330 30% 8%)',
+                    popover: 'hsl(330 30% 8%)',
+                    input: 'hsl(330 20% 18%)',
+                    ring: 'hsl(330 81% 60%)',
+                }
+            }
+        };
+
+        let currentMode = 'light';
+        let currentTheme = 'default';
+
+        function applyTheme(themeName, mode) {
+            const theme = themes[themeName];
+            if (!theme) return;
+
+            const colors = theme[mode];
+            const root = document.documentElement;
+
+            Object.entries(colors).forEach(([key, value]) => {
+                root.style.setProperty(`--color-${key}`, value);
+            });
+
+            if (mode === 'dark') {
+                root.classList.add('dark');
+                root.classList.remove('light');
+            } else {
+                root.classList.add('light');
+                root.classList.remove('dark');
+            }
+
+            currentTheme = themeName;
+            currentMode = mode;
+
+            // Update active theme card
+            document.querySelectorAll('.theme-card').forEach(card => {
+                card.classList.remove('active');
+            });
+        }
+
+        function toggleMode() {
+            const newMode = currentMode === 'light' ? 'dark' : 'light';
+            applyTheme(currentTheme, newMode);
+        }
+
+        function setTheme(themeName) {
+            applyTheme(themeName, currentMode);
+        }
+
+        function setRadius(radius) {
+            document.documentElement.style.setProperty('--radius', radius);
+        }
+
+        // Initialize
+        applyTheme('default', 'light');
+    </script>
+</body>
+</html>
