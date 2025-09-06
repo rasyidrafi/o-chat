@@ -233,7 +233,7 @@ const AppContent: React.FC<{
 
         {ui.isMobileMenuOpen && (
           <div
-            className="fixed inset-0 bg-black/60 z-30 md:hidden"
+            className="fixed inset-0 bg-black/50 z-30 md:hidden"
             onClick={() =>
               setUi((prev) => ({ ...prev, isMobileMenuOpen: false }))
             }
