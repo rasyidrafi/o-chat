@@ -2111,18 +2111,21 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
           // Cache the current conversations for immediate use
           setAllConversationsForSearch(conversations);
 
-          // Load all conversations in the background for future searches (don't wait for it)
+          // Load all conversations in the background for future searches
           if (hasMoreConversations) {
-            console.log('� Background loading: Fetching all conversations for future searches...');
+            console.log('🚀 Background loading: Fetching all conversations for future searches...');
+            // Keep loading state true while background loading
             ChatStorageService.loadConversations(user, false).then(allConversations => {
               console.log(`📦 Background complete: ${allConversations.length} total conversations cached`);
               setAllConversationsForSearch(allConversations);
-
-              // If the user is still searching the same query, update results with complete data
-              // This is handled by the React state update triggering a re-search
             }).catch(error => {
               console.warn('Background conversation loading failed:', error);
+            }).finally(() => {
+              // Only set loading false after background operation completes
+              setIsSearching(false);
             });
+          } else {
+            // No background loading needed, can set loading false in finally block
           }
         } else {
           // No conversations loaded yet, need to load them
@@ -2149,7 +2152,11 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       console.error('❌ Error searching conversations:', error);
       setFilteredConversations([]);
     } finally {
-      setIsSearching(false);
+      // Only set loading false if no background operation is running
+      // Background operation handles its own loading state
+      if (allConversationsForSearch.length > 0 || !hasMoreConversations) {
+        setIsSearching(false);
+      }
     }
   }, [user, conversations, hasMoreConversations]); // Add conversations and hasMoreConversations to optimize
 

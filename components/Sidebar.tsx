@@ -254,7 +254,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           <button
             onClick={handleNewChat}
             disabled={isCreatingNewChat}
-            className={`truncate py-2 mx-2 my-2 px-2 ${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover} rounded-lg cursor-pointer`}
+            className={`flex items-center justify-center truncate py-2 mx-2 my-2 px-2 ${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover} rounded-lg cursor-pointer`}
           >
             {isCollapsed ? (
               <Plus className="w-4 h-4" />
@@ -266,7 +266,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           </button>
           <button
             onClick={onOpenSearchCenter}
-            className={`${themes.sidebar.fg} ${themes.sidebar.fgHover} ${themes.sidebar.bg} ${themes.sidebar.bgHover} rounded-lg shadow-sm truncate font-medium text-sm py-2 mx-2 px-4 ${themes.sidebar.border} cursor-pointer`}
+            className={`${themes.sidebar.fg} ${themes.sidebar.fgHover} ${themes.sidebar.bg} ${themes.sidebar.bgHover} rounded-lg shadow-sm truncate font-medium text-sm py-2 mx-2 border-1 px-4 ${themes.sidebar.border} cursor-pointer`}
           >
             {isCollapsed ? (
               <Search className="w-4 h-4" />
@@ -279,7 +279,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                 <div className="flex items-center gap-1">
                   <CommandK
                     isMac={isMac}
-                    eachClass={`${themes.card.bg} ${themes.sidebar.border}`}
+                    eachClass={`${themes.card.bg} border-1 ${themes.sidebar.border}`}
                   />
                 </div>
               </div>
@@ -289,15 +289,9 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
 
         <div
           ref={scrollContainerRef}
-          className={`py-2 flex-grow overflow-y-auto overflow-x-hidden block thin-scrollbar relative ${
+          className={`py-2 flex-grow overflow-y-auto overflow-x-hidden block thin-scrollbar scroll-fade relative ${
             isCollapsed ? "md:hidden" : ""
           }`}
-          style={{
-            maskImage:
-              "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-          }}
         >
           {!isLoading && (
             <>
@@ -337,7 +331,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                               className={`p-1 rounded transition-colors cursor-pointer ${themes.card.bgAsHover}`}
                               aria-label="Cancel delete"
                             >
-                              <X className="w-3 h-3 text-zinc-600 dark:text-zinc-400" />
+                              <X className="w-3 h-3" />
                             </button>
                             <button
                               onClick={(e) => {

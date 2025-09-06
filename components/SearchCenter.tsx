@@ -10,6 +10,8 @@ import { Search, X, Chat } from "./Icons";
 import { useChat } from "../hooks/useChat";
 import { ChatConversation } from "../types/chat";
 import { useSettingsContext } from "../contexts/SettingsContext";
+import { themes } from "@/constants/themes";
+import LoadingState from "./ui/LoadingState";
 
 interface SearchCenterProps {
   isOpen: boolean;
@@ -28,7 +30,6 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
   chat,
   onCloseMobileSidebar,
 }) => {
-  // Get animationsDisabled and isMobile from settings context
   const { settings, isMobile } = useSettingsContext();
   const animationsDisabled = settings.animationsDisabled;
 
@@ -47,7 +48,6 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  
   // Clear local search when modal closes
   useEffect(() => {
     if (!isOpen) {
@@ -127,7 +127,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
     (conversation: ChatConversation) => {
       selectConversation(conversation.id);
       onClose();
-      
+
       // Close mobile sidebar when on mobile
       if (isMobile && onCloseMobileSidebar) {
         onCloseMobileSidebar();
@@ -221,19 +221,21 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
     return (
       <button
         onClick={handleClick}
-        className={`cursor-pointer w-full text-left px-4 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group ${
-          isActive ? "bg-[#f4f4f4] dark:bg-[#252525]" : ""
+        className={`cursor-pointer w-full text-left px-4 py-2 transition-colors group ${
+          themes.sidebar.bgHover
+        } ${
+          isActive
+            ? `${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHoverAsBg}`
+            : themes.sidebar.fg
         }`}
       >
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0">
-            <Chat className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+          <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">
+            <Chat className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
             <div
-              className={`font-medium text-[#707070] truncate text-[.875rem] ${
-                isActive ? "dark:text-white" : "dark:text-[#898989]"
-              }`}
+              className={`font-light text-sm truncate capitalize`}
             >
               {searchQuery.trim() ? (
                 <span
@@ -248,7 +250,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
                 conversation.title || "Untitled Conversation"
               )}
             </div>
-            <div className="text-[.75rem] text-zinc-500 dark:text-zinc-400">
+            <div className={`text-xs ${themes.sidebar.fgSecondary}`}>
               {conversation.updatedAt.toLocaleDateString()} •{" "}
               {conversation.updatedAt.toLocaleTimeString([], {
                 hour: "2-digit",
@@ -274,7 +276,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
           transition={{ duration: animationsDisabled ? 0 : 0.2 }}
           onClick={onClose}
           className={`fixed inset-0 z-[100] flex justify-center ${
-            isMobile ? "" : "pt-16 px-4 bg-black/50 backdrop-blur-sm"
+            isMobile ? "" : "pt-16 px-4 bg-black/50"
           }`}
         >
           <motion.div
@@ -287,62 +289,61 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
             }}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={handleKeyDown}
-            className={`bg-white dark:bg-zinc-900 w-full flex flex-col overflow-hidden ${
+            className={`${themes.sidebar.bg} ${
+              themes.sidebar.border
+            } border-1 w-full flex flex-col overflow-hidden ${
               isMobile
                 ? "h-full"
-                : "rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 max-w-lg h-fit max-h-[calc(100vh-8rem)]"
+                : "rounded-lg shadow-md max-w-lg h-fit max-h-[calc(100vh-8rem)]"
             }`}
             tabIndex={-1}
           >
             {/* Simplified Header */}
-            <div className="px-2 border-b border-zinc-200 dark:border-zinc-700">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <div className={`px-2 ${themes.sidebar.border} border-b`}>
+              <div className={`relative`}>
+                <Search
+                  className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${themes.sidebar.fg}`}
+                />
                 <input
                   type="text"
                   value={localSearchQuery}
                   onChange={handleSearchChange}
                   placeholder="Search conversations..."
-                  className="w-full bg-transparent border-0 py-3 pl-10 pr-10 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none"
+                  className={`w-full bg-transparent border-0 py-3 pl-10 pr-10 ${themes.sidebar.fgRaw(
+                    "placeholder:"
+                  )} ${themes.sidebar.fgHoverAsFg} focus:outline-none text-sm`}
                   autoFocus={!isMobile}
-                  style={{
-                    fontSize: "0.875rem",
-                  }}
                 />
-                {localSearchQuery ? (
-                  <button
-                    onClick={handleClearSearch}
-                    className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                    aria-label="Clear search"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={onClose}
-                    className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                    aria-label="Close search"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                <button
+                  onClick={localSearchQuery ? onClose : handleClearSearch}
+                  className={`cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 ${themes.sidebar.fg} transition-colors`}
+                  aria-label={
+                    localSearchQuery ? "Clear search" : "Close search"
+                  }
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
             {/* Results */}
             <div
               ref={scrollContainerRef}
-              className="flex-1 overflow-y-auto thin-scrollbar"
+              className="flex-1 overflow-y-auto thin-scrollbar scroll-fade"
             >
               {isSearching ? (
-                <div className="flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-zinc-400">
-                  <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
-                  <div className="text-[.875rem]">Searching...</div>
+                <div
+                  className={`flex flex-col items-center justify-center py-12 ${themes.sidebar.fg}`}
+                >
+                  <LoadingState message="" />
+                  <div className="text-sm">Searching...</div>
                 </div>
               ) : hasResults ? (
                 orderedGroups.map(([dateGroup, convs]) => (
                   <div key={dateGroup}>
-                    <div className="px-4 py-2 text-[.75rem] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    <div
+                      className={`sticky top-0 px-4 py-2 text-xs font-medium z-10 ${themes.sidebar.bg} ${themes.sidebar.fgSecondary}`}
+                    >
                       {hasSearchQuery
                         ? `${dateGroup} (${convs.length} result${
                             convs.length !== 1 ? "s" : ""
@@ -364,42 +365,30 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
                   </div>
                 ))
               ) : (
-                <div className="text-center text-zinc-500 dark:text-zinc-400 py-12">
-                  {hasSearchQuery ? (
-                    <div>
-                      <div className="text-[.875rem] mb-2">
-                        No results found
-                      </div>
-                      {!isMobile && (
-                        <button
-                          onClick={handleClearSearch}
-                          className="cursor-pointer text-purple-500 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
-                        >
-                          <div className="text-[.875rem]">Clear search</div>
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-[.875rem]">No conversations yet</div>
-                  )}
+                <div
+                  className={`text-center text-sm py-12 ${themes.sidebar.fg}`}
+                >
+                  {hasSearchQuery ? "No results found" : "No conversations yet"}
                 </div>
               )}
             </div>
 
             {/* Mobile buttons - bottom right */}
             {isMobile && (
-              <div className="absolute bottom-4 right-4 flex gap-2">
+              <div
+                className={`absolute bottom-4 right-4 flex gap-2 text-sm ${themes.sidebar.fg}`}
+              >
                 <button
                   onClick={handleClearSearch}
-                  className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer px-3 py-2"
+                  className={`flex items-center justify-center border-1 ${themes.sidebar.border} ${themes.sidebar.bg} ${themes.sidebar.bgHover} rounded-lg transition-all duration-200 cursor-pointer px-3 py-2`}
                 >
-                  <div className="text-[.875rem] text-zinc-700 dark:text-zinc-300">Clear</div>
+                  <div>Clear</div>
                 </button>
                 <button
                   onClick={onClose}
-                  className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer px-3 py-2"
+                  className={`flex items-center justify-center border-1 ${themes.sidebar.border} ${themes.sidebar.bg} ${themes.sidebar.bgHover} rounded-lg transition-all duration-200 cursor-pointer px-3 py-2`}
                 >
-                  <div className="text-[.875rem] text-zinc-700 dark:text-zinc-300">Close</div>
+                  <div>Close</div>
                 </button>
               </div>
             )}

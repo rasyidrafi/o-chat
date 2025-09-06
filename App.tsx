@@ -230,16 +230,6 @@ const AppContent: React.FC<{
             }
           />
         </Routes>
-
-        {ui.isMobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 z-30 md:hidden"
-            onClick={() =>
-              setUi((prev) => ({ ...prev, isMobileMenuOpen: false }))
-            }
-            aria-hidden="true"
-          ></div>
-        )}
       </div>
 
       {ui.isSettingsOpen && (

@@ -12,6 +12,11 @@
   --font-size-4xl: calc(2.25rem * var(--font-size-scale, 1));
 }
 
+:root {
+  --scroll-fade-color: black;
+  --scroll-fade-height: 12px;
+}
+
 html {
   overflow: hidden;
   height: 100%;
@@ -21,7 +26,6 @@ body {
   height: 100%;
   overflow: auto;
 }
-
 
 /* General body styles */
 body {
@@ -346,4 +350,21 @@ h6 {
   100% {
     background-position: 200% 0;
   }
+}
+
+.scroll-fade {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0px,
+    var(--scroll-fade-color) var(--scroll-fade-height),
+    var(--scroll-fade-color) calc(100% - var(--scroll-fade-height)),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    var(--scroll-fade-color) var(--scroll-fade-height),
+    var(--scroll-fade-color) calc(100% - var(--scroll-fade-height)),
+    transparent
+  );
 }
