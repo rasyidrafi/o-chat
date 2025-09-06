@@ -10,6 +10,27 @@
   --font-size-2xl: calc(1.5rem * var(--font-size-scale, 1));
   --font-size-3xl: calc(1.875rem * var(--font-size-scale, 1));
   --font-size-4xl: calc(2.25rem * var(--font-size-scale, 1));
+  
+  /* Theme colors */
+  --color-primary: var(--color-primary, hsl(262.1 83.3% 57.8%));
+  --color-secondary: var(--color-secondary, hsl(220 14.3% 95.9%));
+  --color-accent: var(--color-accent, hsl(220 14.3% 95.9%));
+  --color-background: var(--color-background, hsl(0 0% 100%));
+  --color-foreground: var(--color-foreground, hsl(222.2 84% 4.9%));
+  --color-muted: var(--color-muted, hsl(220 14.3% 95.9%));
+  --color-border: var(--color-border, hsl(220 13% 91%));
+  --color-destructive: var(--color-destructive, hsl(0 84.2% 60.2%));
+  --color-card: var(--color-card, hsl(0 0% 100%));
+  --color-popover: var(--color-popover, hsl(0 0% 100%));
+  --color-input: var(--color-input, hsl(220 13% 91%));
+  --color-ring: var(--color-ring, hsl(262.1 83.3% 57.8%));
+  
+  /* Theme properties */
+  --radius: var(--radius, 0.5rem);
+  --shadow-sm: var(--shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+  --shadow-md: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1));
+  --shadow-lg: var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1));
+  --spacing: var(--spacing, 0.25rem);
 }
 
 html {

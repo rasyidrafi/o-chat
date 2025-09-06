@@ -6,6 +6,7 @@ import FontPreview from "../FontPreview";
 import Button from "../../ui/Button";
 import { AppSettings } from "../../../hooks/useSettings";
 import HorizontalRule from "@/components/ui/HorizontalRule";
+import { ThemeSwitcher } from "../../ui/ThemeSwitcher";
 
 interface CustomizationTabProps {
   settings: AppSettings;
@@ -61,6 +62,20 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({
             {isSaved ? "Saved!" : "Save Preferences"}
           </Button>
         </div>
+      </div>
+
+      {/* @ts-ignore */}
+      <HorizontalRule className="my-8" />
+
+      {/* Theme Section */}
+      <div>
+        <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+          Theme & Colors
+        </h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+          Customize the appearance and colors of your interface.
+        </p>
+        <ThemeSwitcher />
       </div>
 
       {/* @ts-ignore */}
