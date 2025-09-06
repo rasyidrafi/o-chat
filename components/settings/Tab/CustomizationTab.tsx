@@ -113,8 +113,8 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({
               <TabButtonGroup
                 options={[
                   { value: 1, label: "Default" },
-                  { value: 1.15, label: "Big" },
-                  { value: 1.3, label: "Large" },
+                  { value: 1.07, label: "Big" },
+                  { value: 1.14, label: "Large" },
                 ]}
                 value={settings.fontSize}
                 onChange={(fontSize: number) => updateSettings({ fontSize })}
