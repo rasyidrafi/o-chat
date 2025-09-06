@@ -1324,8 +1324,7 @@ const ChatInput = ({
               <img
                 src={attachment.url}
                 alt={attachment.filename}
-                className="w-16 h-16 object-cover"
-                style={{ borderRadius: 'var(--radius)' }}
+                className="w-16 h-16 object-cover rounded-lg"
               />
               <button
                 onClick={() => removeAttachment(attachment.id)}
@@ -1381,7 +1380,7 @@ const ChatInput = ({
                 fontSize: isMobile ? '0.875rem' : '.875rem'
               }}
             >
-              <span className="truncate flex-1 text-left" style={{ color: 'var(--color-foreground)' }}>
+              <span className="truncate flex-1 text-left text-foreground">
                 {selectedModelLabel}
               </span>
               {isLoadingSystemModels || isLoadingModelFromConversation ? (
@@ -1415,7 +1414,7 @@ const ChatInput = ({
                   }}
                 >
                   {/* Search Input */}
-                  <div className="p-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <div className="p-3 border-b border-border">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 opacity-60" />
                       <input
@@ -1525,7 +1524,7 @@ const ChatInput = ({
                   !capabilities.hasImageEditing))
             );
           })() && (
-            <div className="relative transition-colors flex items-center py-2 px-2.5" style={{ borderRadius: 'var(--radius)' }}>
+            <div className="relative transition-colors flex items-center py-2 px-2.5 rounded-lg">
               <input
                 type="file"
                 accept="image/*"
@@ -1568,7 +1567,7 @@ const ChatInput = ({
                 title={selectedImageSize}
               >
                 <FullScreen className="w-4 h-4 opacity-60 sm:hidden flex-shrink-0" />
-                <span className="truncate flex-1 text-left hidden sm:block" style={{ color: 'var(--color-foreground)' }}>
+                <span className="truncate flex-1 text-left hidden sm:block text-foreground">
                   {selectedImageSize}
                 </span>
                 <ChevronDown

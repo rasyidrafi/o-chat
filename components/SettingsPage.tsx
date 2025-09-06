@@ -237,7 +237,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     if (!ContentComponent) {
       return (
         <div>
-          <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-foreground)' }}>
+          <h2 className="text-2xl font-bold mb-1 text-foreground">
             {activeTab}
           </h2>
           <p className="mt-4">
@@ -271,7 +271,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   ]);
 
   return (
-    <div className="fixed inset-0 z-70 font-sans overflow-y-auto custom-scrollbar" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-foreground)' }}>
+    <div className="fixed inset-0 z-70 font-sans overflow-y-auto custom-scrollbar bg-background text-foreground">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-between mb-8">
           <Button variant="ghost" size="sm" onClick={onClose} className="gap-2">
@@ -284,9 +284,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           <aside className="lg:col-span-3">
             <div className="space-y-6">
               {isSignedIn ? (
-                <div className="flex flex-col items-center p-6 text-center" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
+                <div className="flex flex-col items-center p-6 text-center bg-muted rounded-lg">
                   <UserAvatar user={user!} size={96} className="mb-4" />
-                  <h2 className="font-bold text-xl truncate max-w-full" style={{ color: 'var(--color-foreground)' }}>
+                  <h2 className="font-bold text-xl truncate max-w-full text-foreground">
                     {user!.displayName || user!.email}
                   </h2>
                   {user!.displayName && (
@@ -308,8 +308,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                   </Button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center text-center p-6" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
-                  <h2 className="font-bold text-xl" style={{ color: 'var(--color-foreground)' }}>
+                <div className="flex flex-col items-center text-center p-6 bg-muted rounded-lg">
+                  <h2 className="font-bold text-xl text-foreground">
                     Not Signed In
                   </h2>
                   <p className="text-sm opacity-70 mt-2">
@@ -326,10 +326,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
               {/* Hide usage section on mobile since it's now in Usage tab */}
               {!isMobile && (
-                <div className="p-6" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
+                <div className="p-6 bg-muted rounded-lg">
                 <div>
                   <div className="flex items-center mb-2">
-                    <h3 className="font-semibold text-sm" style={{ color: 'var(--color-foreground)' }}>
+                    <h3 className="font-semibold text-sm text-foreground">
                       Usage
                     </h3>
                   </div>
@@ -371,7 +371,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             {usageData.totalConversations}
                           </span>
                         </div>
-                        <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'var(--color-border)' }}>
+                        <div className="w-full rounded-full h-1.5 bg-border">
                           <motion.div
                             className="bg-gradient-to-r from-blue-400 to-blue-500 h-1.5 rounded-full"
                             initial={
@@ -402,7 +402,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             {usageData.backedByServerCount}
                           </span>
                         </div>
-                        <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'var(--color-border)' }}>
+                        <div className="w-full rounded-full h-1.5 bg-border">
                           <motion.div
                             className="bg-gradient-to-r from-green-400 to-green-500 h-1.5 rounded-full"
                             initial={
@@ -432,7 +432,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             {usageData.byokCount}
                           </span>
                         </div>
-                        <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'var(--color-border)' }}>
+                        <div className="w-full rounded-full h-1.5 bg-border">
                           <motion.div
                             className="bg-gradient-to-r from-pink-400 to-pink-500 h-1.5 rounded-full"
                             initial={
@@ -452,7 +452,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                           {usageData.byokCount} messages sent
                         </p>
                       </div>
-                      <div className="rounded-lg p-3 flex items-start gap-2.5" style={{ backgroundColor: 'var(--color-secondary)' }}>
+                      <div className="rounded-lg p-3 flex items-start gap-2.5 bg-secondary">
                         <Info className="w-4 h-4 opacity-60 mt-0.5 flex-shrink-0" />
                         <p className="text-xs opacity-80">
                           Server-backed messages are unlimited and free.
@@ -468,7 +468,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
           </aside>
           <main className="lg:col-span-9">
-            <div className="flex overflow-x-auto mb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden" style={{ borderBottom: '1px solid var(--color-border)' }}>
+            <div className="flex overflow-x-auto mb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden border-b border-border">
               {tabs.map((tab) => (
                 <TabButton
                   key={tab}

@@ -69,18 +69,18 @@ const ApiProviderCard = React.memo<{
   onChange: (value: string) => void;
 }>(({ title, consoleUrl, placeholder, consoleName, value, onChange }) => {
   return (
-    <div className="p-6 space-y-4" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
+    <div className="p-6 space-y-4 bg-muted rounded-lg">
       {/* Title line */}
       <div className="flex items-center gap-3">
         <Key className="w-6 h-6 opacity-60" />
-        <h3 className="text-xl font-bold" style={{ color: 'var(--color-foreground)' }}>
+        <h3 className="text-xl font-bold text-foreground">
           {title}
         </h3>
       </div>
 
       {/* Input line */}
       <div className="flex items-center gap-4">
-        <label className="text-sm font-medium min-w-[80px]" style={{ color: 'var(--color-foreground)', opacity: 0.8 }}>
+        <label className="text-sm font-medium min-w-[80px] text-foreground/80">
           API Key:
         </label>
         <input
@@ -88,13 +88,7 @@ const ApiProviderCard = React.memo<{
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full border py-2 px-3 text-sm focus:outline-none focus:ring-1"
-          style={{
-            backgroundColor: 'var(--color-background)',
-            borderColor: 'var(--color-border)',
-            borderRadius: 'var(--radius)',
-            color: 'var(--color-foreground)'
-          }}
+          className="w-full border py-2 px-3 text-sm focus:outline-none focus:ring-1 bg-background border-border rounded-lg text-foreground"
           autoComplete="new-password"
         />
       </div>
@@ -374,7 +368,7 @@ const ApiKeysTab: React.FC = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-foreground)' }}>
+      <h2 className="text-2xl font-bold mb-1 text-foreground">
         API Keys
       </h2>
       <p className="opacity-70 mb-6">
@@ -412,13 +406,13 @@ const ApiKeysTab: React.FC = () => {
         />
 
         {/* OpenAI Compatible Providers Section */}
-        <div className="pt-6" style={{ borderTop: '1px solid var(--color-border)' }}>
+        <div className="pt-6 border-t border-border">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-xl font-bold" style={{ color: 'var(--color-foreground)' }}>
+              <h3 className="text-xl font-bold text-foreground">
                 OpenAI Compatible Providers
               </h3>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+              <p className="text-sm text-foreground/60 mt-1">
                 Add custom API endpoints that are compatible with OpenAI's API
                 format.
               </p>

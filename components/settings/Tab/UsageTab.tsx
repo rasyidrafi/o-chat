@@ -34,14 +34,14 @@ const UsageTab: React.FC<UsageTabProps> = ({
 }) => {
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-foreground)' }}>
+      <h2 className="text-2xl font-bold mb-1 text-foreground">
         Usage
       </h2>
       <p className="opacity-70 mb-6">
         Track your message usage across different sources
       </p>
       
-      <div className="p-6" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
+      <div className="p-6 bg-muted rounded-lg">
         {loadingState.isLoading ? (
           <div className="h-50 flex items-center justify-center py-8">
             <LoadingState 
@@ -80,7 +80,7 @@ const UsageTab: React.FC<UsageTabProps> = ({
                   {usageData.totalConversations}
                 </span>
               </div>
-              <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--color-border)' }}>
+              <div className="w-full rounded-full h-2 bg-border">
                 <motion.div
                   className="bg-gradient-to-r from-blue-400 to-blue-500 h-2 rounded-full"
                   initial={
