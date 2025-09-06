@@ -745,11 +745,14 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       let messagesToSend: ServiceChatMessage[] = historyMessages;
 
       // Always add system prompt - combines default prompt with user custom instruction
-      const systemPrompt = buildSystemPrompt(settings?.customInstruction);
-      messagesToSend = [
-        { role: 'system', content: systemPrompt },
-        ...historyMessages
-      ];
+      if (settings?.customInstruction && settings.customInstruction.trim()) {
+        // const systemPrompt = buildSystemPrompt(settings?.customInstruction);
+        const systemPrompt = settings.customInstruction.trim();
+        messagesToSend = [
+          { role: 'system', content: systemPrompt },
+          ...historyMessages
+        ];
+      }
 
       // Define callback functions separately
       const onChunkCallback = (chunk: string) => {
