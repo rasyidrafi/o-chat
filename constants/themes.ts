@@ -2,9 +2,11 @@
 export const themes = {
   special: { // special theme
     bg: "bg-purple-600",
+    bgLeft: "bg-pink-500",
     bgGradient: "bg-gradient-to-r from-pink-600 to-purple-600",
     bgHover: "hover:opacity-90",
     fg: "text-[#fafafa]",
+    fgLeft: "text-pink-500",
   },
 
   sidebar: { // sidebar

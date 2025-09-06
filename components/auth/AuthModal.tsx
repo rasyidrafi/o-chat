@@ -9,6 +9,7 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { useSettingsContext } from "../../contexts/SettingsContext";
+import { themes } from "@/constants/themes.ts";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   // Get animationsDisabled from settings context
   const { settings } = useSettingsContext();
   const animationsDisabled = settings.animationsDisabled;
-  
+
   const [activeTab, setActiveTab] = useState<AuthTab>("Login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,8 +69,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleClose = () => {
-    resetState();
     onClose();
+    resetState();
   };
 
   const handleTabChange = (tab: AuthTab) => {
@@ -79,40 +80,45 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {Boolean(isOpen) ? (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          // initial={{ opacity: 0 }}
+          // animate={{ opacity: 1 }}
+          // exit={{ opacity: 0 }}
           transition={{ duration: animationsDisabled ? 0 : 0.2 }}
           onClick={handleClose}
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4`}
         >
           <motion.div
             initial={{ scale: 0.95, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 20, opacity: 0 }}
-            transition={{ duration: animationsDisabled ? 0 : 0.2, ease: "easeOut" }}
+            transition={{
+              duration: animationsDisabled ? 0 : 0.2,
+              ease: "easeOut",
+            }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden"
+            className={`w-full max-w-md rounded-lg shadow-md border-1 overflow-hidden ${themes.sidebar.bg} ${themes.sidebar.border}`}
           >
             {/* Header with tabs and close button */}
-            <div className="p-6 border-b border-zinc-200 dark:border-zinc-700">
+            <div className={`p-6 border-b ${themes.sidebar.border}`}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
+                <h2
+                  className={`text-xl font-semibold ${themes.sidebar.fgHoverAsFg}`}
+                >
                   Authentication
                 </h2>
                 <button
                   onClick={handleClose}
-                  className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                  className={`cursor-pointer p-2 rounded-lg transition-colors ${themes.sidebar.fg} ${themes.sidebar.fgHover}`}
                   aria-label="Close dialog"
                 >
-                  <X className="w-5 h-5 text-zinc-500" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Tabs */}
-              <div className="flex border-b border-zinc-200 dark:border-zinc-700 -mb-6 pb-0">
+              <div className={`flex -mb-6 pb-0`}>
                 <Tab
                   title="Login"
                   activeTab={activeTab}
@@ -135,7 +141,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  icon={<Mail className="w-4 h-4 text-zinc-400" />}
+                  icon={<Mail className="w-4 h-4 " />}
                   required
                 />
                 <Input
@@ -144,28 +150,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  icon={<Lock className="w-4 h-4 text-zinc-400" />}
+                  icon={<Lock className="w-4 h-4" />}
                   required
                 />
                 {activeTab === "Register" && (
-                  <AnimatePresence>
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: animationsDisabled ? 0 : 0.2 }}
-                    >
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="Confirm Password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        icon={<Lock className="w-4 h-4 text-zinc-400" />}
-                        required
-                      />
-                    </motion.div>
-                  </AnimatePresence>
+                  <motion.div
+                    // initial={{ opacity: 0, height: 0 }}
+                    // animate={{ opacity: 1, height: "auto" }}
+                    // exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: animationsDisabled ? 0 : 0.2 }}
+                  >
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Confirm Password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      icon={<Lock className="w-4 h-4" />}
+                      required
+                    />
+                  </motion.div>
                 )}
 
                 {error && (
@@ -191,7 +195,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </div>
           </motion.div>
         </motion.div>
-      )}
+      ) : <div></div>}
     </AnimatePresence>
   );
 };
@@ -206,23 +210,23 @@ const Tab: React.FC<TabProps> = ({ title, activeTab, setActiveTab }) => {
   // Get animationsDisabled from settings context
   const { settings } = useSettingsContext();
   const animationsDisabled = settings.animationsDisabled;
-  
+
   const isActive = activeTab === title;
   return (
     <button
       type="button"
       onClick={() => setActiveTab(title)}
-      className={`relative w-1/2 py-3 text-sm font-semibold text-center transition-colors focus:outline-none
+      className={`cursor-pointer relative w-1/2 py-3 text-sm font-semibold text-center transition-colors focus:outline-none
                 ${
                   isActive
-                    ? "text-pink-500"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    ? themes.special.fgLeft
+                    : `${themes.sidebar.fg} ${themes.sidebar.fgHover}`
                 }`}
     >
       {title}
       {isActive && (
         <motion.div
-          className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-pink-500"
+          className={`absolute bottom-[-1px] left-0 right-0 h-0.5 ${themes.special.bgLeft}`}
           layoutId="auth-tab-indicator"
           transition={{ duration: animationsDisabled ? 0 : 0.2 }}
         />
