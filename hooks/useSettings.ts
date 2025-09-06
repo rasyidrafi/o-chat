@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { User } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { BorderRadius, DEFAULT_BORDER_RADIUS } from "../constants/themes";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -14,6 +15,9 @@ export interface AppSettings {
   customInstruction: string;
   hidePersonalInfo: boolean;
   disableLinkWarning: boolean;
+  // New theming properties
+  themePalette: string;
+  borderRadius: BorderRadius;
 }
 
 const loadGuestSettings = (): AppSettings => ({
@@ -25,6 +29,9 @@ const loadGuestSettings = (): AppSettings => ({
   customInstruction: localStorage.getItem("customInstruction") || "",
   hidePersonalInfo: localStorage.getItem("hidePersonalInfo") === "true",
   disableLinkWarning: localStorage.getItem("disableLinkWarning") === "true",
+  // New theming properties with defaults
+  themePalette: localStorage.getItem("themePalette") || "default",
+  borderRadius: (localStorage.getItem("borderRadius") as BorderRadius) || DEFAULT_BORDER_RADIUS,
 });
 
 const clearLocalSettings = () => {
@@ -37,6 +44,8 @@ const clearLocalSettings = () => {
     "customInstruction",
     "hidePersonalInfo",
     "disableLinkWarning",
+    "themePalette",
+    "borderRadius",
   ];
   guestSettingsKeys.forEach((key) => localStorage.removeItem(key));
 };
@@ -89,6 +98,8 @@ export const useSettings = (
         "customInstruction",
         "hidePersonalInfo",
         "disableLinkWarning",
+        "themePalette",
+        "borderRadius",
       ];
       const hasLocalSettings = guestSettingsKeys.some(
         (key) => localStorage.getItem(key) !== null

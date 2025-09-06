@@ -18,6 +18,7 @@ import {
   SettingsProvider,
   useSettingsContext,
 } from "./contexts/SettingsContext";
+import { initializeThemeProperties } from "./utils/themeUtils";
 
 const defaultConfirmDialogProps = {
   title: "",
@@ -128,7 +129,9 @@ const AppContent: React.FC<{
       "--font-size-scale",
       settings.fontSize.toString()
     );
-  }, [settings.mainFont, settings.fontSize]);
+    // Initialize theme properties
+    initializeThemeProperties(settings);
+  }, [settings.mainFont, settings.fontSize, settings.themePalette, settings.borderRadius]);
 
   const handleSignOut = async () => {
     try {
