@@ -154,7 +154,7 @@ const AppContent: React.FC<{
 
   // Show global loading screen while auth or settings are initializing
   // This ensures all core app state is ready before rendering the main UI
-  if (authIsLoading || !authLoaded || !settingsLoaded || chat.isLoading) {
+  if (authIsLoading || !authLoaded || !settingsLoaded) {
     return <AuthLoadingScreen />;
   }
 
