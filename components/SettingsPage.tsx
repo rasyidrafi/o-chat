@@ -450,9 +450,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                       <div className="bg-zinc-200/50 dark:bg-zinc-900/50 rounded-lg p-3 flex items-start gap-2.5">
                         <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400 mt-0.5 flex-shrink-0" />
                         <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                          Server-backed messages are unlimited and free.
-                          Messages using your own API key are billed directly to
-                          you - please monitor your API usage and costs.
+                          Personal API key usage results in direct account billing. We disclaim responsibility for all associated charges and billing matters.
                         </p>
                       </div>
                     </motion.div>
