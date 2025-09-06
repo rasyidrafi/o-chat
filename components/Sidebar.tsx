@@ -321,7 +321,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     return (
       <aside
         ref={ref}
-        className={`shadow-sm ${isMobile ? "p-1" : "p-2"} fixed md:relative top-0 left-0 h-full flex flex-col bg-[var(--color-background)] z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
+        className={`shadow-sm ${isMobile ? "p-1" : "p-2"} fixed md:relative top-0 left-0 h-full flex flex-col bg-background z-60 transition-all duration-300 ease-in-out md:translate-x-0 ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         } w-64 ${isCollapsed ? "md:w-20" : ""}`}
       >
@@ -344,7 +344,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           <Button
             variant="ghost"
             onClick={onOpenSearchCenter}
-            className={`shadow-sm text-[var(--color-foreground)]/70 hover:text-[var(--color-foreground)] bg-[var(--color-background)] hover:bg-[var(--color-muted)] truncate text-sm py-2 mx-2 px-4 border border-[var(--color-border)]`}
+            className={`shadow-sm text-foreground/70 hover:text-foreground bg-background hover:bg-muted truncate text-sm py-2 mx-2 px-4 border border-border`}
             size="none"
           >
             {isCollapsed ? (
@@ -390,7 +390,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
               {/* Show search results or all conversations */}
               {orderedGroups.map(([dateGroup, convs]) => (
                 <div key={dateGroup} className="mb-4 last:mb-0">
-                  <div className="font-[500] text-[var(--color-foreground)]/60 text-[.75rem] mb-1.5 px-4">
+                  <div className="font-[500] text-foreground/60 text-[.75rem] mb-1.5 px-4">
                     {localSearchQuery.trim()
                       ? `${dateGroup} (${convs.length} result${
                           convs.length !== 1 ? "s" : ""
@@ -402,10 +402,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                       <li
                         key={conversation.id}
                         onClick={() => handleConversationSelect(conversation)}
-                        className={`mb-[4px] last:mb-0 text-[.875rem] hover:text-[var(--color-foreground)] capitalize py-[6px] px-[8px] leading-[20px] rounded-[var(--radius)] cursor-pointer transition-colors group relative hover:bg-[var(--color-muted)] ${
+                        className={`mb-[4px] last:mb-0 text-[.875rem] hover:text-foreground capitalize py-[6px] px-[8px] leading-[20px] rounded-lg cursor-pointer transition-colors group relative hover:bg-muted ${
                           activeConversationId === conversation.id
-                            ? "text-[var(--color-foreground)] bg-[var(--color-muted)]"
-                            : "text-[var(--color-foreground)]/70"
+                            ? "text-foreground bg-muted"
+                            : "text-foreground/70"
                         }`}
                       >
                         <div className="truncate">
@@ -459,7 +459,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                         ) : (
                           <button
                             onClick={(e) => handleDeleteClick(e, conversation)}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-[var(--color-muted)] hover:bg-[var(--color-muted)]/80 rounded-[var(--radius)] transition-all shadow-[var(--shadow-sm)] cursor-pointer"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-muted hover:bg-muted/80 rounded-lg transition-all shadow-sm cursor-pointer"
                             aria-label="Delete conversation"
                           >
                             <X className="w-3 h-3" />
@@ -496,7 +496,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                 )} */}
 
               {!localSearchQuery.trim() && conversations.length === 0 && (
-                <div className="text-[.875rem] font-[500] flex items-center justify-center px-4 h-full text-center text-[var(--color-foreground)]/60 py-8">
+                <div className="text-[.875rem] font-[500] flex items-center justify-center px-4 h-full text-center text-foreground/60 py-8">
                   No conversations yet.
                   <br />
                   Start a new chat to begin!
@@ -510,7 +510,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           {isSignedIn ? (
             <div className="flex flex-col">
               <div
-                className="flex truncate justify-center px-2 py-1 items-center rounded-[var(--radius)] hover:bg-[var(--color-muted)] cursor-pointer"
+                className="flex truncate justify-center px-2 py-1 items-center rounded-lg hover:bg-muted cursor-pointer"
                 onClick={() => onOpenSettings?.("Account")}
               >
                 <UserAvatar user={user!} size={32} />
@@ -519,10 +519,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                     isCollapsed ? "md:hidden" : ""
                   }`}
                 >
-                  <div className="text-[var(--color-foreground)] text-[.875rem] truncate">
+                  <div className="text-foreground text-[.875rem] truncate">
                     {user!.displayName || user!.email}
                   </div>
-                  <div className="text-[var(--color-foreground)]/70 text-[.75rem] truncate">
+                  <div className="text-foreground/70 text-[.75rem] truncate">
                     Signed In
                   </div>
                 </div>
@@ -531,7 +531,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           ) : (
             <button
               onClick={onLoginClick}
-              className={`text-[var(--color-foreground)] truncate flex items-center justify-center w-full py-3.5 rounded-[var(--radius)] transition-colors hover:bg-[var(--color-muted)] cursor-pointer ${
+              className={`text-foreground truncate flex items-center justify-center w-full py-3.5 rounded-lg transition-colors hover:bg-muted cursor-pointer ${
                 isCollapsed ? "px-2.5" : "px-4 gap-2"
               }`}
             >

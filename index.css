@@ -1,6 +1,7 @@
 @import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *));
-@theme {
+
+/* Root variables - Light mode defaults */
+:root {
   --font-sans: var(--font-main, "Outfit"), sans-serif;
   --font-size-xs: calc(0.75rem * var(--font-size-scale, 1));
   --font-size-sm: calc(0.875rem * var(--font-size-scale, 1));
@@ -11,19 +12,26 @@
   --font-size-3xl: calc(1.875rem * var(--font-size-scale, 1));
   --font-size-4xl: calc(2.25rem * var(--font-size-scale, 1));
   
-  /* Theme colors */
-  --color-primary: var(--color-primary, hsl(262.1 83.3% 57.8%));
-  --color-secondary: var(--color-secondary, hsl(220 14.3% 95.9%));
-  --color-accent: var(--color-accent, hsl(220 14.3% 95.9%));
-  --color-background: var(--color-background, hsl(0 0% 100%));
-  --color-foreground: var(--color-foreground, hsl(222.2 84% 4.9%));
-  --color-muted: var(--color-muted, hsl(220 14.3% 95.9%));
-  --color-border: var(--color-border, hsl(220 13% 91%));
-  --color-destructive: var(--color-destructive, hsl(0 84.2% 60.2%));
-  --color-card: var(--color-card, hsl(0 0% 100%));
-  --color-popover: var(--color-popover, hsl(0 0% 100%));
-  --color-input: var(--color-input, hsl(220 13% 91%));
-  --color-ring: var(--color-ring, hsl(262.1 83.3% 57.8%));
+  /* Light mode theme colors - defaults */
+  --color-primary: 262.1 83.3% 57.8%;
+  --color-primary-foreground: 210 40% 98%;
+  --color-secondary: 220 14.3% 95.9%;
+  --color-secondary-foreground: 222.2 84% 4.9%;
+  --color-accent: 220 14.3% 95.9%;
+  --color-accent-foreground: 222.2 84% 4.9%;
+  --color-background: 0 0% 100%;
+  --color-foreground: 222.2 84% 4.9%;
+  --color-muted: 220 14.3% 95.9%;
+  --color-muted-foreground: 222.2 84% 4.9%;
+  --color-border: 220 13% 91%;
+  --color-input: 220 13% 91%;
+  --color-ring: 262.1 83.3% 57.8%;
+  --color-destructive: 0 84.2% 60.2%;
+  --color-destructive-foreground: 210 40% 98%;
+  --color-card: 0 0% 100%;
+  --color-card-foreground: 222.2 84% 4.9%;
+  --color-popover: 0 0% 100%;
+  --color-popover-foreground: 222.2 84% 4.9%;
   
   /* Theme properties */
   --radius: var(--radius, 0.5rem);
@@ -31,6 +39,29 @@
   --shadow-md: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1));
   --shadow-lg: var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1));
   --spacing: var(--spacing, 0.25rem);
+}
+
+/* Dark mode theme colors */
+.dark {
+  --color-primary: 263.4 70% 50.4%;
+  --color-primary-foreground: 210 40% 98%;
+  --color-secondary: 215 27.9% 16.9%;
+  --color-secondary-foreground: 210 40% 98%;
+  --color-accent: 215 27.9% 16.9%;
+  --color-accent-foreground: 210 40% 98%;
+  --color-background: 222.2 84% 4.9%;
+  --color-foreground: 210 40% 98%;
+  --color-muted: 215 27.9% 16.9%;
+  --color-muted-foreground: 215.4 16.3% 46.9%;
+  --color-border: 215 27.9% 16.9%;
+  --color-input: 215 27.9% 16.9%;
+  --color-ring: 263.4 70% 50.4%;
+  --color-destructive: 0 62.8% 30.6%;
+  --color-destructive-foreground: 210 40% 98%;
+  --color-card: 222.2 84% 4.9%;
+  --color-card-foreground: 210 40% 98%;
+  --color-popover: 222.2 84% 4.9%;
+  --color-popover-foreground: 210 40% 98%;
 }
 
 html {

@@ -1279,13 +1279,7 @@ const ChatInput = ({
   };
 
   return (
-    <div className="md:backdrop-blur-md p-3 w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg" style={{ 
-      backgroundColor: 'var(--color-card)', 
-      borderColor: 'var(--color-border)',
-      border: '1px solid',
-      borderRadius: 'var(--radius)',
-      boxShadow: 'var(--shadow-lg)'
-    }}>
+    <div className="md:backdrop-blur-md p-3 w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg bg-card border border-border">
       {/* Image Preview Section */}
       {inputMode === "image_generation" && uploadedImageForEditing && (
         <div className="mb-3">
@@ -1293,11 +1287,7 @@ const ChatInput = ({
             <img
               src={uploadedImageForEditing}
               alt="Image for editing"
-              className="w-20 h-20 object-cover border"
-              style={{ 
-                borderRadius: 'var(--radius)',
-                borderColor: 'var(--color-border)'
-              }}
+              className="w-20 h-20 object-cover border border-border rounded"
             />
             <button
               onClick={clearAllImages}

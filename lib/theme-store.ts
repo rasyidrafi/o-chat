@@ -140,9 +140,11 @@ function applyThemeToDocument(state: ThemeState) {
   const colors = config.colors[currentMode];
   const root = document.documentElement;
   
-  // Apply color variables
+  // Apply color variables (removing 'hsl(' and ')' wrapper since CSS handles this)
   Object.entries(colors).forEach(([key, value]) => {
-    root.style.setProperty(`--color-${key}`, value);
+    // Convert hsl(x y z) to x y z for CSS variable usage
+    const hslValue = value.replace(/^hsl\(/, '').replace(/\)$/, '');
+    root.style.setProperty(`--color-${key}`, hslValue);
   });
   
   // Apply other theme variables

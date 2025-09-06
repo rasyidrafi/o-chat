@@ -426,7 +426,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         <div className="flex justify-between text-xs font-medium mb-1">
                           <span className="opacity-80 flex items-center gap-1">
                             Your Own API
-                            <Info className="w-3.5 h-3.5 text-pink-500" />
+                            <Info className="w-3.5 h-3.5 text-primary" />
                           </span>
                           <span className="opacity-60">
                             {usageData.byokCount}

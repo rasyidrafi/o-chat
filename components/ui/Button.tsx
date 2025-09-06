@@ -20,11 +20,11 @@ const Button: React.FC<ButtonProps> = ({
   const baseClasses = 'inline-flex items-center justify-center transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
   const variantClasses = {
-    primary: 'bg-[var(--color-primary)] text-white hover:opacity-90 focus:ring-[var(--color-ring)]',
-    secondary: 'bg-[var(--color-secondary)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] focus:ring-[var(--color-ring)] border border-[var(--color-border)]',
-    destructive: 'bg-[var(--color-destructive)] text-white hover:opacity-90 focus:ring-[var(--color-destructive)]',
-    ghost: 'hover:bg-[var(--color-muted)] text-[var(--color-foreground)] focus:ring-[var(--color-ring)]',
-    outlined: 'border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-muted)] focus:ring-[var(--color-ring)]',
+    primary: 'bg-primary text-primary-foreground hover:opacity-90 focus:ring-ring',
+    secondary: 'bg-secondary hover:bg-muted text-secondary-foreground focus:ring-ring border border-border',
+    destructive: 'bg-destructive text-destructive-foreground hover:opacity-90 focus:ring-destructive',
+    ghost: 'hover:bg-muted text-foreground focus:ring-ring',
+    outlined: 'border border-border bg-transparent text-foreground hover:bg-muted focus:ring-ring',
     none: ''
   };
 
