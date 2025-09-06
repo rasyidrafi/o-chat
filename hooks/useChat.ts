@@ -32,7 +32,7 @@ const CACHE_EXPIRY_TIME = 30 * 60 * 1000; // 30 minutes in milliseconds
 export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateFunction) => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreConversations, setHasMoreConversations] = useState(true);
   const [conversationsLastDoc, setConversationsLastDoc] = useState<any>(null);

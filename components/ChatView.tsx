@@ -382,7 +382,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         </AnimatePresence>
 
         <div
-          className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-[8px]"
+          className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"
           style={chatInputPadding}
         >
           <ChatInput

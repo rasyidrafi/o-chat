@@ -1,10 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Routes,
-  Route,
-  useParams,
-  useNavigate,
-} from "react-router-dom";
+import { Routes, Route, useParams, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import ChatView from "./components/ChatView";
 import SettingsPage, { Tab as SettingsTab } from "./components/SettingsPage";
@@ -41,11 +36,15 @@ const ConversationRoute: React.FC<{
   }
 
   React.useEffect(() => {
-    if (conversationId && chat.currentConversationId !== conversationId && chat.currentConversationId == null) {
+    if (
+      conversationId &&
+      chat.currentConversationId !== conversationId &&
+      chat.currentConversationId == null
+    ) {
       chat.selectConversation(conversationId);
     }
   }, []);
-  
+
   return null; // This component just handles routing logic
 };
 
@@ -155,7 +154,7 @@ const AppContent: React.FC<{
 
   // Show global loading screen while auth or settings are initializing
   // This ensures all core app state is ready before rendering the main UI
-  if (authIsLoading || !authLoaded || !settingsLoaded) {
+  if (authIsLoading || !authLoaded || !settingsLoaded || chat.isLoading) {
     return <AuthLoadingScreen />;
   }
 
@@ -255,6 +254,7 @@ const AppContent: React.FC<{
           onSignOutClick={onSignOutClick}
         />
       )}
+
       <AuthModal
         isOpen={ui.isAuthModalOpen}
         onClose={() => setUi((prev) => ({ ...prev, isAuthModalOpen: false }))}
