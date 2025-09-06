@@ -18,6 +18,7 @@ import {
   SettingsProvider,
   useSettingsContext,
 } from "./contexts/SettingsContext";
+import { useThemeStore } from "./lib/theme-store";
 
 const defaultConfirmDialogProps = {
   title: "",
@@ -89,6 +90,9 @@ const AppContent: React.FC<{
 
   const { settings, settingsLoaded, updateSettings, toggleTheme } =
     useSettingsContext();
+
+  // Initialize theme store
+  const { themeState } = useThemeStore();
 
   const chat = useChat(settingsLoaded ? settings : undefined, navigate);
 

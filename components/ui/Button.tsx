@@ -20,7 +20,7 @@ const Button: React.FC<ButtonProps> = ({
   const baseClasses = 'inline-flex items-center justify-center transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
   const variantClasses = {
-    primary: 'text-white bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 focus:ring-pink-500',
+    primary: 'bg-[var(--color-primary)] text-white hover:opacity-90 focus:ring-[var(--color-ring)]',
     secondary: 'bg-[var(--color-secondary)] hover:bg-[var(--color-muted)] text-[var(--color-foreground)] focus:ring-[var(--color-ring)] border border-[var(--color-border)]',
     destructive: 'bg-[var(--color-destructive)] text-white hover:opacity-90 focus:ring-[var(--color-destructive)]',
     ghost: 'hover:bg-[var(--color-muted)] text-[var(--color-foreground)] focus:ring-[var(--color-ring)]',

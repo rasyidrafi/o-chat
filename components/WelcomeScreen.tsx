@@ -16,10 +16,10 @@ interface SuggestionButtonProps {
 const SuggestionButton: React.FC<SuggestionButtonProps> = memo(({ icon, label, onClick, isActive }) => (
   <button 
     onClick={onClick}
-    className={`flex items-center gap-2.5 py-2 px-4 rounded-lg transition-colors cursor-pointer text-zinc-900 dark:text-zinc-200 ${
+    className={`flex items-center gap-2.5 py-2 px-4 rounded-[var(--radius)] transition-colors cursor-pointer text-[var(--color-foreground)] ${
       isActive 
-        ? 'bg-[#e3dedb] dark:bg-zinc-700' // Active state style
-        : 'bg-[#efeae7] dark:bg-[#2a2a2a] hover:bg-[#e3dedb] dark:hover:bg-zinc-700'
+        ? 'bg-[var(--color-muted)] hover:bg-[var(--color-muted)]' // Active state style
+        : 'bg-[var(--color-secondary)] hover:bg-[var(--color-muted)]'
     }`}
   >
     {icon}
@@ -36,9 +36,9 @@ const PromptSuggestion: React.FC<{
 }> = memo(({ children, onClick }) => (
     <button 
       onClick={onClick}
-      className="w-full text-left py-3 px-4 bg-[#efeae7] dark:bg-[#2a2a2a] rounded-lg hover:bg-[#e3dedb] dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+      className="w-full text-left py-3 px-4 bg-[var(--color-secondary)] rounded-[var(--radius)] hover:bg-[var(--color-muted)] transition-colors cursor-pointer"
     >
-        <p className="text-sm text-zinc-900 dark:text-zinc-200">{children}</p>
+        <p className="text-sm text-[var(--color-foreground)]">{children}</p>
     </button>
 ));
 
@@ -107,7 +107,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onPromptSelect }) => {
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center">
-      <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white mb-6">
+      <h1 className="text-3xl sm:text-4xl font-bold text-[var(--color-foreground)] mb-6">
         How can I help you{displayName ? `, ${displayName}` : ''}?
       </h1>
       
