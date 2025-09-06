@@ -315,7 +315,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
                   autoFocus={!isMobile}
                 />
                 <button
-                  onClick={localSearchQuery ? onClose : handleClearSearch}
+                  onClick={localSearchQuery ? handleClearSearch : onClose}
                   className={`cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 ${themes.sidebar.fg} transition-colors`}
                   aria-label={
                     localSearchQuery ? "Clear search" : "Close search"
