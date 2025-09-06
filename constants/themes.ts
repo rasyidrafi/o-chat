@@ -20,6 +20,7 @@ export const themes = {
   },
 
   card: { // card
-    bg: "bg-[#f2f3f3] dark:bg-[#1a1a1a]"
+    bg: "bg-[#f2f3f3] dark:bg-[#1a1a1a]",
+    bgAsHover: "hover:bg-[#f2f3f3] hover:dark:bg-[#1a1a1a]"
   }
 };

@@ -328,13 +328,13 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
 
                         {/* Delete confirmation buttons */}
                         {confirmingDelete === conversation.id ? (
-                          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-zinc-200 dark:bg-zinc-700 rounded-lg p-1">
+                          <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 ${themes.sidebar.bg} rounded-lg p-1`}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteCancel();
                               }}
-                              className="p-1 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded transition-colors cursor-pointer"
+                              className={`p-1 rounded transition-colors cursor-pointer ${themes.card.bgAsHover}`}
                               aria-label="Cancel delete"
                             >
                               <X className="w-3 h-3 text-zinc-600 dark:text-zinc-400" />
@@ -353,7 +353,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                         ) : (
                           <button
                             onClick={(e) => handleDeleteClick(e, conversation)}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-lg transition-all shadow-sm cursor-pointer"
+                            className={`absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 ${themes.sidebar.bg} ${themes.card.bgAsHover} rounded-lg transition-all shadow-sm cursor-pointer`}
                             aria-label="Delete conversation"
                           >
                             <X className="w-3 h-3" />
@@ -401,7 +401,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           ) : (
             <button
               onClick={onLoginClick}
-              className={`${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHover} truncate flex items-center justify-center w-full py-3.5 rounded-lg transition-colors cursor-pointer ${
+              className={`${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHover} text-sm font-medium truncate flex items-center justify-center w-full py-3.5 rounded-lg transition-colors cursor-pointer ${
                 isCollapsed ? "px-2.5" : "px-4 gap-2"
               }`}
             >
@@ -410,7 +410,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  <span className="text-[.875rem] font-[500]">Login</span>
+                  <span>Login</span>
                 </>
               )}
             </button>
