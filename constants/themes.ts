@@ -3,6 +3,7 @@ export const themes = {
   special: { // special theme
     bg: "bg-purple-600",
     bgLeft: "bg-pink-500",
+    bgLeftAsBorder: "border-pink-500",
     bgGradient: "bg-gradient-to-r from-pink-600 to-purple-600",
     bgHover: "hover:opacity-90",
     fg: "text-[#fafafa]",
@@ -20,6 +21,10 @@ export const themes = {
     fgHoverAsFg: "text-[#202020] dark:text-[#fafafa]",
     fgSecondary: "text-[#9a9a9a] dark:text-[#656565]",
     border: "border-[#dfdfdf] dark:border-[#242424]"
+  },
+
+  chatview: {
+    backdrop: "bg-[#f9f9f9] dark:bg-[#1c1c1c]"
   },
 
   card: { // card

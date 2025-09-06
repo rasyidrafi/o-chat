@@ -1,5 +1,6 @@
 import React from "react";
 import LoadingState from "./ui/LoadingState";
+import { themes } from "@/constants/themes";
 
 interface AuthLoadingScreenProps {
   className?: string;
@@ -10,7 +11,7 @@ const AuthLoadingScreen: React.FC<AuthLoadingScreenProps> = ({
 }) => {
   return (
     <div
-      className={`flex items-center justify-center min-h-screen bg-white dark:bg-[#1c1c1c] ${className}`}
+      className={`flex items-center justify-center min-h-screen ${themes.chatview.backdrop} ${className}`}
     >
       <LoadingState
         message={""}

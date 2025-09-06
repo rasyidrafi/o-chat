@@ -1,4 +1,5 @@
 import React from 'react';
+import { themes } from '@/constants/themes';
 
 interface LoadingStateProps {
   message?: string;
@@ -41,16 +42,16 @@ const LoadingState: React.FC<LoadingStateProps> = ({
     <div className={`${containerClasses} ${className}`}>
       {/* Loading spinner with pink theme colors */}
       <div className={spacingClasses[size]}>
-        <div className={`animate-spin ${spinnerSizeClasses[size]} border-pink-500 border-t-transparent rounded-full mx-auto`}></div>
+        <div className={`animate-spin ${spinnerSizeClasses[size]} ${themes.special.bgLeftAsBorder} border-t-transparent rounded-full mx-auto`}></div>
       </div>
 
       {/* Text content */}
       <div className="space-y-1 text-center">
-        <span className={`${textSizeClasses[size]} text-zinc-900 dark:text-zinc-100`}>
+        <span className={`${textSizeClasses[size]} ${themes.sidebar.fgHoverAsFg}`}>
           {message}
         </span>
         {subtitle && (
-          <p className={`${size === 'sm' ? 'text-xs' : 'text-sm'} text-zinc-500 dark:text-zinc-400 max-w-xs`}>
+          <p className={`${size === 'sm' ? 'text-xs' : 'text-sm'} ${themes.sidebar.fg} max-w-xs`}>
             {subtitle}
           </p>
         )}
