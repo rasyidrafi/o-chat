@@ -20,11 +20,11 @@ const Button: React.FC<ButtonProps> = ({
   const baseClasses = 'inline-flex items-center justify-center rounded-lg transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 
   const variantClasses = {
-    primary: 'text-white bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 focus:ring-pink-500',
-    secondary: 'bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white focus:ring-zinc-500',
-    destructive: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
-    ghost: 'hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-zinc-500',
-    outlined: 'border-1 border-zinc-300/50 dark:border-zinc-600 bg-transparent text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:ring-zinc-500',
+    primary: 'text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:ring-primary-500',
+    secondary: 'bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-neutral-900 dark:text-white focus:ring-neutral-500',
+    destructive: 'bg-accent-500 text-white hover:bg-accent-600 focus:ring-accent-500',
+    ghost: 'hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-neutral-500',
+    outlined: 'border-1 border-neutral-300/50 dark:border-neutral-600 bg-transparent text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 focus:ring-neutral-500',
     none: ''
   };
 

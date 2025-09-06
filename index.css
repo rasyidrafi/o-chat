@@ -11,7 +11,7 @@
   --font-size-3xl: calc(1.875rem * var(--font-size-scale, 1));
   --font-size-4xl: calc(2.25rem * var(--font-size-scale, 1));
 
-  /* Theme-aware color system */
+  /* Theme-aware color system using Tailwind v4 syntax */
   --color-primary-50: var(--color-primary-50, rgb(253 242 248));
   --color-primary-100: var(--color-primary-100, rgb(252 231 243));
   --color-primary-200: var(--color-primary-200, rgb(251 207 232));
