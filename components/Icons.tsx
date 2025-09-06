@@ -334,12 +334,12 @@ export const Chat: React.FC<IconProps> = ({ size = 24, ...props }) => (
   </svg>
 );
 
-export const CommandK: React.FC<IconProps & { isMac?: boolean }> = ({ isMac = true, ...props }) => (
-  <div className="flex items-center gap-0.5 text-[10px] font-mono opacity-70" {...props}>
-    <span className="px-1 py-0.5 bg-gray-200 dark:bg-[#1f1f1f] border border-gray-300 dark:border-gray-600 rounded text-[10px] font-medium leading-none">
+export const CommandK: React.FC<IconProps & { isMac?: boolean, eachClass?: string }> = ({ isMac = true, eachClass = "", ...props }) => (
+  <div className="flex items-center gap-0.5 text-xs font-mono opacity-70" {...props}>
+    <span className={`px-1 py-0.5 ${eachClass} rounded font-medium leading-none`}>
       {isMac ? '⌘' : 'Ctrl'}
     </span>
-    <span className="px-1 py-0.5 bg-gray-200 dark:bg-[#1f1f1f] border border-gray-300 dark:border-gray-600 rounded text-[10px] font-medium leading-none">
+    <span className={`px-1 py-0.5 ${eachClass} rounded font-medium leading-none`}>
       K
     </span>
   </div>
