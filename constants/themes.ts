@@ -27,6 +27,10 @@ export const themes = {
     backdrop: "bg-[#f9f9f9] dark:bg-[#1c1c1c]"
   },
 
+  settings: {
+    backdrop: "bg-[#f9f9f9] dark:bg-[#151515]",
+  },
+
   card: { // card
     bg: "bg-[#f2f3f3] dark:bg-[#1a1a1a]",
     bgAsHover: "hover:bg-[#f2f3f3] hover:dark:bg-[#1a1a1a]"

@@ -328,7 +328,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
 
                         {/* Delete confirmation buttons */}
                         {confirmingDelete === conversation.id ? (
-                          <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 ${themes.sidebar.bg} rounded-lg p-1`}>
+                          <div className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 border-1 ${themes.sidebar.border} ${themes.sidebar.bg} rounded-lg p-1`}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -353,7 +353,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                         ) : (
                           <button
                             onClick={(e) => handleDeleteClick(e, conversation)}
-                            className={`absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 ${themes.sidebar.bg} ${themes.card.bgAsHover} rounded-lg transition-all shadow-sm cursor-pointer`}
+                            className={`absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 border-1 ${themes.sidebar.border} ${themes.sidebar.bg} ${themes.card.bgAsHover} rounded-lg transition-all shadow-sm cursor-pointer`}
                             aria-label="Delete conversation"
                           >
                             <X className="w-3 h-3" />
