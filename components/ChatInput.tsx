@@ -1279,7 +1279,13 @@ const ChatInput = ({
   };
 
   return (
-    <div className="bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg">
+    <div className="md:backdrop-blur-md p-3 w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg" style={{ 
+      backgroundColor: 'var(--color-card)', 
+      borderColor: 'var(--color-border)',
+      border: '1px solid',
+      borderRadius: 'var(--radius)',
+      boxShadow: 'var(--shadow-lg)'
+    }}>
       {/* Image Preview Section */}
       {inputMode === "image_generation" && uploadedImageForEditing && (
         <div className="mb-3">
@@ -1287,7 +1293,11 @@ const ChatInput = ({
             <img
               src={uploadedImageForEditing}
               alt="Image for editing"
-              className="w-20 h-20 object-cover rounded-lg border border-zinc-200 dark:border-zinc-700"
+              className="w-20 h-20 object-cover border"
+              style={{ 
+                borderRadius: 'var(--radius)',
+                borderColor: 'var(--color-border)'
+              }}
             />
             <button
               onClick={clearAllImages}
@@ -1304,12 +1314,18 @@ const ChatInput = ({
           {attachments.map((attachment) => (
             <div
               key={attachment.id}
-              className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24"
+              className="relative group max-w-24"
+              style={{ 
+                backgroundColor: 'var(--color-muted)',
+                borderRadius: 'var(--radius)',
+                padding: '0.5rem'
+              }}
             >
               <img
                 src={attachment.url}
                 alt={attachment.filename}
-                className="w-16 h-16 object-cover rounded"
+                className="w-16 h-16 object-cover"
+                style={{ borderRadius: 'var(--radius)' }}
               />
               <button
                 onClick={() => removeAttachment(attachment.id)}
@@ -1335,9 +1351,13 @@ const ChatInput = ({
               ? "Describe the image you want to generate..."
               : "Type your message here..."
           }
-          className={`w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 ${isMobile ? "text-sm" : ""} max-h-32 overflow-y-auto thin-scrollbar min-h-12`}
-          style={isMobile ? {} : {
+          className={`w-full bg-transparent placeholder-opacity-60 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 ${isMobile ? "text-sm" : ""} max-h-32 overflow-y-auto thin-scrollbar min-h-12`}
+          style={isMobile ? { 
+            color: 'var(--color-foreground)',
+            fontSize: '0.875rem'
+          } : {
             fontSize: ".875rem",
+            color: 'var(--color-foreground)'
           }}
           rows={1}
         />
@@ -1354,12 +1374,14 @@ const ChatInput = ({
                   return;
                 setIsModelDropdownOpen(!isModelDropdownOpen);
               }}
-              className={`flex items-center gap-2 py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48 cursor-pointer ${isMobile ? "text-sm" : ""}`}
-              style={isMobile ? {} : {
-                fontSize: ".875rem",
+              className={`flex items-center gap-2 py-2 px-2.5 cursor-pointer w-32 sm:w-48 transition-colors ${isMobile ? "text-sm" : ""}`}
+              style={{
+                backgroundColor: 'var(--color-card)',
+                borderRadius: 'var(--radius)',
+                fontSize: isMobile ? '0.875rem' : '.875rem'
               }}
             >
-              <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
+              <span className="truncate flex-1 text-left" style={{ color: 'var(--color-foreground)' }}>
                 {selectedModelLabel}
               </span>
               {isLoadingSystemModels || isLoadingModelFromConversation ? (
@@ -1370,7 +1392,7 @@ const ChatInput = ({
                 />
               ) : (
                 <ChevronDown
-                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
+                  className={`w-4 h-4 opacity-60 ${transitionClass} flex-shrink-0 ${
                     isModelDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
@@ -1383,20 +1405,31 @@ const ChatInput = ({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                  className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-[#fbf9f7] dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
+                  className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 rounded-lg shadow-lg overflow-hidden z-10"
+                  style={{
+                    backgroundColor: 'var(--color-popover)',
+                    borderColor: 'var(--color-border)',
+                    border: '1px solid',
+                    borderRadius: 'var(--radius)',
+                    boxShadow: 'var(--shadow-lg)'
+                  }}
                 >
                   {/* Search Input */}
-                  <div className="p-3 border-b border-zinc-200 dark:border-zinc-700">
+                  <div className="p-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 opacity-60" />
                       <input
                         type="text"
                         placeholder="Search models..."
                         value={modelSearchQuery}
                         onChange={(e) => setModelSearchQuery(e.target.value)}
-                        className={`w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors ${isMobile ? "text-sm" : ""}`}
-                        style={isMobile ? {} : {
-                          fontSize: ".875rem",
+                        className={`w-full border py-2 pl-10 pr-3 focus:outline-none focus:ring-1 transition-colors ${isMobile ? "text-sm" : ""}`}
+                        style={{
+                          backgroundColor: 'var(--color-input)',
+                          borderColor: 'var(--color-border)',
+                          borderRadius: 'var(--radius)',
+                          color: 'var(--color-foreground)',
+                          fontSize: isMobile ? '0.875rem' : '.875rem'
                         }}
                         autoFocus={!isMobile}
                       />
@@ -1417,9 +1450,9 @@ const ChatInput = ({
                       {isLoadingSystemModels &&
                         modelOptions.filter((opt) => opt.source === "system")
                           .length === 0 && (
-                          <div className={`px-3 py-2 text-zinc-500 dark:text-zinc-400 flex items-center gap-2 ${isMobile ? "text-sm" : ""}`}
-                               style={isMobile ? {} : {
-                                 fontSize: ".875rem",
+                          <div className={`px-3 py-2 opacity-60 flex items-center gap-2 ${isMobile ? "text-sm" : ""}`}
+                               style={{
+                                 fontSize: isMobile ? '0.875rem' : '.875rem'
                                }}>
                             <LoadingIndicator size="sm" color="primary" />
                             Loading models...
@@ -1441,13 +1474,11 @@ const ChatInput = ({
                                 option.providerId || "system"
                               }`}
                               onClick={() => handleModelSelect(option)}
-                              className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors ${
-                                isSelected
-                                  ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
-                                  : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                              } ${isMobile ? "text-sm" : ""}`}
-                              style={isMobile ? {} : {
-                                fontSize: ".875rem",
+                              className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors ${isMobile ? "text-sm" : ""}`}
+                              style={{
+                                backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent',
+                                color: isSelected ? 'white' : 'var(--color-foreground)',
+                                fontSize: isMobile ? '0.875rem' : '.875rem'
                               }}
                               title={option.label}
                             >
@@ -1466,9 +1497,9 @@ const ChatInput = ({
                           .includes(modelSearchQuery.toLowerCase())
                       ).length === 0 &&
                         modelSearchQuery && (
-                          <div className={`px-3 py-2 text-zinc-500 dark:text-zinc-400 text-center ${isMobile ? "text-sm" : ""}`}
-                               style={isMobile ? {} : {
-                                 fontSize: ".875rem",
+                          <div className={`px-3 py-2 opacity-60 text-center ${isMobile ? "text-sm" : ""}`}
+                               style={{
+                                 fontSize: isMobile ? '0.875rem' : '.875rem'
                                }}>
                             No models found matching "{modelSearchQuery}"
                           </div>
@@ -1494,7 +1525,7 @@ const ChatInput = ({
                   !capabilities.hasImageEditing))
             );
           })() && (
-            <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2.5 rounded-lg">
+            <div className="relative transition-colors flex items-center py-2 px-2.5" style={{ borderRadius: 'var(--radius)' }}>
               <input
                 type="file"
                 accept="image/*"
@@ -1516,7 +1547,7 @@ const ChatInput = ({
                 {isUploadingImage ? (
                   <LoadingIndicator size="sm" color="primary" />
                 ) : (
-                  <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  <Paperclip className="w-4 h-4 opacity-60" />
                 )}
               </button>
             </div>
@@ -1527,19 +1558,21 @@ const ChatInput = ({
             <div ref={sizeDropdownRef} className="flex items-stretch relative">
               <button
                 onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                className={`flex items-center gap-2 py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer ${isMobile ? "text-sm" : ""}`}
-                style={isMobile ? {} : {
-                  fontSize: ".875rem",
+                className={`flex items-center gap-2 py-2 px-2.5 transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer ${isMobile ? "text-sm" : ""}`}
+                style={{
+                  backgroundColor: 'var(--color-card)',
+                  borderRadius: 'var(--radius)',
+                  fontSize: isMobile ? '0.875rem' : '.875rem'
                 }}
                 disabled={disabled || isImageGenerating}
                 title={selectedImageSize}
               >
-                <FullScreen className="w-4 h-4 text-zinc-500 dark:text-zinc-400 sm:hidden flex-shrink-0" />
-                <span className="text-zinc-900 dark:text-white truncate flex-1 text-left hidden sm:block">
+                <FullScreen className="w-4 h-4 opacity-60 sm:hidden flex-shrink-0" />
+                <span className="truncate flex-1 text-left hidden sm:block" style={{ color: 'var(--color-foreground)' }}>
                   {selectedImageSize}
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
+                  className={`w-4 h-4 opacity-60 ${transitionClass} flex-shrink-0 ${
                     isSizeDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
@@ -1551,7 +1584,14 @@ const ChatInput = ({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                    className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none bg-[#fbf9f7] dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
+                    className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none rounded-lg shadow-lg overflow-hidden z-10"
+                    style={{
+                      backgroundColor: 'var(--color-popover)',
+                      borderColor: 'var(--color-border)',
+                      border: '1px solid',
+                      borderRadius: 'var(--radius)',
+                      boxShadow: 'var(--shadow-lg)'
+                    }}
                   >
                     <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
                       {ImageGenerationService.getImageSizeOptions().map(
@@ -1564,13 +1604,11 @@ const ChatInput = ({
                                 setSelectedImageSize(option.value);
                                 setIsSizeDropdownOpen(false);
                               }}
-                              className={`cursor-pointer w-full text-left px-3 py-2 transition-colors ${
-                                isSelected
-                                  ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
-                                  : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                              } ${isMobile ? "text-sm" : ""}`}
-                              style={isMobile ? {} : {
-                                fontSize: ".875rem",
+                              className={`cursor-pointer w-full text-left px-3 py-2 transition-colors ${isMobile ? "text-sm" : ""}`}
+                              style={{
+                                backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent',
+                                color: isSelected ? 'white' : 'var(--color-foreground)',
+                                fontSize: isMobile ? '0.875rem' : '.875rem'
                               }}
                             >
                               {option.label}
@@ -1588,8 +1626,10 @@ const ChatInput = ({
           {/* Send/Generate Button */}
           <button
             onClick={handleSendMessage}
-            className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors disabled:cursor-not-allowed cursor-pointer ${
-              (() => {
+            className="py-1.5 px-2.5 flex items-center transition-colors disabled:cursor-not-allowed cursor-pointer"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: (() => {
                 const capabilities = getCurrentModelCapabilities();
                 if (inputMode === "image_generation") {
                   if (capabilities?.hasImageEditing) {
@@ -1598,9 +1638,9 @@ const ChatInput = ({
                       uploadedImageForEditing &&
                       !disabled &&
                       !isImageGenerating
-                    );
+                    ) ? 'var(--color-primary)' : 'var(--color-muted)';
                   } else {
-                    return prompt.trim() && !disabled && !isImageGenerating;
+                    return (prompt.trim() && !disabled && !isImageGenerating) ? 'var(--color-primary)' : 'var(--color-muted)';
                   }
                 } else {
                   if (capabilities?.hasVision) {
@@ -1608,17 +1648,38 @@ const ChatInput = ({
                       (prompt.trim() || attachments.length > 0) &&
                       !disabled &&
                       !isUploadingImage
-                    );
+                    ) ? 'var(--color-primary)' : 'var(--color-muted)';
                   } else {
-                    return prompt.trim() && !disabled && !isUploadingImage;
+                    return (prompt.trim() && !disabled && !isUploadingImage) ? 'var(--color-primary)' : 'var(--color-muted)';
+                  }
+                }
+              })(),
+              color: (() => {
+                const capabilities = getCurrentModelCapabilities();
+                if (inputMode === "image_generation") {
+                  if (capabilities?.hasImageEditing) {
+                    return (
+                      prompt.trim() &&
+                      uploadedImageForEditing &&
+                      !disabled &&
+                      !isImageGenerating
+                    ) ? 'white' : 'var(--color-foreground)';
+                  } else {
+                    return (prompt.trim() && !disabled && !isImageGenerating) ? 'white' : 'var(--color-foreground)';
+                  }
+                } else {
+                  if (capabilities?.hasVision) {
+                    return (
+                      (prompt.trim() || attachments.length > 0) &&
+                      !disabled &&
+                      !isUploadingImage
+                    ) ? 'white' : 'var(--color-foreground)';
+                  } else {
+                    return (prompt.trim() && !disabled && !isUploadingImage) ? 'white' : 'var(--color-foreground)';
                   }
                 }
               })()
-                ? inputMode === "image_generation"
-                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
-                  : "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
-                : "bg-[#eeece9] dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
-            }`}
+            }}
             disabled={(() => {
               const capabilities = getCurrentModelCapabilities();
               if (inputMode === "image_generation") {

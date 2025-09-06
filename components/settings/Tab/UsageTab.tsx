@@ -34,14 +34,14 @@ const UsageTab: React.FC<UsageTabProps> = ({
 }) => {
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+      <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-foreground)' }}>
         Usage
       </h2>
-      <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+      <p className="opacity-70 mb-6">
         Track your message usage across different sources
       </p>
       
-      <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6">
+      <div className="p-6" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
         {loadingState.isLoading ? (
           <div className="h-50 flex items-center justify-center py-8">
             <LoadingState 
@@ -73,14 +73,14 @@ const UsageTab: React.FC<UsageTabProps> = ({
           >
             <div>
               <div className="flex justify-between text-sm font-medium mb-2">
-                <span className="text-zinc-600 dark:text-zinc-300">
+                <span className="opacity-80">
                   Conversations
                 </span>
-                <span className="text-zinc-500 dark:text-zinc-400">
+                <span className="opacity-60">
                   {usageData.totalConversations}
                 </span>
               </div>
-              <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
+              <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--color-border)' }}>
                 <motion.div
                   className="bg-gradient-to-r from-blue-400 to-blue-500 h-2 rounded-full"
                   initial={
@@ -95,7 +95,7 @@ const UsageTab: React.FC<UsageTabProps> = ({
                   }}
                 />
               </div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+              <p className="text-sm opacity-60 mt-2">
                 {usageData.totalConversations} total conversations
               </p>
             </div>

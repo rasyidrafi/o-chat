@@ -80,8 +80,13 @@ const UserAvatar = React.memo<{
   // Always show initials to avoid Google's rate limiting issues
   return (
     <div
-      className={`${className} ${backgroundColor} flex items-center justify-center text-white font-semibold rounded-full ring-4 ring-white dark:ring-zinc-700`}
-      style={{ width: size, height: size, fontSize: size * 0.3 }}
+      className={`${className} ${backgroundColor} flex items-center justify-center text-white font-semibold rounded-full ring-4`}
+      style={{ 
+        width: size, 
+        height: size, 
+        fontSize: size * 0.3,
+        borderColor: 'var(--color-background)'
+      }}
       title={`${user.displayName || user.email}`}
     >
       {initials}
@@ -232,7 +237,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     if (!ContentComponent) {
       return (
         <div>
-          <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+          <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-foreground)' }}>
             {activeTab}
           </h2>
           <p className="mt-4">
@@ -266,7 +271,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   ]);
 
   return (
-    <div className="fixed inset-0 z-70 bg-white dark:bg-[#1c1c1c] text-zinc-900 dark:text-zinc-200 font-sans overflow-y-auto custom-scrollbar">
+    <div className="fixed inset-0 z-70 font-sans overflow-y-auto custom-scrollbar" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-foreground)' }}>
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-between mb-8">
           <Button variant="ghost" size="sm" onClick={onClose} className="gap-2">
@@ -279,13 +284,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           <aside className="lg:col-span-3">
             <div className="space-y-6">
               {isSignedIn ? (
-                <div className="flex flex-col items-center p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl text-center">
+                <div className="flex flex-col items-center p-6 text-center" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
                   <UserAvatar user={user!} size={96} className="mb-4" />
-                  <h2 className="font-bold text-xl text-zinc-900 dark:text-white truncate max-w-full">
+                  <h2 className="font-bold text-xl truncate max-w-full" style={{ color: 'var(--color-foreground)' }}>
                     {user!.displayName || user!.email}
                   </h2>
                   {user!.displayName && (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate max-w-full">
+                    <p className="text-sm opacity-70 truncate max-w-full">
                       {user!.email}
                     </p>
                   )}
@@ -303,11 +308,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                   </Button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center text-center p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl">
-                  <h2 className="font-bold text-xl text-zinc-900 dark:text-white">
+                <div className="flex flex-col items-center text-center p-6" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
+                  <h2 className="font-bold text-xl" style={{ color: 'var(--color-foreground)' }}>
                     Not Signed In
                   </h2>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+                  <p className="text-sm opacity-70 mt-2">
                     Sign in to sync your data and unlock features.
                   </p>
                   <Button
@@ -321,10 +326,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
               {/* Hide usage section on mobile since it's now in Usage tab */}
               {!isMobile && (
-                <div className="p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl">
+                <div className="p-6" style={{ backgroundColor: 'var(--color-muted)', borderRadius: 'var(--radius)' }}>
                 <div>
                   <div className="flex items-center mb-2">
-                    <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">
+                    <h3 className="font-semibold text-sm" style={{ color: 'var(--color-foreground)' }}>
                       Usage
                     </h3>
                   </div>
@@ -359,14 +364,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                     >
                       <div>
                         <div className="flex justify-between text-xs font-medium mb-1">
-                          <span className="text-zinc-600 dark:text-zinc-300">
+                          <span className="opacity-80">
                             Conversations
                           </span>
-                          <span className="text-zinc-500 dark:text-zinc-400">
+                          <span className="opacity-60">
                             {usageData.totalConversations}
                           </span>
                         </div>
-                        <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                        <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'var(--color-border)' }}>
                           <motion.div
                             className="bg-gradient-to-r from-blue-400 to-blue-500 h-1.5 rounded-full"
                             initial={
@@ -381,23 +386,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             }}
                           />
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                        <p className="text-xs opacity-60 mt-1">
                           {usageData.totalConversations} total conversations
                         </p>
                       </div>
                       <div>
                         <div className="flex justify-between text-xs font-medium mb-1">
-                          <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1.5">
+                          <span className="opacity-80 flex items-center gap-1.5">
                             Backed by Us
                             <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
                               Unlimited
                             </span>
                           </span>
-                          <span className="text-zinc-500 dark:text-zinc-400">
+                          <span className="opacity-60">
                             {usageData.backedByServerCount}
                           </span>
                         </div>
-                        <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                        <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'var(--color-border)' }}>
                           <motion.div
                             className="bg-gradient-to-r from-green-400 to-green-500 h-1.5 rounded-full"
                             initial={
@@ -413,21 +418,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             }}
                           />
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                        <p className="text-xs opacity-60 mt-1">
                           {usageData.backedByServerCount} messages sent
                         </p>
                       </div>
                       <div>
                         <div className="flex justify-between text-xs font-medium mb-1">
-                          <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
+                          <span className="opacity-80 flex items-center gap-1">
                             Your Own API
                             <Info className="w-3.5 h-3.5 text-pink-500" />
                           </span>
-                          <span className="text-zinc-500 dark:text-zinc-400">
+                          <span className="opacity-60">
                             {usageData.byokCount}
                           </span>
                         </div>
-                        <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                        <div className="w-full rounded-full h-1.5" style={{ backgroundColor: 'var(--color-border)' }}>
                           <motion.div
                             className="bg-gradient-to-r from-pink-400 to-pink-500 h-1.5 rounded-full"
                             initial={
@@ -443,13 +448,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                             }}
                           />
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                        <p className="text-xs opacity-60 mt-1">
                           {usageData.byokCount} messages sent
                         </p>
                       </div>
-                      <div className="bg-zinc-200/50 dark:bg-zinc-900/50 rounded-lg p-3 flex items-start gap-2.5">
-                        <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      <div className="rounded-lg p-3 flex items-start gap-2.5" style={{ backgroundColor: 'var(--color-secondary)' }}>
+                        <Info className="w-4 h-4 opacity-60 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs opacity-80">
                           Server-backed messages are unlimited and free.
                           Messages using your own API key are billed directly to
                           you - please monitor your API usage and costs.
@@ -463,7 +468,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
           </aside>
           <main className="lg:col-span-9">
-            <div className="flex border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto mb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex overflow-x-auto mb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden" style={{ borderBottom: '1px solid var(--color-border)' }}>
               {tabs.map((tab) => (
                 <TabButton
                   key={tab}
