@@ -7,11 +7,10 @@ import {
   Search,
   Eye,
   Edit,
-  Palette,
+  Gallery,
   FullScreen,
   Brain,
 } from "./Icons";
-import LoadingIndicator from "./ui/LoadingIndicator";
 import { motion, AnimatePresence } from "framer-motion";
 // import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
 import {
@@ -25,6 +24,7 @@ import { ImageGenerationJobService } from "../services/imageGenerationJobService
 import { MessageAttachment, ChatConversation } from "../types/chat";
 import { useAuth } from "../contexts/AuthContext";
 import { useSettingsContext } from "@/contexts/SettingsContext";
+import { useLocalStorageData } from "../hooks/useLocalStorageData";
 import { themes } from "@/constants/themes";
 import LoadingState from "./ui/LoadingState";
 
@@ -67,6 +67,7 @@ const ChatInput = ({
   currentConversation,
 }: ChatInputProps) => {
   const { user } = useAuth();
+  const { saveLastSelectedModel, loadLastSelectedModel } = useLocalStorageData();
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
@@ -222,8 +223,8 @@ const ChatInput = ({
 
     if (capabilities.hasImageEditing) {
       icons.push(
-        <div key="edit" title="Image Editing">
-          <Edit className="w-4 h-4 text-blue-500" />
+        <div key="edit" title="Image Editing" className={`${themes.disabled.bg} rounded p-1`}>
+          <Edit className="w-3 h-3" />
         </div>
       );
     }
@@ -233,24 +234,24 @@ const ChatInput = ({
       capabilities.hasImageGenerationJobs
     ) {
       icons.push(
-        <div key="generation" title="Image Generation">
-          <Palette className="w-4 h-4 text-purple-500" />
+        <div key="generation" title="Image Generation" className={`${themes.disabled.bg} rounded p-1`}>
+          <Gallery className="w-3 h-3" />
         </div>
       );
     }
 
     if (capabilities.hasVision) {
       icons.push(
-        <div key="vision" title="Vision">
-          <Eye className="w-4 h-4 text-green-500" />
+        <div key="vision" title="Vision" className={`${themes.disabled.bg} rounded p-1`}>
+          <Eye className="w-3 h-3" />
         </div>
       );
     }
 
     if (capabilities.hasReasoning) {
       icons.push(
-        <div key="reasoning" title="Reasoning">
-          <Brain className="w-4 h-4 text-orange-500" />
+        <div key="reasoning" title="Reasoning" className={`${themes.disabled.bg} rounded p-1`}>
+          <Brain className="w-3 h-3" />
         </div>
       );
     }
@@ -570,8 +571,9 @@ const ChatInput = ({
         console.error("Error loading custom providers:", error);
       }
 
-      // Set final options with localStorage data only
-      setModelOptions([...options]);
+      // Set final options with localStorage data only (sorted alphabetically)
+      const sortedOptions = [...options].sort((a, b) => a.label.localeCompare(b.label));
+      setModelOptions(sortedOptions);
 
       // Check capabilities for loaded models
       checkCurrentModelCapabilities([...options]);
@@ -585,8 +587,9 @@ const ChatInput = ({
         supportedParameters: model.supported_parameters || [],
       }));
 
-      setModelOptions(fallbackSystemModels);
-      checkCurrentModelCapabilities(fallbackSystemModels);
+      const sortedFallbackModels = fallbackSystemModels.sort((a, b) => a.label.localeCompare(b.label));
+      setModelOptions(sortedFallbackModels);
+      checkCurrentModelCapabilities(sortedFallbackModels);
     } finally {
       setIsLoadingSystemModels(false);
     }
@@ -606,14 +609,6 @@ const ChatInput = ({
     // Check if this is a new conversation or if we haven't auto-selected for this conversation yet
     const isNewConversation =
       lastProcessedConversationIdRef.current !== conversationId;
-
-    // Only auto-select model if:
-    // 1. It's a new conversation AND
-    // 2. User hasn't manually selected a model for this conversation yet
-    if (!isNewConversation && userHasManuallySelectedModelRef.current) {
-      // User has manually selected a model for this conversation, don't override
-      return;
-    }
 
     const lastMessageModelInfo = getLastMessageModel();
     if (!lastMessageModelInfo) {
@@ -701,6 +696,35 @@ const ChatInput = ({
     getLastMessageModel,
     onModelSelect,
   ]);
+
+  // Effect to load last selected model for new chats only
+  useEffect(() => {
+    // Only load from localStorage for new chats (no current conversation)
+    if (modelOptions.length === 0 || currentConversation) return;
+
+    const savedModelData = loadLastSelectedModel();
+    if (savedModelData) {
+      const { model, source, providerId } = savedModelData;
+      // Check if the saved model exists in current options
+      const modelExists = modelOptions.some((opt) =>
+        opt.value === model &&
+        opt.source === source &&
+        (opt.providerId || "") === (providerId || "")
+      );
+      if (modelExists) {
+        setSelectedModel(model);
+        setSelectedProviderId(providerId || "");
+        // Don't mark as manually selected for localStorage loading
+        // This allows conversations to override with their last message model
+        // userHasManuallySelectedModelRef.current = true;
+
+        // Notify parent component
+        if (onModelSelect) {
+          onModelSelect(model, source, providerId);
+        }
+      }
+    }
+  }, [modelOptions, currentConversation, loadLastSelectedModel, onModelSelect]);
 
   // Handle image upload
   const handleImageUpload = useCallback(
@@ -1182,6 +1206,14 @@ const ChatInput = ({
     // Mark that user has manually selected a model
     userHasManuallySelectedModelRef.current = true;
 
+    // Save manually selected model to localStorage
+    const modelData = {
+      model: option.value,
+      source: option.source,
+      providerId: option.providerId || "",
+    };
+    saveLastSelectedModel(modelData);
+
     // Check capabilities of the new model
     checkCurrentModelCapabilities(modelOptions);
 
@@ -1439,7 +1471,7 @@ const ChatInput = ({
                               option.providerId || "system"
                             }`}
                             onClick={() => handleModelSelect(option)}
-                            className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${themes.sidebar.fgHoverAsFg} ${
+                            className={`cursor-pointer w-full text-left flex items-center justify-between pl-3 pr-2 py-2 transition-colors text-sm ${themes.sidebar.fgHoverAsFg} ${
                               isSelected
                                 ? `${themes.sidebar.bgHoverAsBg}`
                                 : `${themes.sidebar.bgHover}`

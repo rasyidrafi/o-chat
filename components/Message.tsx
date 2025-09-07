@@ -13,7 +13,6 @@ import TypingIndicator from "./TypingIndicator";
 import ReasoningDisplay from "./ReasoningDisplay";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
-import LoadingIndicator from "./ui/LoadingIndicator";
 import { MemoizedMarkdown } from "./MemoizedMarkdown";
 import { Copy, RotateCcw, GitBranch, Edit, Check } from "./Icons";
 import { themes } from "@/constants/themes";
@@ -29,6 +28,7 @@ const loadMermaid = () => {
 };
 
 import { useSettingsContext } from "../contexts/SettingsContext";
+import LoadingState from "./ui/LoadingState";
 
 const getImageUrlFromPath = async (gcsPath: string): Promise<string> => {
   try {
@@ -176,7 +176,6 @@ ImageContentComponent.displayName = "ImageContentComponent";
 interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
-  isLastMessage?: boolean;
 }
 
 // Mermaid diagram component with memoization
@@ -252,7 +251,7 @@ const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(
 MermaidDiagram.displayName = "MermaidDiagram";
 
 const Message: React.FC<MessageProps> = memo(
-  ({ message, isStreaming = false, isLastMessage = false }) => {
+  ({ message, isStreaming = false }) => {
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [isDark, setIsDark] = useState(false);
@@ -380,7 +379,11 @@ const Message: React.FC<MessageProps> = memo(
     const getMessageStyles = () => {
       // Check if user message contains image attachments
       const hasImageAttachments =
-        isUser && ((message.attachments && message.attachments.length > 0) || (Array.isArray(message.content) && message.content.length > 0 && message.content.some(item => item.type === "image_url")));
+        isUser &&
+        ((message.attachments && message.attachments.length > 0) ||
+          (Array.isArray(message.content) &&
+            message.content.length > 0 &&
+            message.content.some((item) => item.type === "image_url")));
 
       if (isUser) {
         // For messages with image attachments, use responsive width scaling
@@ -403,7 +406,10 @@ const Message: React.FC<MessageProps> = memo(
           return (
             <div>
               <div className={`text-xs my-1 ${themes.sidebar.fg}`}>
-                Image {(Boolean(message.attachments && message.attachments.length > 0) ? "Editing" : "Generation")}
+                Image{" "}
+                {Boolean(message.attachments && message.attachments.length > 0)
+                  ? "Editing"
+                  : "Generation"}
               </div>
               <div className="text-sm leading-relaxed whitespace-pre-wrap">
                 {typeof message.content === "string"
@@ -522,7 +528,7 @@ const Message: React.FC<MessageProps> = memo(
 
                         {/* Loading content */}
                         <div className="flex flex-col items-center space-y-3 text-zinc-500 dark:text-zinc-400 z-10">
-                          <LoadingIndicator size="md" color="primary" />
+                          <LoadingState size="md" message="" />
                           <div className="text-xs text-center px-4">
                             <div>{loadingText}</div>
                             {isAsyncJob && (
@@ -727,7 +733,9 @@ const Message: React.FC<MessageProps> = memo(
         >
           <div
             className={`flex flex-col w-full ${
-              isUser ? "max-w-full items-end mt-4 pb-4" : "max-w-full items-start min-w-0"
+              isUser
+                ? "max-w-full items-end mt-4 pb-4"
+                : "max-w-full items-start min-w-0"
             }`}
           >
             <div className={getMessageStyles()}>{renderContent()}</div>

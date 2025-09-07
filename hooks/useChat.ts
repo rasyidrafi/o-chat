@@ -1404,6 +1404,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
       // Find active jobs only in the current conversation
       conversation.messages.forEach(msg => {
+        console.log(msg)
+
         // Look for messages that are image generation jobs
         if (msg.messageType === 'image_generation' && msg.imageGenerationJob) {
           const job = msg.imageGenerationJob;

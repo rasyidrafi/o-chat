@@ -172,6 +172,15 @@ export const useLocalStorageData = () => {
       return results;
     };
 
+    // Last selected model operations
+    const saveLastSelectedModel = (modelData: { model: string; source: string; providerId: string }) => {
+      return setCachedItem("lastSelectedModel", modelData);
+    };
+
+    const loadLastSelectedModel = (): { model: string; source: string; providerId: string } | null => {
+      return getCachedItem("lastSelectedModel");
+    };
+
     return { 
       // Original methods
       getConversationsFromLocal, 
@@ -187,6 +196,10 @@ export const useLocalStorageData = () => {
       clearCache,
       bulkLoadFromStorage,
       bulkSaveToStorage,
+
+      // Last selected model methods
+      saveLastSelectedModel,
+      loadLastSelectedModel,
     };
   }, [getCachedItem, setCachedItem, clearCache]);
 };
