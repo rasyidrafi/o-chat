@@ -16,6 +16,7 @@ import { ImageGenerationService } from "../services/imageGenerationService";
 import LoadingIndicator from "./ui/LoadingIndicator";
 import { MemoizedMarkdown } from "./MemoizedMarkdown";
 import { Copy, RotateCcw, GitBranch, Edit, Check } from "./Icons";
+import { themes } from "@/constants/themes";
 import "katex/dist/katex.min.css"; // Import KaTeX CSS
 
 // Lazy load heavy dependencies only when needed
@@ -379,18 +380,18 @@ const Message: React.FC<MessageProps> = memo(
     const getMessageStyles = () => {
       // Check if user message contains image attachments
       const hasImageAttachments =
-        isUser && message.attachments && message.attachments.length > 0;
+        isUser && ((message.attachments && message.attachments.length > 0) || (Array.isArray(message.content) && message.content.length > 0 && message.content.some(item => item.type === "image_url")));
 
       if (isUser) {
         // For messages with image attachments, use responsive width scaling
         if (hasImageAttachments) {
-          return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 w-[100%] sm:w-[85%] md:w-[75%] lg:w-[50%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
+          return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-[6px] w-[100%] sm:w-[85%] md:w-[75%] lg:w-[50%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
         }
         // For text-only messages, keep original styling
-        return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-3 max-w-[90%] sm:max-w-[85%] md:max-w-[75%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
+        return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-[6px] max-w-[90%] sm:max-w-[85%] md:max-w-[75%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
       }
       if (message.isError) {
-        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-3 w-full max-w-full break-words overflow-wrap-anywhere";
+        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-[6px] w-full max-w-full break-words overflow-wrap-anywhere";
       }
       return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
     };
@@ -400,9 +401,9 @@ const Message: React.FC<MessageProps> = memo(
       if (message.messageType === "image_generation") {
         if (isUser) {
           return (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-                <span className="font-medium">Image Generation Request:</span>
+            <div>
+              <div className={`text-xs my-1 ${themes.sidebar.fg}`}>
+                Image {(Boolean(message.attachments && message.attachments.length > 0) ? "Editing" : "Generation")}
               </div>
               <div className="text-sm leading-relaxed whitespace-pre-wrap">
                 {typeof message.content === "string"
@@ -413,10 +414,7 @@ const Message: React.FC<MessageProps> = memo(
 
               {/* Display input image for editing if attachments exist */}
               {message.attachments && message.attachments.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-xs text-zinc-500 dark:text-zinc-500">
-                    Input image for editing:
-                  </div>
+                <div className="space-y-2 py-2">
                   {message.attachments.map((attachment, index) => (
                     <ImageContentComponent
                       key={index}
@@ -555,7 +553,7 @@ const Message: React.FC<MessageProps> = memo(
               ) : null}
               {(message.generatedImageUrl ||
                 (message.attachments && message.attachments.length > 0)) && (
-                <div className="text-xs text-zinc-500 dark:text-zinc-500">
+                <div className="text-xs text-zinc-500 dark:text-zinc-500 mb-1">
                   Image will be expired after several hours.
                 </div>
               )}
@@ -597,7 +595,7 @@ const Message: React.FC<MessageProps> = memo(
               variants={fadeVariants}
               initial={animationsDisabled ? {} : "initial"}
               animate="animate"
-              className="space-y-2 flex flex-col"
+              className="space-y-2 flex flex-col pb-2"
             >
               {message.content.map((item, index) => {
                 if (item.type === "text") {
