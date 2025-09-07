@@ -1471,7 +1471,7 @@ const ChatInput = ({
                               option.providerId || "system"
                             }`}
                             onClick={() => handleModelSelect(option)}
-                            className={`cursor-pointer w-full text-left flex items-center justify-between pl-3 pr-2 py-2 transition-colors text-sm ${themes.sidebar.fgHoverAsFg} ${
+                            className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${themes.sidebar.fgHoverAsFg} ${
                               isSelected
                                 ? `${themes.sidebar.bgHoverAsBg}`
                                 : `${themes.sidebar.bgHover}`
