@@ -20,6 +20,7 @@ import { DEFAULT_MODEL_ID } from "../constants/models";
 import { useChat } from "../hooks/useChat";
 import { useSettingsContext } from "../contexts/SettingsContext";
 import LoadingState from "./ui/LoadingState";
+import { themes } from "@/constants/themes";
 
 interface ChatViewProps {
   onMenuClick: () => void;
@@ -171,10 +172,10 @@ const ChatView: React.FC<ChatViewProps> = ({
   // Memoized theme icon props to prevent recreation on every render
   const themeIconProps = useMemo(
     () => ({
-      initial: { opacity: 0, rotate: -90, scale: 0.5 },
-      animate: { opacity: 1, rotate: 0, scale: 1 },
-      exit: { opacity: 0, rotate: 90, scale: 0.5 },
-      transition: { duration: animationsDisabled ? 0 : 0.3 },
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit: { opacity: 0 },
+      transition: { duration: animationsDisabled ? 0 : 0.2 },
     }),
     [animationsDisabled]
   );
@@ -251,7 +252,9 @@ const ChatView: React.FC<ChatViewProps> = ({
   );
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f9f9f9] dark:bg-[#1c1c1c] relative">
+    <div
+      className={`flex-1 flex flex-col relative ${themes.chatview.backdrop}`}
+    >
       {/* Top-left positioned collapse button for desktop */}
       <motion.div
         className="fixed z-50 hidden md:block"
@@ -263,11 +266,11 @@ const ChatView: React.FC<ChatViewProps> = ({
       >
         <button
           onClick={toggleSidebar}
-          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-lg transition-all duration-200 cursor-pointer"
+          className={`flex items-center justify-center border rounded-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border} shadow-sm`}
           style={buttonSizeStyle}
           aria-label="Toggle sidebar"
         >
-          <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+          <Menu className="w-5 h-5" />
         </button>
       </motion.div>
 
@@ -278,41 +281,42 @@ const ChatView: React.FC<ChatViewProps> = ({
           left: "10px",
         }}
       >
-        <div className="flex items-center rounded-lg border-none">
+        <div className="flex items-center rounded-lg border-none shadow-sm">
           <button
             onClick={onMenuClick}
-            className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
+            className={`flex items-center justify-center border rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
             style={buttonSizeStyle}
             aria-label="Open menu"
           >
-            <Menu className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+            <Menu className="w-5 h-5" />
           </button>
           <button
             onClick={onOpenSearchCenter}
-            className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
-            style={buttonSizeStyle}
+            className={`px-2 gap-1.5 flex items-center justify-center border rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
+            style={{ ...buttonSizeStyle, width: "auto" }}
             aria-label="Search conversations"
           >
-            <Search className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+            <Search className="w-5 h-5" />
+            <div className="font-medium">Search</div>
           </button>
         </div>
       </div>
 
       {/* Top-right positioned buttons */}
       <div
-        className="fixed z-10 flex items-center rounded-lg border-none"
+        className="fixed z-10 flex items-center rounded-lg border-none shadow-sm"
         style={topRightButtonsStyle}
       >
         <button
           onClick={() => onOpenSettings()}
-          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer"
+          className={`flex items-center justify-center border rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
           style={buttonSizeStyle}
           aria-label="Settings"
         >
-          <SlidersHorizontal className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+          <SlidersHorizontal className="w-5 h-5" />
         </button>
         <button
-          className="flex items-center justify-center hover:bg-[#eeece9] dark:hover:bg-zinc-700 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-[#1c1c1c] md:dark:bg-[#1c1c1c]/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer"
+          className={`flex items-center justify-center border rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
           onClick={toggleTheme}
           aria-label={`Switch to ${
             theme === "light" ? "dark" : theme === "dark" ? "system" : "light"
@@ -328,11 +332,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       <main className="flex-1 flex flex-col overflow-hidden">
         {isLoading || isLoadingMessages ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <LoadingState
-              message={""}
-              size="md"
-              centerContent={true}
-            />
+            <LoadingState message={""} size="md" centerContent={true} />
           </div>
         ) : shouldShowWelcome ? (
           <div className="w-full flex-1 flex items-center justify-center">

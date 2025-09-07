@@ -24,7 +24,10 @@ export const themes = {
   },
 
   chatview: {
-    backdrop: "bg-[#f9f9f9] dark:bg-[#1c1c1c]"
+    backdrop: "bg-[#f9f9f9] dark:bg-[#1c1c1c]",
+    card: "bg-[#e9eaea] dark:bg-[#27272a]",
+    inputBg: "dark:bg-[#343d3f]",
+    border: "border-[#e7e4e2] dark:border-zinc-700",
   },
 
   settings: {

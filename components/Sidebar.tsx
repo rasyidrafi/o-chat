@@ -260,7 +260,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
           <button
             onClick={handleNewChat}
             disabled={isCreatingNewChat}
-            className={`flex items-center justify-center truncate py-2 mx-2 my-2 px-2 ${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover} rounded-lg cursor-pointer`}
+            className={`flex items-center justify-center truncate py-2 mx-2 my-2 px-2 ${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover} rounded-lg cursor-pointer shadow-sm`}
           >
             {isCollapsed ? (
               <Plus className="w-4 h-4" />
