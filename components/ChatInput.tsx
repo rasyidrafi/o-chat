@@ -610,6 +610,14 @@ const ChatInput = ({
     const isNewConversation =
       lastProcessedConversationIdRef.current !== conversationId;
 
+    // Only auto-select model if:
+    // 1. It's a new conversation (always allow for new conversations)
+    // 2. OR it's the same conversation but user hasn't manually selected yet
+    if (!isNewConversation && userHasManuallySelectedModelRef.current) {
+      // User has manually selected a model for this conversation, don't override
+      return;
+    }
+
     const lastMessageModelInfo = getLastMessageModel();
     if (!lastMessageModelInfo) {
       // Update the processed conversation ID even if no model info found
