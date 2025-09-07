@@ -25,6 +25,8 @@ import { ImageGenerationJobService } from "../services/imageGenerationJobService
 import { MessageAttachment, ChatConversation } from "../types/chat";
 import { useAuth } from "../contexts/AuthContext";
 import { useSettingsContext } from "@/contexts/SettingsContext";
+import { themes } from "@/constants/themes";
+import LoadingState from "./ui/LoadingState";
 
 interface ModelOption {
   label: string;
@@ -1279,19 +1281,27 @@ const ChatInput = ({
   };
 
   return (
-    <div className="bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-lg">
+    <div
+      className={`${
+        isMobile ? themes.chatview.inputBg : themes.chatview.inputBgTransparent
+      } ${
+        themes.chatview.border
+      } md:backdrop-blur-md border-1 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-sm`}
+    >
       {/* Image Preview Section */}
       {inputMode === "image_generation" && uploadedImageForEditing && (
-        <div className="mb-3">
-          <div className="relative group inline-block">
+        <div className="mb-2 flex overflow-x-auto gap-2 thin-scrollbar">
+          <div
+            className={`relative group inline-block rounded-lg max-w-24 ${themes.message.backdrop}`}
+          >
             <img
               src={uploadedImageForEditing}
               alt="Image for editing"
-              className="w-20 h-20 object-cover rounded-lg border border-zinc-200 dark:border-zinc-700"
+              className="w-20 h-20 object-cover rounded-lg"
             />
             <button
               onClick={clearAllImages}
-              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              className="cursor-pointer absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <X className="w-3 h-3" />
             </button>
@@ -1300,20 +1310,20 @@ const ChatInput = ({
       )}
 
       {inputMode === "chat" && attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="mb-2 flex overflow-x-auto gap-2 thin-scrollbar">
           {attachments.map((attachment) => (
             <div
               key={attachment.id}
-              className="relative group bg-zinc-100 dark:bg-zinc-800 rounded-lg p-2 max-w-24"
+              className={`relative group inline-block rounded-lg max-w-24 ${themes.message.backdrop}`}
             >
               <img
                 src={attachment.url}
                 alt={attachment.filename}
-                className="w-16 h-16 object-cover rounded"
+                className="w-20 h-20 object-cover rounded-lg"
               />
               <button
                 onClick={() => removeAttachment(attachment.id)}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                className="cursor-pointer absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -1335,10 +1345,9 @@ const ChatInput = ({
               ? "Describe the image you want to generate..."
               : "Type your message here..."
           }
-          className={`w-full bg-transparent text-zinc-900 dark:text-zinc-200 placeholder-zinc-500 dark:placeholder-zinc-500 resize-none focus:outline-none pl-2 pr-2 pt-1 pb-1 ${isMobile ? "text-sm" : ""} max-h-32 overflow-y-auto thin-scrollbar min-h-12`}
-          style={isMobile ? {} : {
-            fontSize: ".875rem",
-          }}
+          className={`w-full bg-transparent resize-none focus:outline-none px-2 py-1 text-sm max-h-32 overflow-y-auto thin-scrollbar min-h-12 ${
+            themes.sidebar.fgHoverAsFg
+          } ${themes.sidebar.fgRaw("placeholder:")}`}
           rows={1}
         />
       </div>
@@ -1354,23 +1363,20 @@ const ChatInput = ({
                   return;
                 setIsModelDropdownOpen(!isModelDropdownOpen);
               }}
-              className={`flex items-center gap-2 py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors w-32 sm:w-48 cursor-pointer ${isMobile ? "text-sm" : ""}`}
-              style={isMobile ? {} : {
-                fontSize: ".875rem",
-              }}
+              className={`flex items-center gap-2 p-2 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
             >
-              <span className="text-zinc-900 dark:text-white truncate flex-1 text-left">
+              <span
+                className={`${themes.sidebar.fgHoverAsFg} truncate flex-1 text-left`}
+              >
                 {selectedModelLabel}
               </span>
               {isLoadingSystemModels || isLoadingModelFromConversation ? (
-                <LoadingIndicator
-                  size="sm"
-                  color="primary"
-                  className="text-zinc-500 dark:text-zinc-400"
-                />
+                <LoadingState size="xs" message="" />
               ) : (
                 <ChevronDown
-                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
+                  className={`w-4 h-4 ${
+                    themes.sidebar.fgHoverAsFg
+                  } ${transitionClass} flex-shrink-0 ${
                     isModelDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
@@ -1383,97 +1389,85 @@ const ChatInput = ({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                  className="absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-[#fbf9f7] dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
+                  className={`absolute bottom-full mb-2 left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 rounded-lg shadow-sm border overflow-hidden z-10 ${themes.chatview.inputBg} ${themes.chatview.border}`}
                 >
                   {/* Search Input */}
-                  <div className="p-3 border-b border-zinc-200 dark:border-zinc-700">
+                  <div
+                    className={`p-3 border-b ${themes.chatview.border} ${themes.sidebar.fg}`}
+                  >
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
                       <input
                         type="text"
                         placeholder="Search models..."
                         value={modelSearchQuery}
                         onChange={(e) => setModelSearchQuery(e.target.value)}
-                        className={`w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg py-2 pl-10 pr-3 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors ${isMobile ? "text-sm" : ""}`}
-                        style={isMobile ? {} : {
-                          fontSize: ".875rem",
-                        }}
+                        className={`w-full ${themes.chatview.inputBg} border ${
+                          themes.chatview.border
+                        } ${themes.sidebar.fgRaw("placeholder:")} ${
+                          themes.sidebar.fgHoverAsFg
+                        } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
                         autoFocus={!isMobile}
                       />
                     </div>
                   </div>
 
                   {/* Model Options */}
-                  <div
-                    className="max-h-64 overflow-y-auto thin-scrollbar"
-                    style={{
-                      maskImage:
-                        "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-                      WebkitMaskImage:
-                        "linear-gradient(to bottom, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)",
-                    }}
-                  >
-                    <div className="py-1">
-                      {isLoadingSystemModels &&
-                        modelOptions.filter((opt) => opt.source === "system")
-                          .length === 0 && (
-                          <div className={`px-3 py-2 text-zinc-500 dark:text-zinc-400 flex items-center gap-2 ${isMobile ? "text-sm" : ""}`}
-                               style={isMobile ? {} : {
-                                 fontSize: ".875rem",
-                               }}>
-                            <LoadingIndicator size="sm" color="primary" />
-                            Loading models...
-                          </div>
-                        )}
-                      {modelOptions
-                        .filter((option) =>
-                          option.label
-                            .toLowerCase()
-                            .includes(modelSearchQuery.toLowerCase())
-                        )
-                        .map((option) => {
-                          const isSelected =
-                            selectedModel === option.value &&
-                            selectedProviderId === (option.providerId || "");
-                          return (
-                            <button
-                              key={`${option.value}-${
-                                option.providerId || "system"
-                              }`}
-                              onClick={() => handleModelSelect(option)}
-                              className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors ${
-                                isSelected
-                                  ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
-                                  : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                              } ${isMobile ? "text-sm" : ""}`}
-                              style={isMobile ? {} : {
-                                fontSize: ".875rem",
-                              }}
-                              title={option.label}
-                            >
-                              <span className="truncate flex-1 mr-2">
-                                {option.label}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                {getCapabilityIcons(option)}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      {modelOptions.filter((option) =>
+                  <div className="h-64 overflow-y-auto thin-scrollbar">
+                    {isLoadingSystemModels &&
+                      modelOptions.filter((opt) => opt.source === "system")
+                        .length === 0 && (
+                        <div
+                          className={`px-3 py-2 ${themes.sidebar.fg} flex items-center gap-2 text-sm`}
+                        >
+                          <LoadingState />
+                        </div>
+                      )}
+                    {modelOptions
+                      .filter((option) =>
                         option.label
                           .toLowerCase()
                           .includes(modelSearchQuery.toLowerCase())
-                      ).length === 0 &&
-                        modelSearchQuery && (
-                          <div className={`px-3 py-2 text-zinc-500 dark:text-zinc-400 text-center ${isMobile ? "text-sm" : ""}`}
-                               style={isMobile ? {} : {
-                                 fontSize: ".875rem",
-                               }}>
-                            No models found matching "{modelSearchQuery}"
-                          </div>
-                        )}
-                    </div>
+                      )
+                      .map((option) => {
+                        const isSelected =
+                          selectedModel === option.value &&
+                          selectedProviderId === (option.providerId || "");
+                        return (
+                          <button
+                            key={`${option.value}-${
+                              option.providerId || "system"
+                            }`}
+                            onClick={() => handleModelSelect(option)}
+                            className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${themes.sidebar.fgHoverAsFg} ${
+                              isSelected
+                                ? `${themes.sidebar.bgHoverAsBg}`
+                                : `${themes.sidebar.bgHover}`
+                            }`}
+                            title={option.label}
+                          >
+                            <span className="truncate flex-1 mr-2">
+                              {option.label}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              {getCapabilityIcons(option)}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    {modelOptions.filter((option) =>
+                      option.label
+                        .toLowerCase()
+                        .includes(modelSearchQuery.toLowerCase())
+                    ).length === 0 &&
+                      modelSearchQuery && (
+                        <div
+                          className={`px-3 flex justify-center items-center text-sm text-center ${themes.sidebar.fg}`}
+                          style={{ height: "inherit" }}
+                        >
+                          No results found
+                        </div>
+                      )}
                   </div>
                 </motion.div>
               )}
@@ -1494,7 +1488,9 @@ const ChatInput = ({
                   !capabilities.hasImageEditing))
             );
           })() && (
-            <div className="relative hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors rounded-lg flex items-center py-2 px-2.5 rounded-lg">
+            <div
+              className={`cursor-pointer relative bg-transparent transition-colors rounded-lg flex items-center p-2 rounded-lg ${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHover}`}
+            >
               <input
                 type="file"
                 accept="image/*"
@@ -1505,18 +1501,18 @@ const ChatInput = ({
                     e.target.value = "";
                   }
                 }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                className="absolute inset-0 w-full h-full opacity-0 z-10"
                 disabled={isUploadingImage}
               />
               <button
-                className="transition-colors relative flex items-center"
+                className={`transition-colors relative flex items-center`}
                 aria-label="Upload image"
                 disabled={isUploadingImage}
               >
                 {isUploadingImage ? (
-                  <LoadingIndicator size="sm" color="primary" />
+                  <LoadingState size="xs" message="" />
                 ) : (
-                  <Paperclip className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                  <Paperclip className="w-4 h-4" />
                 )}
               </button>
             </div>
@@ -1527,19 +1523,16 @@ const ChatInput = ({
             <div ref={sizeDropdownRef} className="flex items-stretch relative">
               <button
                 onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                className={`flex items-center gap-2 py-2 px-2.5 rounded-lg bg-[#fbf9f7] dark:bg-zinc-800/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer ${isMobile ? "text-sm" : ""}`}
-                style={isMobile ? {} : {
-                  fontSize: ".875rem",
-                }}
+                className={`flex items-center gap-2 p-2 rounded-lg transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer text-sm ${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHover} bg-transparent`}
                 disabled={disabled || isImageGenerating}
                 title={selectedImageSize}
               >
-                <FullScreen className="w-4 h-4 text-zinc-500 dark:text-zinc-400 sm:hidden flex-shrink-0" />
-                <span className="text-zinc-900 dark:text-white truncate flex-1 text-left hidden sm:block">
+                <FullScreen className={`w-4 h-4 sm:hidden flex-shrink-0`} />
+                <span className="truncate flex-1 text-left hidden sm:block">
                   {selectedImageSize}
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 ${transitionClass} flex-shrink-0 ${
+                  className={`w-4 h-4 ${transitionClass} flex-shrink-0 ${
                     isSizeDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
@@ -1551,9 +1544,9 @@ const ChatInput = ({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                    className="absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none bg-[#fbf9f7] dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden z-10"
+                    className={`absolute bottom-full mb-2 right-0 w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none ${themes.chatview.inputBg} rounded-lg shadow-sm border ${themes.chatview.border} overflow-hidden z-10`}
                   >
-                    <div className="py-1 max-h-48 overflow-y-auto thin-scrollbar">
+                    <div className="h-auto overflow-y-auto thin-scrollbar">
                       {ImageGenerationService.getImageSizeOptions().map(
                         (option) => {
                           const isSelected = selectedImageSize === option.value;
@@ -1564,14 +1557,13 @@ const ChatInput = ({
                                 setSelectedImageSize(option.value);
                                 setIsSizeDropdownOpen(false);
                               }}
-                              className={`cursor-pointer w-full text-left px-3 py-2 transition-colors ${
+                              className={`cursor-pointer w-full text-left px-2.5 py-2 text-sm transition-colors ${themes.sidebar.fgHoverAsFg} ${
+                                themes.sidebar.bgHover
+                              } ${
                                 isSelected
-                                  ? "bg-pink-100/80 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300"
-                                  : "text-zinc-900 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-700/80"
-                              } ${isMobile ? "text-sm" : ""}`}
-                              style={isMobile ? {} : {
-                                fontSize: ".875rem",
-                              }}
+                                  ? `${themes.sidebar.bgHoverAsBg}`
+                                  : `${themes.chatview.inputBg}`
+                              } $`}
                             >
                               {option.label}
                             </button>
@@ -1614,10 +1606,8 @@ const ChatInput = ({
                   }
                 }
               })()
-                ? inputMode === "image_generation"
-                  ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
-                  : "bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:from-pink-700 hover:to-purple-700"
-                : "bg-[#eeece9] dark:bg-zinc-600/80 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
+                ? `${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover}`
+                : `${themes.disabled.bg} ${themes.sidebar.fg} cursor-not-allowed`
             }`}
             disabled={(() => {
               const capabilities = getCurrentModelCapabilities();

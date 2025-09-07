@@ -314,7 +314,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
                       <li
                         key={conversation.id}
                         onClick={() => handleConversationSelect(conversation)}
-                        className={`mb-[4px] last:mb-0 font-light text-sm capitalize py-[6px] px-[8px] leading-[20px] rounded-lg cursor-pointer transition-colors group relative ${
+                        className={`mb-[4px] last:mb-0 font-normal text-sm capitalize py-[6px] px-[8px] leading-[20px] rounded-lg cursor-pointer transition-colors group relative ${
                           themes.sidebar.bgHover
                         } ${themes.sidebar.fgHover}  ${
                           activeConversationId === conversation.id

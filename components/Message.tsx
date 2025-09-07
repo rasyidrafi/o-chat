@@ -385,13 +385,13 @@ const Message: React.FC<MessageProps> = memo(
       if (isUser) {
         // For messages with image attachments, use responsive width scaling
         if (hasImageAttachments) {
-          return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-[6px] w-[100%] sm:w-[85%] md:w-[75%] lg:w-[50%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
+          return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-xl px-3 py-[6px] w-[100%] sm:w-[85%] md:w-[75%] lg:w-[50%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
         }
         // For text-only messages, keep original styling
-        return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-2xl px-4 py-[6px] max-w-[90%] sm:max-w-[85%] md:max-w-[75%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
+        return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-xl px-3 py-[6px] max-w-[90%] sm:max-w-[85%] md:max-w-[75%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
       }
       if (message.isError) {
-        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-2xl px-4 py-[6px] w-full max-w-full break-words overflow-wrap-anywhere";
+        return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-xl px-3 py-[6px] w-full max-w-full break-words overflow-wrap-anywhere";
       }
       return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
     };

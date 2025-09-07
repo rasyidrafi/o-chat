@@ -299,7 +299,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
             tabIndex={-1}
           >
             {/* Simplified Header */}
-            <div className={`px-2 ${themes.sidebar.border} border-b`}>
+            <div className={`px-2 ${themes.sidebar.border} border-b py-2`}>
               <div className={`relative`}>
                 <Search
                   className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${themes.sidebar.fg}`}
@@ -329,14 +329,13 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
             {/* Results */}
             <div
               ref={scrollContainerRef}
-              className="flex-1 overflow-y-auto thin-scrollbar scroll-fade"
+              className="flex flex-col overflow-y-auto thin-scrollbar scroll-fade min-h-64"
             >
               {isSearching ? (
                 <div
-                  className={`flex flex-col items-center justify-center py-12 ${themes.sidebar.fg}`}
+                  className={`flex-1 flex flex-col items-center justify-center ${themes.sidebar.fg}`}
                 >
-                  <LoadingState message="" />
-                  <div className="text-sm">Searching...</div>
+                  <LoadingState message="Searching..." />
                 </div>
               ) : hasResults ? (
                 orderedGroups.map(([dateGroup, convs]) => (
@@ -366,7 +365,7 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
                 ))
               ) : (
                 <div
-                  className={`text-center text-sm py-12 ${themes.sidebar.fg}`}
+                  className={`flex-1 flex flex-col items-center justify-center text-center text-sm ${themes.sidebar.fg}`}
                 >
                   {hasSearchQuery ? "No results found" : "No conversations yet"}
                 </div>

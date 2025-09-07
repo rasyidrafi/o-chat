@@ -292,7 +292,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           </button>
           <button
             onClick={onOpenSearchCenter}
-            className={`px-2 gap-1.5 flex items-center justify-center border rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
+            className={`pl-2 pr-3 gap-1.5 flex items-center justify-center border rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
             style={{ ...buttonSizeStyle, width: "auto" }}
             aria-label="Search conversations"
           >
@@ -365,16 +365,16 @@ const ChatView: React.FC<ChatViewProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: animationsDisabled ? 0 : 0.2 }}
-              className="absolute -top-13 left-0 right-0 flex justify-center pointer-events-auto"
+              className="absolute -top-12 left-0 right-0 flex justify-center pointer-events-auto"
               style={chatInputPadding}
             >
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
                 <button
                   onClick={handleScrollToBottom}
-                  className="w-10 h-10 bg-[#fbf9f7] md:bg-[#fbf9f7]/80 dark:bg-zinc-800 md:dark:bg-zinc-800/80 md:backdrop-blur-md border border-[#e7e4e2] dark:border-zinc-700/50 rounded-full transition-all duration-200 flex items-center justify-center group cursor-pointer hover:bg-[#eeece9] dark:hover:bg-zinc-700"
+                  className={`w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center group cursor-pointer shadow-sm border-1 ${themes.chatview.inputBg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
                   aria-label="Scroll to bottom"
                 >
-                  <ArrowDown className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                  <ArrowDown className={`w-5 h-5`} />
                 </button>
               </div>
             </motion.div>

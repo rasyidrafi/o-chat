@@ -26,8 +26,13 @@ export const themes = {
   chatview: {
     backdrop: "bg-[#f9f9f9] dark:bg-[#1c1c1c]",
     card: "bg-[#e9eaea] dark:bg-[#27272a]",
-    inputBg: "dark:bg-[#343d3f]",
+    inputBg: "bg-[#fbf9f7] dark:bg-zinc-800",
+    inputBgTransparent: "bg-[#fbf9f7]/80 dark:bg-zinc-800/80",
     border: "border-[#e7e4e2] dark:border-zinc-700",
+  },
+
+  message: {
+    backdrop: "bg-[#e3dedb] dark:bg-zinc-800",
   },
 
   settings: {
@@ -37,5 +42,9 @@ export const themes = {
   card: { // card
     bg: "bg-[#f2f3f3] dark:bg-[#1a1a1a]",
     bgAsHover: "hover:bg-[#f2f3f3] hover:dark:bg-[#1a1a1a]"
+  },
+
+  disabled: {
+    bg: "bg-[#eeece9] dark:bg-zinc-600/80"
   }
 };
