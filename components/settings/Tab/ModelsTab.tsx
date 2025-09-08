@@ -29,6 +29,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [activeByokTab, setActiveByokTab] = useState<"selected" | "available">("available");
   const [availableProviders, setAvailableProviders] = useState<Array<Provider>>([]);
+  const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set());
 
   // Custom hooks
   const modelsManager = useModelsManager();
@@ -287,6 +288,19 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     modelsManager.refreshSystemModels(true); // Force refresh to bypass cache
   }, [modelsManager]);
 
+  // Handle model expansion toggle
+  const toggleModelExpansion = useCallback((modelId: string) => {
+    setExpandedModels(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(modelId)) {
+        newSet.delete(modelId);
+      } else {
+        newSet.add(modelId);
+      }
+      return newSet;
+    });
+  }, []);
+
   // Helper functions
   const isServerModelEnabled = useCallback((modelId: string): boolean => {
     if (modelId === DEFAULT_MODEL_ID) return true;
@@ -457,14 +471,15 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             </div>
           )}
 
-          {/* Server Models Grid */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 transition-all duration-300 ${
+          {/* Server Models List */}
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch transition-all duration-300 ${
             modelsManager.isLoadingSystemModels ? 'opacity-50 blur-sm pointer-events-none' : 'opacity-100 blur-none'
           }`}>
             <AnimatePresence mode="wait">
               {paginatedServerModels.models.map((model, index) => (
                 <motion.div
                   key={model.id}
+                  className="h-full"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
@@ -481,6 +496,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     isEnabled={isServerModelEnabled(model.id)}
                     onToggle={(enabled) => handleServerModelToggle(model.id, model.name, enabled)}
                     disabled={modelsManager.isLoadingSystemModels || model.id === DEFAULT_MODEL_ID}
+                    isExpanded={expandedModels.has(model.id)}
+                    onToggleExpansion={() => toggleModelExpansion(model.id)}
+                    layout="row"
                   />
                 </motion.div>
               ))}
@@ -616,15 +634,16 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                 </div>
               )}
 
-              {/* BYOK Models Grid */}
+              {/* BYOK Models List */}
               {paginatedByokModels.models.length > 0 && (
-                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 transition-all duration-300 ${
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch transition-all duration-300 ${
                   modelsManager.isLoadingModels ? 'opacity-50 blur-sm pointer-events-none' : 'opacity-100 blur-none'
                 }`}>
                   <AnimatePresence mode="wait">
                     {paginatedByokModels.models.map((model, index) => (
                       <motion.div
                         key={model.id}
+                        className="h-full"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
@@ -640,6 +659,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                           isEnabled={isModelSelected(model.id)}
                           onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
                           disabled={modelsManager.isLoadingModels}
+                          isExpanded={expandedModels.has(model.id)}
+                          onToggleExpansion={() => toggleModelExpansion(model.id)}
+                          layout="row"
                         />
                       </motion.div>
                     ))}

@@ -12,6 +12,7 @@ import {
   Menu,
   ArrowDown,
   Search,
+  Plus,
 } from "./Icons";
 import { Theme } from "../hooks/useSettings";
 import { Tab as SettingsTab } from "./SettingsPage";
@@ -23,7 +24,6 @@ import LoadingState from "./ui/LoadingState";
 import { themes } from "@/constants/themes";
 
 interface ChatViewProps {
-  onMenuClick: () => void;
   toggleSidebar: () => void;
   isSidebarCollapsed: boolean;
   onOpenSettings: (tab?: SettingsTab) => void;
@@ -34,7 +34,6 @@ interface ChatViewProps {
 }
 
 const ChatView: React.FC<ChatViewProps> = ({
-  onMenuClick,
   toggleSidebar,
   isSidebarCollapsed,
   onOpenSettings,
@@ -281,18 +280,18 @@ const ChatView: React.FC<ChatViewProps> = ({
           left: "10px",
         }}
       >
-        <div className="flex items-center rounded-lg border-none shadow-sm">
+        <div className="flex items-center gap-2">
           <button
-            onClick={onMenuClick}
-            className={`flex items-center justify-center border rounded-bl-lg rounded-tl-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
+            onClick={() => chat.selectConversation(null)}
+            className={`flex items-center justify-center border rounded-lg transition-all duration-200 cursor-pointer ${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover} ${themes.chatview.border} shadow-sm`}
             style={buttonSizeStyle}
-            aria-label="Open menu"
+            aria-label="New chat"
           >
-            <Menu className="w-5 h-5" />
+            <Plus className="w-5 h-5" />
           </button>
           <button
             onClick={onOpenSearchCenter}
-            className={`pl-2 pr-3 gap-1.5 flex items-center justify-center border rounded-tr-lg rounded-br-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
+            className={`pl-2 pr-3 gap-1.5 flex items-center justify-center border rounded-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border} shadow-sm`}
             style={{ ...buttonSizeStyle, width: "auto" }}
             aria-label="Search conversations"
           >
