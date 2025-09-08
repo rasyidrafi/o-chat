@@ -15,8 +15,8 @@ interface ModelsState {
 }
 
 interface SelectedModelsState {
-  selectedModels: Array<{ id: string; name: string; supported_parameters?: string[], category?: string; }>;
-  selectedServerModels: Array<{ id: string; name: string; supported_parameters?: string[], category?: string; }>;
+  selectedModels: Array<{ id: string; name: string; supported_parameters?: string[], category?: string; provider_id?: string; provider_name?: string; }>;
+  selectedServerModels: Array<{ id: string; name: string; supported_parameters?: string[], category?: string; provider_id?: string; provider_name?: string; }>;
 }
 
 // Cache keys
@@ -252,6 +252,8 @@ export const useModelsManager = () => {
           category: "server" as const,
           id: model.id,
           supported_parameters: model.supported_parameters,
+          provider_id: model.provider_id,
+          provider_name: model.provider_name,
         };
       }
       
@@ -271,6 +273,8 @@ export const useModelsManager = () => {
           category: "server" as const,
           id: model.id,
           supported_parameters: model.supported_parameters,
+          provider_id: model.provider_id,
+          provider_name: model.provider_name,
         };
       }
       
@@ -299,6 +303,8 @@ export const useModelsManager = () => {
         category: "server" as const,
         id: model.id,
         supported_parameters: model.supported_parameters,
+        provider_id: model.provider_id,
+        provider_name: model.provider_name,
       };
     });
   }, [modelsState.systemModels, modelsState.systemModelsError]);

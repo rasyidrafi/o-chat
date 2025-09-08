@@ -10,6 +10,23 @@ import {
   Gallery,
   FullScreen,
   Brain,
+  AI21,
+  OpenAI,
+  Gemini,
+  StabilityAI,
+  BlackForestLabs,
+  ByteDance,
+  Meta,
+  Anthropic,
+  Microsoft,
+  Cohere,
+  XAI,
+  DeepSeek,
+  Mistral,
+  MoonshotAI,
+  Zai,
+  Qwen,
+  Venice,
 } from "./Icons";
 import { motion, AnimatePresence } from "framer-motion";
 // import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
@@ -33,6 +50,7 @@ interface ModelOption {
   value: string;
   source: string;
   providerId?: string;
+  providerName?: string;
   supportedParameters?: string[];
 }
 
@@ -259,6 +277,65 @@ const ChatInput = ({
     return icons;
   }, []);
 
+  // Get provider icon for a provider name
+  const getProviderIcon = useCallback((providerName: string) => {
+    const lowerProviderName = providerName.toLowerCase();
+    
+    if (lowerProviderName.includes('ai21')) {
+      return <AI21 size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('openai')) {
+      return <OpenAI size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('google') || lowerProviderName.includes('gemini')) {
+      return <Gemini size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('anthropic')) {
+      return <Anthropic size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('stability') || lowerProviderName.includes('stabilityai')) {
+      return <StabilityAI size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('black forest') || lowerProviderName.includes('flux')) {
+      return <BlackForestLabs size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('bytedance')) {
+      return <ByteDance size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('meta')) {
+      return <Meta size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('microsoft')) {
+      return <Microsoft size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('cohere')) {
+      return <Cohere size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('xai')) {
+      return <XAI size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('deepseek')) {
+      return <DeepSeek size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('mistral')) {
+      return <Mistral size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('moonshot')) {
+      return <MoonshotAI size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('zai') || lowerProviderName.includes('z.ai')) {
+      return <Zai size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('qwen')) {
+      return <Qwen size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes('venice')) {
+      return <Venice size={18} className="text-current" />;
+    }
+    
+    return null; // No icon for unknown providers
+  }, []);
+
   // Check if current model supports image generation
   const checkCurrentModelCapabilities = useCallback(
     (options: ModelOption[]) => {
@@ -408,6 +485,8 @@ const ChatInput = ({
             id: string;
             name: string;
             supported_parameters?: string[];
+            provider_id?: string;
+            provider_name?: string;
           }) =>
             selected.id === model.id ||
             selected.name === model.name ||
@@ -422,6 +501,8 @@ const ChatInput = ({
             id: string;
             name: string;
             supported_parameters?: string[];
+            provider_id?: string;
+            provider_name?: string;
           }) =>
             selected.id === model.id ||
             selected.name === model.name ||
@@ -434,6 +515,8 @@ const ChatInput = ({
           label: model.name,
           value: model.id,
           source: "system",
+          providerId: model.provider_id || "",
+          providerName: model.provider_name || "",
           supportedParameters,
         };
       });
@@ -445,6 +528,8 @@ const ChatInput = ({
           id: string;
           name: string;
           supported_parameters?: string[];
+          provider_id?: string;
+          provider_name?: string;
         }) => {
           // Check if this model is already in options
           const existsInOptions = options.some(
@@ -458,6 +543,8 @@ const ChatInput = ({
               label: selectedModel.name,
               value: selectedModel.id,
               source: "system",
+              providerId: selectedModel.provider_id || "",
+              providerName: selectedModel.provider_name || "",
               supportedParameters: selectedModel.supported_parameters || [],
             });
           }
@@ -481,12 +568,14 @@ const ChatInput = ({
                     value: "gpt-4",
                     source: "builtin",
                     providerId: provider.id,
+                    providerName: "OpenAI",
                   },
                   {
                     label: "GPT-3.5 Turbo",
                     value: "gpt-3.5-turbo",
                     source: "builtin",
                     providerId: provider.id,
+                    providerName: "OpenAI",
                   }
                 );
               } else if (provider.id === "anthropic") {
@@ -496,12 +585,14 @@ const ChatInput = ({
                     value: "claude-3-sonnet-20240229",
                     source: "builtin",
                     providerId: provider.id,
+                    providerName: "Anthropic",
                   },
                   {
                     label: "Claude 3 Haiku",
                     value: "claude-3-haiku-20240307",
                     source: "builtin",
                     providerId: provider.id,
+                    providerName: "Anthropic",
                   }
                 );
               }
@@ -548,12 +639,15 @@ const ChatInput = ({
                       id: string;
                       name: string;
                       supported_parameters?: string[];
+                      provider_id?: string;
+                      provider_name?: string;
                     }) => {
                       customOptions.push({
                         label: `${provider.label} - ${model.name}`,
                         value: model.id,
                         source: "custom",
                         providerId: provider.id,
+                        providerName: provider.label,
                         supportedParameters: model.supported_parameters || [],
                       });
                     }
@@ -571,8 +665,31 @@ const ChatInput = ({
         console.error("Error loading custom providers:", error);
       }
 
-      // Set final options with localStorage data only (sorted alphabetically)
-      const sortedOptions = [...options].sort((a, b) => a.label.localeCompare(b.label));
+      // Set final options with localStorage data only (sorted by provider, then by model name)
+      // Models without provider_id go to bottom
+      const sortedOptions = [...options].sort((a, b) => {
+        // First check if models have provider_id - those without go to bottom
+        const aHasProvider = Boolean(a.providerId && a.providerId.trim());
+        const bHasProvider = Boolean(b.providerId && b.providerId.trim());
+        
+        if (aHasProvider && !bHasProvider) return -1; // a has provider, b doesn't - a comes first
+        if (!aHasProvider && bHasProvider) return 1;  // b has provider, a doesn't - b comes first
+        if (!aHasProvider && !bHasProvider) {
+          // Both don't have providers - sort by model name
+          return a.label.localeCompare(b.label);
+        }
+        
+        // Both have providers - sort by provider name first, then by model name
+        const providerA = a.providerName || "";
+        const providerB = b.providerName || "";
+        
+        if (providerA !== providerB) {
+          return providerA.localeCompare(providerB);
+        }
+        
+        // If same provider (or both have no provider), sort by model name
+        return a.label.localeCompare(b.label);
+      });
       setModelOptions(sortedOptions);
 
       // Check capabilities for loaded models
@@ -584,10 +701,34 @@ const ChatInput = ({
         label: model.name,
         value: model.id,
         source: "system",
+        providerId: model.provider_id || "",
+        providerName: model.provider_name || "",
         supportedParameters: model.supported_parameters || [],
       }));
 
-      const sortedFallbackModels = fallbackSystemModels.sort((a, b) => a.label.localeCompare(b.label));
+      const sortedFallbackModels = fallbackSystemModels.sort((a, b) => {
+        // First check if models have provider_id - those without go to bottom
+        const aHasProvider = Boolean(a.providerId && a.providerId.trim());
+        const bHasProvider = Boolean(b.providerId && b.providerId.trim());
+        
+        if (aHasProvider && !bHasProvider) return -1; // a has provider, b doesn't - a comes first
+        if (!aHasProvider && bHasProvider) return 1;  // b has provider, a doesn't - b comes first
+        if (!aHasProvider && !bHasProvider) {
+          // Both don't have providers - sort by model name
+          return a.label.localeCompare(b.label);
+        }
+        
+        // Both have providers - sort by provider name first, then by model name
+        const providerA = a.providerName || "";
+        const providerB = b.providerName || "";
+        
+        if (providerA !== providerB) {
+          return providerA.localeCompare(providerB);
+        }
+        
+        // If same provider (or both have no provider), sort by model name
+        return a.label.localeCompare(b.label);
+      });
       setModelOptions(sortedFallbackModels);
       checkCurrentModelCapabilities(sortedFallbackModels);
     } finally {
@@ -1463,38 +1604,72 @@ const ChatInput = ({
                           <LoadingState />
                         </div>
                       )}
-                    {modelOptions
-                      .filter((option) =>
+                    {(() => {
+                      const filteredOptions = modelOptions.filter((option) =>
                         option.label
                           .toLowerCase()
                           .includes(modelSearchQuery.toLowerCase())
-                      )
-                      .map((option) => {
-                        const isSelected =
-                          selectedModel === option.value &&
-                          selectedProviderId === (option.providerId || "");
-                        return (
-                          <button
-                            key={`${option.value}-${
-                              option.providerId || "system"
-                            }`}
-                            onClick={() => handleModelSelect(option)}
-                            className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${themes.sidebar.fgHoverAsFg} ${
-                              isSelected
-                                ? `${themes.sidebar.bgHoverAsBg}`
-                                : `${themes.sidebar.bgHover}`
-                            }`}
-                            title={option.label}
-                          >
-                            <span className="truncate flex-1 mr-2">
-                              {option.label}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              {getCapabilityIcons(option)}
+                      );
+
+                      // Group models by provider
+                      const groupedModels = filteredOptions.reduce((groups: { [key: string]: ModelOption[] }, option) => {
+                        const providerName = (option.providerId && option.providerId.trim()) ? (option.providerName || "Other") : "Other";
+                        if (!groups[providerName]) {
+                          groups[providerName] = [];
+                        }
+                        groups[providerName].push(option);
+                        return groups;
+                      }, {});
+
+                      // Sort providers alphabetically, but put "Other" at the end
+                      return Object.keys(groupedModels)
+                        .sort((a, b) => {
+                          if (a === "Other" && b !== "Other") return 1;
+                          if (a !== "Other" && b === "Other") return -1;
+                          return a.localeCompare(b);
+                        })
+                        .map((providerName) => {
+                          const models = groupedModels[providerName];
+                          
+                          return (
+                            <div key={providerName} className="mb-2 last:mb-0 first:mt-2">
+                              {/* Provider header */}
+                              <div className={`px-3 py-1 text-xs ${themes.sidebar.fg} flex items-center gap-2`}>
+                                {providerName !== "Other" && getProviderIcon(providerName)}
+                                <span>{providerName}</span>
+                              </div>
+                              
+                              {/* Models in this provider */}
+                              {models.map((option) => {
+                                const isSelected =
+                                  selectedModel === option.value &&
+                                  selectedProviderId === (option.providerId || "");
+                                return (
+                                  <button
+                                    key={`${option.value}-${
+                                      option.providerId || "system"
+                                    }`}
+                                    onClick={() => handleModelSelect(option)}
+                                    className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${themes.sidebar.fgHoverAsFg} ${
+                                      isSelected
+                                        ? `${themes.sidebar.bgHoverAsBg}`
+                                        : `${themes.sidebar.bgHover}`
+                                    }`}
+                                    title={option.label}
+                                  >
+                                    <span className="truncate flex-1 mr-2">
+                                      {option.label}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      {getCapabilityIcons(option)}
+                                    </div>
+                                  </button>
+                                );
+                              })}
                             </div>
-                          </button>
-                        );
-                      })}
+                          );
+                        });
+                    })()}
                     {modelOptions.filter((option) =>
                       option.label
                         .toLowerCase()

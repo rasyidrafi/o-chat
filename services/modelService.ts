@@ -1,5 +1,5 @@
 import { Provider, Model } from '../types/providers';
-import { DEFAULT_SYSTEM_MODELS } from '../constants/models';
+import { DEFAULT_SYSTEM_MODELS, PROVIDER_NAMES } from '../constants/models';
 import { auth } from '../firebase';
 
 /**
@@ -123,12 +123,16 @@ export const fetchSystemModels = async (): Promise<Model[]> => {
             const modelId = model.id || model.model || '';
             const description = model?.description || "";
             const modelSupportedParameters = model.supported_parameters || [];
+            const providerId = model.provider_id || '';
+            const providerName = model.provider_name || PROVIDER_NAMES[providerId] || '';
 
             return {
                 id: modelId,
                 name: model.name || modelId,
                 description,
-                supported_parameters: modelSupportedParameters || []
+                supported_parameters: modelSupportedParameters || [],
+                provider_id: providerId,
+                provider_name: providerName
             };
         }) as Model[];
         
@@ -197,7 +201,9 @@ export const fetchModels = async (provider: Provider): Promise<Model[]> => {
                 id: model.id || model.model || '',
                 name: model.name || model.id || model.model || '',
                 description: model.description || '',
-                supported_parameters: model.supported_parameters || []
+                supported_parameters: model.supported_parameters || [],
+                provider_id: model.provider_id || '',
+                provider_name: model.provider_name || PROVIDER_NAMES[model.provider_id] || ''
             })) as Model[];
         }
         

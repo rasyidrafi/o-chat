@@ -246,6 +246,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
           name: modelName,
           supported_parameters: model?.supported_parameters || [],
           category: model?.category || "server",
+          provider_id: model?.provider_id || "",
+          provider_name: model?.provider_name || "",
         });
       }
     } else {
@@ -273,7 +275,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       .map(model => ({
         id: model.id,
         name: model.name,
-        supported_parameters: model.supported_parameters || []
+        supported_parameters: model.supported_parameters || [],
+        provider_id: model.provider_id || "",
+        provider_name: model.provider_name || "",
       }));
     
     modelsManager.saveSelectedServerModels(allSelectableModels);

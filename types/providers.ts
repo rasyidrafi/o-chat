@@ -15,6 +15,8 @@ export interface Model {
     name: string;
     description: string;
     supported_parameters: string[];
+    provider_id?: string;
+    provider_name?: string;
 }
 
 // Model capabilities based on supported parameters
