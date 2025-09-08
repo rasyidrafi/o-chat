@@ -12,7 +12,7 @@ import {
   Menu,
   ArrowDown,
   Search,
-  Plus,
+  Edit,
 } from "./Icons";
 import { Theme } from "../hooks/useSettings";
 import { Tab as SettingsTab } from "./SettingsPage";
@@ -24,6 +24,7 @@ import LoadingState from "./ui/LoadingState";
 import { themes } from "@/constants/themes";
 
 interface ChatViewProps {
+  onMenuClick: () => void;
   toggleSidebar: () => void;
   isSidebarCollapsed: boolean;
   onOpenSettings: (tab?: SettingsTab) => void;
@@ -34,6 +35,7 @@ interface ChatViewProps {
 }
 
 const ChatView: React.FC<ChatViewProps> = ({
+  onMenuClick,
   toggleSidebar,
   isSidebarCollapsed,
   onOpenSettings,
@@ -280,25 +282,14 @@ const ChatView: React.FC<ChatViewProps> = ({
           left: "10px",
         }}
       >
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => chat.selectConversation(null)}
-            className={`flex items-center justify-center border rounded-lg transition-all duration-200 cursor-pointer ${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover} ${themes.chatview.border} shadow-sm`}
-            style={buttonSizeStyle}
-            aria-label="New chat"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-          <button
-            onClick={onOpenSearchCenter}
-            className={`pl-2 pr-3 gap-1.5 flex items-center justify-center border rounded-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border} shadow-sm`}
-            style={{ ...buttonSizeStyle, width: "auto" }}
-            aria-label="Search conversations"
-          >
-            <Search className="w-5 h-5" />
-            <div className="font-medium">Search</div>
-          </button>
-        </div>
+        <button
+          onClick={onMenuClick}
+          className={`flex items-center justify-center border rounded-lg transition-all duration-200 cursor-pointer ${themes.sidebar.bg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border} shadow-sm`}
+          style={buttonSizeStyle}
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Top-right positioned buttons */}
@@ -379,6 +370,31 @@ const ChatView: React.FC<ChatViewProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Mobile bottom buttons - vertical layout - mobile only */}
+        <div
+          className="absolute -top-24 right-0 flex justify-end pointer-events-auto md:hidden"
+          style={chatInputPadding}
+        >
+          <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-end">
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={onOpenSearchCenter}
+                className={`w-9 h-9 rounded-lg transition-all duration-200 flex items-center justify-center group cursor-pointer shadow-sm border-1 ${themes.chatview.inputBg} ${themes.sidebar.bgHover} ${themes.sidebar.fg} ${themes.chatview.border}`}
+                aria-label="Search conversations"
+              >
+                <Search className={`w-5 h-5`} />
+              </button>
+              <button
+                onClick={() => chat.selectConversation(null)}
+                className={`w-9 h-9 rounded-lg transition-all duration-200 flex items-center justify-center group cursor-pointer shadow-sm border-none ${themes.special.bgGradient} ${themes.special.fg}`}
+                aria-label="New chat"
+              >
+                <Edit className={`w-4 h-5`} />
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div
           className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"

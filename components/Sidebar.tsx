@@ -1,7 +1,7 @@
 import React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { Search, User, X, LogIn, Plus, Check, CommandK } from "./Icons";
+import { Search, User, X, LogIn, Edit, Check, CommandK } from "./Icons";
 import { User as FirebaseUser } from "firebase/auth";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../contexts/AuthContext";
@@ -146,8 +146,6 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
     }, [hasMoreConversations, isLoadingMore, isLoading, loadMoreConversations]);
 
     const handleNewChat = () => {
-      // Navigate to root path to show welcome screen
-      console.log("open empty conversation");
       chat.selectConversation(null);
       setIsMobileMenuOpen(false);
     };
@@ -263,7 +261,7 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
             className={`flex items-center justify-center truncate py-2 mx-2 my-2 px-2 ${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover} rounded-lg cursor-pointer shadow-sm`}
           >
             {isCollapsed ? (
-              <Plus className="w-4 h-4" />
+              <Edit className="w-4 h-4" />
             ) : (
               <div className="text-sm font-medium flex items-center justify-center gap-4 w-full">
                 <span>New Chat</span>
