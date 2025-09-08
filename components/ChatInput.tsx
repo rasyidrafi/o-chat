@@ -1634,7 +1634,7 @@ const ChatInput = ({
                           return (
                             <div key={providerName} className="mb-2 last:mb-0 first:mt-2">
                               {/* Provider header */}
-                              <div className={`px-3 py-1 text-xs ${themes.sidebar.fg} flex items-center gap-2`}>
+                              <div className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}>
                                 {providerName !== "Other" && getProviderIcon(providerName)}
                                 <span>{providerName}</span>
                               </div>
