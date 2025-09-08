@@ -17,7 +17,7 @@ export const PROVIDER_NAMES: Record<string, string> = {
     'moonshotai': 'Moonshot AI',
     'openai': 'OpenAI',
     'qwen': 'Qwen',
-    'stabilityai': 'Stability AI',
+    'stabillityai': 'Stability AI',
     'venice': 'Venice AI',
     'xai': 'xAI',
     'zai': 'ZAI',
