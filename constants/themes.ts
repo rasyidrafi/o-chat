@@ -8,6 +8,7 @@ export const themes = {
     bgHover: "hover:opacity-90",
     fg: "text-[#fafafa]",
     fgLeft: "text-pink-500",
+    fgLeftLight: "text-pink-500 dark:text-pink-300",
   },
 
   sidebar: { // sidebar
@@ -41,7 +42,7 @@ export const themes = {
 
   card: { // card
     bg: "bg-[#f2f3f3] dark:bg-[#1a1a1a]",
-    bgAsHover: "hover:bg-[#f2f3f3] hover:dark:bg-[#1a1a1a]"
+    bgAsHover: "hover:bg-[#f2f3f3] hover:dark:bg-[#1a1a1a]",
   },
 
   disabled: {

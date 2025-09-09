@@ -1,64 +1,75 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Brain } from './Icons';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import { ChevronDown, ChevronRight, Brain, ChevronUp } from "./Icons";
+import { motion, AnimatePresence } from "framer-motion";
+import { themes } from "@/constants/themes";
 
 interface ReasoningDisplayProps {
   reasoning: string;
+  thinkContent?: string;
   isReasoningComplete: boolean;
   isStreaming: boolean;
 }
 
-const ReasoningDisplay: React.FC<ReasoningDisplayProps> = ({ 
-  reasoning, 
-  isReasoningComplete, 
-  isStreaming 
+const ReasoningDisplay: React.FC<ReasoningDisplayProps> = ({
+  reasoning,
+  thinkContent = "",
+  isReasoningComplete,
+  isStreaming,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  if (!reasoning) return null;
+  const hasContent = reasoning || thinkContent;
+
+  if (!hasContent) return null;
 
   return (
-    <div className="mb-3 border border-pink-200 dark:border-pink-800/50 rounded-lg overflow-hidden">
+    <div className={`mb-4`}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 p-3 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-950/30 dark:to-purple-950/30 hover:from-pink-100 hover:to-purple-100 dark:hover:from-pink-900/40 dark:hover:to-purple-900/40 transition-all text-left"
+        className="px-1 cursor-pointer w-full flex items-center gap-4 transition-all text-left"
       >
-        <Brain className="w-4 h-4 text-pink-600 dark:text-pink-400" />
-        <span className="text-sm font-semibold text-pink-800 dark:text-pink-200">
-          AI Reasoning
-        </span>
-        {!isReasoningComplete && isStreaming && (
-          <div className="flex items-center gap-1">
-            <div className="w-1 h-1 bg-pink-600 dark:bg-pink-400 rounded-full animate-pulse"></div>
-            <div className="w-1 h-1 bg-purple-600 dark:bg-purple-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-1 h-1 bg-pink-600 dark:bg-pink-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+        {!isReasoningComplete && isStreaming ? (
+          <div className="w-5 flex items-center gap-1 justify-center">
+            <div
+              className={`w-1 h-1 rounded-full animate-pulse ${themes.special.bgLeft}`}
+            ></div>
+            <div
+              className={`w-1 h-1 ${themes.special.bgLeft} rounded-full animate-pulse`}
+              style={{ animationDelay: "0.2s" }}
+            ></div>
+            <div
+              className={`w-1 h-1 ${themes.special.bgLeft} rounded-full animate-pulse`}
+              style={{ animationDelay: "0.4s" }}
+            ></div>
           </div>
+        ) : (
+          <Brain className={`w-5 h-4 ${themes.special.fgLeft}`} />
         )}
-        <div className="ml-auto">
+        <span className={`text-sm mr-1 font-semibold ${themes.sidebar.fgHoverAsFg} opacity-70`}>
+          Reasoning
+        </span>
+        <div className="opacity-70">
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+            <ChevronUp className={`w-4 h-4 ${themes.sidebar.fgHoverAsFg}`} />
           ) : (
-            <ChevronRight className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+            <ChevronDown className={`w-4 h-4 ${themes.sidebar.fgHoverAsFg}`} />
           )}
         </div>
       </button>
-      
+
       <AnimatePresence>
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-auto thin-scrollbar"
-            style={{ maxHeight: '300px' }}
+            className={`rounded-lg px-5 py-4 mt-4 border-1 ${themes.chatview.border}`}
           >
-            <div className="p-3 bg-white dark:bg-zinc-900 border-t border-pink-200 dark:border-pink-800/50">
-              <div className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
-                {reasoning}
-                {!isReasoningComplete && isStreaming && (
-                  <span className="inline-block w-0.5 h-4 bg-gradient-to-r from-pink-600 to-purple-600 opacity-75 animate-pulse ml-1" />
-                )}
+            <div className="">
+              <div className={`text-sm ${themes.sidebar.fg} break-words whitespace-pre-wrap`}>
+                {thinkContent && thinkContent}
+                {reasoning && reasoning}
               </div>
             </div>
           </motion.div>

@@ -311,18 +311,69 @@ const Message: React.FC<MessageProps> = memo(
         .join("");
     }, [message.content]);
 
+    // Extract <think> content and clean text content
+    const { thinkContent, cleanedContent } = useMemo(() => {
+      const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
+      let thinkMatches: string[] = [];
+      let match;
+      
+      // Extract all <think> content
+      while ((match = thinkRegex.exec(textContent)) !== null) {
+        thinkMatches.push(match[1].trim());
+      }
+      
+      // Remove <think> tags from content
+      const cleaned = textContent.replace(thinkRegex, '').trim();
+      
+      return {
+        thinkContent: thinkMatches.join('\n\n'),
+        cleanedContent: cleaned
+      };
+    }, [textContent]);
+
+    // For streaming messages, handle real-time <think> processing
+    const streamingThinkData = useMemo(() => {
+      if (!isStreaming || !textContent) {
+        return { streamThinkContent: '', streamCleanedContent: textContent };
+      }
+
+      // Check if we're currently inside a <think> block during streaming
+      const hasOpenThink = textContent.includes('<think>');
+      const hasCloseThink = textContent.includes('</think>');
+      
+      if (!hasOpenThink) {
+        // No <think> tags at all, show everything as normal content
+        return { streamThinkContent: '', streamCleanedContent: textContent };
+      }
+
+      if (hasOpenThink && !hasCloseThink) {
+        // We're inside an unclosed <think> block during streaming
+        const thinkStartIndex = textContent.lastIndexOf('<think>');
+        const beforeThink = textContent.substring(0, thinkStartIndex);
+        const insideThink = textContent.substring(thinkStartIndex + 7); // 7 = '<think>'.length
+        
+        return {
+          streamThinkContent: insideThink,
+          streamCleanedContent: beforeThink
+        };
+      }
+
+      // Has both opening and closing tags, use normal processing
+      return { streamThinkContent: thinkContent, streamCleanedContent: cleanedContent };
+    }, [isStreaming, textContent, thinkContent, cleanedContent]);
+
     // Check for mermaid diagrams
     const mermaidBlocks = useMemo(() => {
       const mermaidRegex = /```mermaid\n([\s\S]*?)\n```/g;
       const blocks: string[] = [];
       let match;
 
-      while ((match = mermaidRegex.exec(textContent)) !== null) {
+      while ((match = mermaidRegex.exec(cleanedContent)) !== null) {
         blocks.push(match[1]);
       }
 
       return blocks;
-    }, [textContent]);
+    }, [cleanedContent]);
 
     // Simple fade animation
     const fadeVariants = {
@@ -585,14 +636,32 @@ const Message: React.FC<MessageProps> = memo(
         // Handle user messages with potentially complex content
         if (typeof message.content === "string") {
           return (
-            <motion.div
-              variants={fadeVariants}
-              initial={animationsDisabled ? {} : "initial"}
-              animate="animate"
-              className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere"
-            >
-              {message.content}
-            </motion.div>
+            <div>
+              {/* Show thinking content for user messages if present */}
+              {thinkContent && (
+                <motion.div
+                  variants={fadeVariants}
+                  initial={animationsDisabled ? {} : "initial"}
+                  animate="animate"
+                  className="mb-3"
+                >
+                  <ReasoningDisplay
+                    reasoning=""
+                    thinkContent={thinkContent}
+                    isReasoningComplete={true}
+                    isStreaming={false}
+                  />
+                </motion.div>
+              )}
+              <motion.div
+                variants={fadeVariants}
+                initial={animationsDisabled ? {} : "initial"}
+                animate="animate"
+                className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere"
+              >
+                {cleanedContent || message.content}
+              </motion.div>
+            </div>
           );
         } else {
           // Handle complex content with text and images
@@ -603,14 +672,25 @@ const Message: React.FC<MessageProps> = memo(
               animate="animate"
               className="space-y-2 flex flex-col pb-2"
             >
+              {/* Show thinking content for user messages if present */}
+              {thinkContent && (
+                <ReasoningDisplay
+                  reasoning=""
+                  thinkContent={thinkContent}
+                  isReasoningComplete={true}
+                  isStreaming={false}
+                />
+              )}
               {message.content.map((item, index) => {
                 if (item.type === "text") {
+                  // Clean <think> tags from text content for user messages too
+                  const userCleanedText = item.text.replace(/<think>([\s\S]*?)<\/think>/g, '').trim();
                   return (
                     <div
                       key={index}
                       className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere"
                     >
-                      {item.text}
+                      {userCleanedText || item.text}
                     </div>
                   );
                 } else if (item.type === "image_url") {
@@ -645,6 +725,7 @@ const Message: React.FC<MessageProps> = memo(
           >
             <ReasoningDisplay
               reasoning={message.reasoning || ""}
+              thinkContent={isStreaming ? streamingThinkData.streamThinkContent : thinkContent}
               isReasoningComplete={message.isReasoningComplete || false}
               isStreaming={isStreaming}
             />
@@ -676,7 +757,7 @@ const Message: React.FC<MessageProps> = memo(
                 {/* Assistant messages: full markdown rendering */}
                 <div className="prose prose-zinc dark:prose-invert max-w-none">
                   <MemoizedMarkdown
-                    content={textContent}
+                    content={isStreaming ? streamingThinkData.streamCleanedContent : cleanedContent}
                     id={message.id}
                     isDark={isDark}
                   />
