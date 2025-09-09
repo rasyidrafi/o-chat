@@ -1923,7 +1923,6 @@ const ChatInput = ({
                     } ${themes.sidebar.fgRaw("placeholder:")} ${
                       themes.sidebar.fgHoverAsFg
                     } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
-                    autoFocus
                   />
                 </div>
               </div>
