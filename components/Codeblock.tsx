@@ -141,7 +141,7 @@ export const Codeblock = memo<CodeblockProps>(({
   return (
     <div 
       ref={codeBlockRef}
-      className="relative mt-1 mb-4 flex flex-col overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700/80 w-full"
+      className="relative my-4 flex flex-col overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700/80 w-full"
       style={{
         marginLeft: negativeMargin > 0 ? `-${negativeMargin}px` : '0',
         marginRight: negativeMargin > 0 ? `-${negativeMargin}px` : '0',
