@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ChevronDown, Brain } from "./Icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { themes } from "@/constants/themes";
+import { MemoizedMarkdown } from "./MemoizedMarkdown";
 
 interface ReasoningDisplayProps {
   reasoning: string;
@@ -19,6 +20,7 @@ const ReasoningDisplay: React.FC<ReasoningDisplayProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasContent = reasoning || thinkContent;
+  const combinedContent = [thinkContent, reasoning].filter(Boolean).join('\n\n');
 
   if (!hasContent) return null;
 
@@ -67,15 +69,14 @@ const ReasoningDisplay: React.FC<ReasoningDisplayProps> = ({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className={`rounded-lg overflow-hidden px-5 py-4 mt-4 border-1 ${themes.chatview.border}`}
+            className={`rounded-lg text-sm overflow-hidden px-5 py-4 mt-4 border-1 ${themes.chatview.border}`}
           >
             <div className="">
-              <div
-                className={`text-sm ${themes.sidebar.fg} break-words whitespace-pre-wrap`}
-              >
-                {thinkContent && thinkContent}
-                {reasoning && reasoning}
-              </div>
+              <MemoizedMarkdown 
+                content={combinedContent}
+                id={`reasoning-${Date.now()}`}
+                isReasoning={true}
+              />
             </div>
           </motion.div>
         )}
