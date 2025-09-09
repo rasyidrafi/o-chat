@@ -251,14 +251,22 @@ export const fetchModels = async (provider: Provider): Promise<Model[]> => {
         
         // Handle array response directly
         if (Array.isArray(data)) {
-            return data as Model[];
+            // Transform the array response to ensure proper model format
+            return data.map((model: any) => ({
+                id: model.id || model.name || model.model || '',
+                name: model.name || model.id || model.model || '',
+                description: model.description || '',
+                supported_parameters: model.supported_parameters || [],
+                provider_id: model.provider_id || '',
+                provider_name: model.provider_name || PROVIDER_NAMES[model.provider_id] || ''
+            })) as Model[];
         }
         
         // The OpenAI API returns models in a 'data' array, but we expect direct array
         if (data.data && Array.isArray(data.data)) {
             // Convert OpenAI format to our expected format
             return data.data.map((model: any) => ({
-                id: model.id || model.model || '',
+                id: model.id || model.name || model.model || '',
                 name: model.name || model.id || model.model || '',
                 description: model.description || '',
                 supported_parameters: model.supported_parameters || [],
