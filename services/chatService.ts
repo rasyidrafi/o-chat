@@ -1,9 +1,10 @@
 // Chat service for handling AI model interactions
-// Supports multiple response formats:
-// - Plain text responses (content-type: text/plain)
-// - OpenAI JSON format with streaming support
-// - OpenAI JSON format without streaming
-// Automatically detects and handles the appropriate format
+// Supports multiple response formats with streaming by default:
+// - First attempts streaming for real-time response delivery (DEFAULT BEHAVIOR)
+// - Falls back to direct fetch for content-type detection if streaming fails
+// - Falls back to non-streaming OpenAI SDK as last resort
+// - Automatically detects plain text responses (content-type: text/plain)
+// - Automatically detects and handles OpenAI JSON format with/without streaming
 import OpenAI from "openai";
 import { User } from 'firebase/auth';
 import { MessageContent } from '../types/chat';
@@ -54,6 +55,12 @@ export interface ChatResponse {
       content?: string;
       reasoning?: string;
       reasoning_details?: any[];
+      images?: Array<{
+        type: 'image_url';
+        image_url: {
+          url: string;
+        };
+      }>;
     };
   }[];
 }
@@ -64,6 +71,12 @@ export interface NonStreamingChatResponse {
       content?: string;
       reasoning?: string;
       role: string;
+      images?: Array<{
+        type: 'image_url';
+        image_url: {
+          url: string;
+        };
+      }>;
     };
   }[];
 }
@@ -130,7 +143,9 @@ export class ChatService {
     abortController?: AbortController,
     source: string = 'system',
     providerId?: string,
-    onReasoningChunk?: (reasoning: string) => void
+    onReasoningChunk?: (reasoning: string) => void,
+    onImageGenerated?: (imageUrl: string) => void,
+    hasImageGenerationChat?: boolean
   ): Promise<void> {
 
     try {
@@ -149,189 +164,270 @@ export class ChatService {
         }
       }
 
-      // Check if this might be a text-only API first
-      try {
-        // Try direct fetch to see response content type
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
+      // ALWAYS START WITH STREAMING - Use direct fetch to intercept headers
+      const openai = this.createOpenAIInstance(idToken, config.baseURL, config.apiKey);
+      const openAIMessages = messages.map(convertToOpenAIMessage);
+      
+      console.log('🚀 Attempting streaming request with header detection...');
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (idToken) {
+        headers['Authorization'] = `Bearer ${idToken}`;
+      }
+
+      // Prepare request body with conditional modalities
+      const requestBody: any = {
+        model,
+        messages: openAIMessages,
+        stream: true  // ALWAYS START WITH STREAMING
+      };
+
+      // Add modalities only if explicitly requested and supported
+      if (hasImageGenerationChat) {
+        requestBody.modalities = ["text", "image"];
+        console.log('🖼️ Including image modality for model:', model);
+      }
+      
+      // Sanitize the base URL to avoid double slashes
+      const sanitizedBaseURL = config.baseURL.replace(/\/+$/, '');
+      const completionsURL = `${sanitizedBaseURL}/chat/completions`;
+      
+      const response = await fetch(completionsURL, {
+        method: 'POST',
+        headers,
+        signal: abortController?.signal,
+        body: JSON.stringify(requestBody)
+      });
+
+      const contentType = response.headers.get('content-type');
+      console.log('📦 Response Content-Type:', contentType);
+
+      // Check if it's Server-Sent Events (streaming)
+      if (contentType && contentType.includes('text/event-stream')) {
+        console.log('✅ Detected streaming response (text/event-stream)');
         
-        if (idToken) {
-          headers['Authorization'] = `Bearer ${idToken}`;
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        
+        if (!reader) {
+          throw new Error('Unable to get response reader');
         }
 
-        const openAIMessages = messages.map(convertToOpenAIMessage);
-        
-        // Sanitize the base URL to avoid double slashes
-        const sanitizedBaseURL = config.baseURL.replace(/\/+$/, ''); // Remove trailing slashes
-        const completionsURL = `${sanitizedBaseURL}/chat/completions`;
-        
-        const response = await fetch(completionsURL, {
-          method: 'POST',
-          headers,
-          signal: abortController?.signal,
-          body: JSON.stringify({
-            model,
-            messages: openAIMessages,
-            stream: false
-          })
-        });
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              break;
+            }
 
-        const contentType = response.headers.get('content-type');
-        
-        // If response is plain text, handle it directly
-        if (contentType && contentType.includes('text/plain')) {
-          console.log('Detected plain text response, handling directly');
-          const textContent = await response.text();
-          onChunk(textContent);
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                
+                if (data === '[DONE]') {
+                  onComplete();
+                  return;
+                }
+
+                try {
+                  const parsed = JSON.parse(data);
+                  
+                  // Handle reasoning chunks
+                  if (parsed.choices?.[0]?.delta?.reasoning && onReasoningChunk) {
+                    onReasoningChunk(parsed.choices[0].delta.reasoning);
+                  }
+                  
+                  // Handle content chunks
+                  if (parsed.choices?.[0]?.delta?.content) {
+                    onChunk(parsed.choices[0].delta.content);
+                  }
+                  
+                  // Handle image chunks
+                  if (parsed.choices?.[0]?.delta?.images && onImageGenerated) {
+                    const images = parsed.choices[0].delta.images;
+                    images.forEach((image: any) => {
+                      if (image.image_url && image.image_url.url) {
+                        onImageGenerated(image.image_url.url);
+                      }
+                    });
+                  }
+                } catch (parseError) {
+                  console.warn('Failed to parse SSE data:', data);
+                }
+              }
+            }
+          }
+          
           onComplete();
           return;
-        }
-
-        // If it's JSON, try to parse it as OpenAI format
-        if (contentType && contentType.includes('application/json')) {
-          const jsonResponse = await response.json();
           
-          // Handle standard OpenAI format
-          if (jsonResponse.choices && jsonResponse.choices[0] && jsonResponse.choices[0].message) {
-            const content = jsonResponse.choices[0].message.content;
-            if (content) {
-              onChunk(content);
-            }
+        } finally {
+          reader.releaseLock();
+        }
+      }
+      
+      // If response is plain text, handle it directly
+      else if (contentType && contentType.includes('text/plain')) {
+        console.log('✅ Detected plain text response, handling directly');
+        const textContent = await response.text();
+        onChunk(textContent);
+        onComplete();
+        return;
+      }
+      
+      // If it's JSON (non-streaming), parse and handle
+      else if (contentType && contentType.includes('application/json')) {
+        console.log('✅ Detected JSON response (non-streaming)');
+        const jsonResponse = await response.json();
+        
+        // Handle standard OpenAI format
+        if (jsonResponse.choices && jsonResponse.choices[0] && jsonResponse.choices[0].message) {
+          const content = jsonResponse.choices[0].message.content;
+          if (content) {
+            onChunk(content);
+          }
+          
+          // Handle reasoning if present
+          const reasoning = jsonResponse.choices[0].message.reasoning;
+          if (reasoning && onReasoningChunk) {
+            onReasoningChunk(reasoning);
+          }
+          
+          // Handle images if present 
+          const images = jsonResponse.choices[0].message.images;
+          if (images && images.length > 0 && onImageGenerated) {
+            images.forEach((image: any) => {
+              if (image.image_url && image.image_url.url) {
+                onImageGenerated(image.image_url.url);
+              }
+            });
+          }
+          
+          onComplete();
+          return;
+        } else {
+          throw new Error('Invalid JSON response structure');
+        }
+      }
+      
+      // If we get here, try OpenAI SDK as fallback
+      else {
+        console.log('❌ Unexpected content type, trying OpenAI SDK fallback:', contentType);
+        
+        try {
+          const completion = await openai.chat.completions.create(requestBody, {
+            signal: abortController?.signal
+          });
+
+          // Check if it's a streaming response (has Symbol.asyncIterator)
+          if (Symbol.asyncIterator in completion) {
+            console.log('✅ OpenAI SDK streaming fallback successful');
             
-            // Handle reasoning if present
-            const reasoning = jsonResponse.choices[0].message.reasoning;
-            if (reasoning && onReasoningChunk) {
-              onReasoningChunk(reasoning);
+            for await (const chunk of completion as any) {
+              // Handle reasoning chunks
+              if (chunk.choices?.[0]?.delta?.reasoning && onReasoningChunk) {
+                onReasoningChunk(chunk.choices[0].delta.reasoning);
+              }
+              
+              // Handle content chunks
+              if (chunk.choices?.[0]?.delta?.content) {
+                onChunk(chunk.choices[0].delta.content);
+              }
+              
+              // Handle image chunks
+              if (chunk.choices?.[0]?.delta?.images && onImageGenerated) {
+                const images = chunk.choices[0].delta.images;
+                images.forEach((image: any) => {
+                  if (image.image_url && image.image_url.url) {
+                    onImageGenerated(image.image_url.url);
+                  }
+                });
+              }
             }
             
             onComplete();
             return;
-          }
-        }
-
-        // If we get here, the response format is unexpected
-        throw new Error(`Unexpected response format. Content-Type: ${contentType}`);
-
-      } catch (directFetchError) {
-        console.log('Direct fetch failed, trying OpenAI SDK approach:', directFetchError);
-        
-        // Fallback to OpenAI SDK approach
-        const openai = this.createOpenAIInstance(idToken, config.baseURL, config.apiKey);
-        const openAIMessages = messages.map(convertToOpenAIMessage);
-
-        // Try streaming first
-        let hasAttemptedFallback = false;
-        
-        try {
-          const completion = await openai.chat.completions.create({
-            model,
-            messages: openAIMessages,
-            stream: true
-          }, {
-            signal: abortController?.signal
-          });
-
-          let receivedAnyChunk = false;
-          
-          for await (const chunk of completion) {
-            receivedAnyChunk = true;
-            
-            // Check if this is actually a complete response (non-streaming) disguised as a chunk
-            // @ts-ignore - Some APIs return the complete message in a streaming format
-            if (chunk.choices?.[0]?.message?.content) {
-              console.log('Received complete message response in streaming format');
-              // @ts-ignore
-              const content = chunk.choices[0].message.content;
-              // @ts-ignore
-              const reasoning = chunk.choices[0].message.reasoning;
-              
-              onChunk(content);
-              if (reasoning && onReasoningChunk) {
-                onReasoningChunk(reasoning);
-              }
-              onComplete();
-              return; // Exit early as we have the complete response
-            }
-
-            // Handle normal streaming chunks
-            // @ts-ignore
-            if (chunk.choices?.[0]?.delta?.reasoning && onReasoningChunk) {
-              // @ts-ignore
-              onReasoningChunk(chunk.choices[0].delta.reasoning);
-            }
-            
-            if (chunk.choices?.[0]?.delta?.content) {
-              onChunk(chunk.choices[0].delta.content);
-            }
-          }
-
-          // If we didn't receive any chunks, this might indicate a non-streaming response
-          if (!receivedAnyChunk && !hasAttemptedFallback) {
-            console.log('No streaming chunks received, trying non-streaming mode');
-            hasAttemptedFallback = true;
-            throw new Error('No streaming chunks received');
-          }
-
-          onComplete();
-        } catch (streamError: any) {
-          // Only attempt fallback once
-          if (hasAttemptedFallback) {
-            throw streamError;
-          }
-
-          // Check if the error indicates streaming is not supported or no chunks received
-          const isStreamingNotSupported = 
-            streamError?.message?.toLowerCase().includes('stream') ||
-            streamError?.message?.toLowerCase().includes('sse') ||
-            streamError?.message?.toLowerCase().includes('event-stream') ||
-            streamError?.message?.includes('No streaming chunks received') ||
-            streamError?.status === 400 ||
-            streamError?.status === 422;
-
-          if (isStreamingNotSupported) {
-            console.log('Streaming not supported or failed, falling back to non-streaming mode');
-            
-            try {
-              const completion = await openai.chat.completions.create({
-                model,
-                messages: openAIMessages,
-                stream: false
-              }, {
-                signal: abortController?.signal
-              });
-
-              console.log('Non-streaming response:', JSON.stringify(completion, null, 2));
-
-              // Check if we have a valid response structure
-              if (!completion.choices || !completion.choices[0]) {
-                throw new Error('Invalid response structure: no choices found');
-              }
-
-              // For non-streaming response, send the complete content at once
-              const content = completion.choices[0]?.message?.content;
-              if (content) {
-                onChunk(content);
-              } else {
-                throw new Error('No content found in response');
-              }
-
-              // Handle reasoning if present in non-streaming response
-              // @ts-ignore
-              const reasoning = completion.choices[0]?.message?.reasoning;
-              if (reasoning && onReasoningChunk) {
-                onReasoningChunk(reasoning);
-              }
-
-              onComplete();
-            } catch (nonStreamError) {
-              console.error('Non-streaming request also failed:', nonStreamError);
-              // If both streaming and non-streaming fail, throw the non-streaming error
-              throw nonStreamError;
-            }
           } else {
-            // If it's not a streaming-related error, rethrow the original error
-            throw streamError;
+            // This is a non-streaming response that came back as a complete object
+            console.log('✅ OpenAI SDK returned complete response');
+            // @ts-ignore
+            const content = completion.choices?.[0]?.message?.content;
+            // @ts-ignore
+            const reasoning = completion.choices?.[0]?.message?.reasoning;
+            // @ts-ignore
+            const images = completion.choices?.[0]?.message?.images;
+            
+            if (content) {
+              onChunk(content);
+            }
+            if (reasoning && onReasoningChunk) {
+              onReasoningChunk(reasoning);
+            }
+            if (images && images.length > 0 && onImageGenerated) {
+              images.forEach((image: any) => {
+                if (image.image_url && image.image_url.url) {
+                  onImageGenerated(image.image_url.url);
+                }
+              });
+            }
+            onComplete();
+            return;
+          }
+          
+        } catch (sdkError: any) {
+          console.log('❌ OpenAI SDK also failed, trying non-streaming as last resort:', sdkError);
+          
+          try {
+            const completion = await openai.chat.completions.create({
+              model,
+              messages: openAIMessages,
+              stream: false
+            }, {
+              signal: abortController?.signal
+            });
+
+            // Check if we have a valid response structure
+            if (!completion.choices || !completion.choices[0]) {
+              throw new Error('Invalid response structure: no choices found');
+            }
+
+            // For non-streaming response, send the complete content at once
+            const content = completion.choices[0]?.message?.content;
+            if (content) {
+              onChunk(content);
+            } else {
+              throw new Error('No content found in response');
+            }
+
+            // Handle reasoning if present in non-streaming response
+            // @ts-ignore
+            const reasoning = completion.choices[0]?.message?.reasoning;
+            if (reasoning && onReasoningChunk) {
+              onReasoningChunk(reasoning);
+            }
+
+            // Handle images if present in non-streaming response
+            // @ts-ignore
+            const images = completion.choices[0]?.message?.images;
+            if (images && images.length > 0 && onImageGenerated) {
+              images.forEach((image: any) => {
+                if (image.image_url && image.image_url.url) {
+                  onImageGenerated(image.image_url.url);
+                }
+              });
+            }
+
+            onComplete();
+          } catch (nonStreamError) {
+            console.error('💥 All methods failed:', nonStreamError);
+            throw nonStreamError;
           }
         }
       }

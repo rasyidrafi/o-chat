@@ -7,11 +7,12 @@ import { ChatMessage as ServiceChatMessage } from '../services/chatService';
 import { ChatStorageService } from '../services/chatStorageService';
 import { ImageGenerationService } from '../services/imageGenerationService';
 import { ImageGenerationJobService } from '../services/imageGenerationJobService';
+import { ChatImageService } from '../services/chatImageService';
 import { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { AppSettings } from '../hooks/useSettings';
-import { getSystemModels } from '../services/modelService';
+import { getSystemModels, getModelCapabilities } from '../services/modelService';
 import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from '../constants/models';
 
 /**
@@ -85,20 +86,22 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   const SAVE_DEBOUNCE_DELAY = 2000; // 2 seconds delay
   const MIN_SAVE_INTERVAL = 5000; // Minimum 5 seconds between saves
 
-  // State to track system model IDs
+  // State to track system model IDs and full model objects for capabilities
   const [systemModelIds, setSystemModelIds] = useState<string[]>(DEFAULT_SYSTEM_MODELS.map(model => model.id));
+  const [systemModels, setSystemModels] = useState<any[]>(DEFAULT_SYSTEM_MODELS);
 
   const currentConversation = React.useMemo(() => {
     if (!currentConversationId) return null;
     return conversations.find(c => c.id === currentConversationId) ?? null;
   }, [conversations, currentConversationId]);
 
-  // Load system models and cache their IDs
+  // Load system models and cache their IDs and capabilities
   React.useEffect(() => {
     const loadSystemModelIds = async () => {
       try {
         const models = await getSystemModels();
         setSystemModelIds(models.map(model => model.id));
+        setSystemModels(models);
       } catch (error) {
         console.error('Error loading system model IDs:', error);
         // Keep fallback models
@@ -111,6 +114,25 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   const getModelSource = (model: string): 'server' | 'byok' => {
     return systemModelIds.includes(model) ? 'server' : 'byok';
   };
+
+  // Helper function to get model capabilities
+  const getModelCapabilitiesById = useCallback((modelId: string) => {
+    const model = systemModels.find(m => m.id === modelId);
+    if (model) {
+      return getModelCapabilities(model);
+    }
+    return {
+      hasTools: false,
+      hasReasoning: false,
+      hasVision: false,
+      hasImageGeneration: false,
+      hasImageGenerationJobs: false,
+      hasImageEditing: false,
+      hasTextGeneration: true,
+      hasAudioGeneration: false,
+      hasImageGenerationChat: false
+    };
+  }, [systemModels]);
 
   // Debounced save function for streaming optimization
   const debouncedSaveConversation = useCallback((conversation: ChatConversation, isForceImmediate: boolean = false) => {
@@ -868,6 +890,77 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         streamingReasoningRef.current = '';
       };
 
+      // Add image generation callback for models that support it
+      const onImageGeneratedCallback = async (imageUrl: string) => {
+        console.log('🖼️ Image generated in chat response:', imageUrl);
+        
+        try {
+          // Extract prompt from the user message for filename
+          const prompt = extractTextFromContent(userMessage.content);
+          
+          // Download and store the image
+          const attachment = await ChatImageService.downloadAndStoreImage(
+            imageUrl,
+            prompt,
+            user?.uid || null
+          );
+
+          // Update the AI message with the image attachment
+          setConversations(prev => {
+            return prev.map(conv =>
+              conv.id === updatedConversation.id
+                ? {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === aiMessage.id ? {
+                      ...msg,
+                      attachments: [...(msg.attachments || []), attachment]
+                    } : msg
+                  ),
+                  updatedAt: new Date()
+                }
+                : conv
+            );
+          });
+
+          console.log('✅ Image attachment added to message');
+        } catch (error) {
+          console.error('❌ Failed to process generated image:', error);
+          
+          // Fallback: add the direct URL as attachment
+          const fallbackAttachment: MessageAttachment = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            type: 'image',
+            url: imageUrl,
+            filename: `chat_image_${Date.now()}.jpg`,
+            size: 0,
+            mimeType: 'image/jpeg',
+            isDirectUrl: true
+          };
+
+          setConversations(prev => {
+            return prev.map(conv =>
+              conv.id === updatedConversation.id
+                ? {
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === aiMessage.id ? {
+                      ...msg,
+                      attachments: [...(msg.attachments || []), fallbackAttachment]
+                    } : msg
+                  ),
+                  updatedAt: new Date()
+                }
+                : conv
+            );
+          });
+        }
+      };
+
+      // Get model capabilities to determine if image generation in chat is supported
+      const modelCapabilities = getModelCapabilitiesById(model);
+      const hasImageGenerationChat = modelCapabilities.hasImageGenerationChat;
+
       await ChatService.sendMessage(
         model,
         messagesToSend,
@@ -878,7 +971,9 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         controller,
         source,
         providerId,
-        onReasoningChunkCallback
+        onReasoningChunkCallback,
+        onImageGeneratedCallback,
+        hasImageGenerationChat
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -916,7 +1011,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       streamingMessageRef.current = '';
       streamingReasoningRef.current = '';
     }
-  }, [currentConversation, createNewConversation, updateMessage, updateMessageReasoning, user, settings, debouncedSaveConversation]);
+  }, [currentConversation, createNewConversation, updateMessage, updateMessageReasoning, user, settings, debouncedSaveConversation, getModelCapabilitiesById, extractTextFromContent, getModelSource]);
 
   const generateImage = useCallback(async (
     prompt: string,

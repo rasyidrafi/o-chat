@@ -41,7 +41,8 @@ export const getModelCapabilities = (modelOrParams: any) => {
                 p.includes('completion') ||
                 p.includes('chat')
             ),
-            hasAudioGeneration: false
+            hasAudioGeneration: false,
+            hasImageGenerationChat: false
         };
     }
     
@@ -61,6 +62,11 @@ export const getModelCapabilities = (modelOrParams: any) => {
     const outputModalities = model.output_modalities || [];
     const hasAudioGeneration = outputModalities.some((modality: string) => 
         modality.toLowerCase().includes('audio')
+    );
+    
+    // Check output modalities for image generation in chat responses  
+    const hasImageGenerationChat = outputModalities.some((modality: string) => 
+        modality.toLowerCase().includes('image')
     );
     
     // Check input modalities for vision support
@@ -98,7 +104,8 @@ export const getModelCapabilities = (modelOrParams: any) => {
             p.includes('completion') ||
             p.includes('chat')
         ),
-        hasAudioGeneration: hasAudioGeneration
+        hasAudioGeneration: hasAudioGeneration,
+        hasImageGenerationChat: hasImageGenerationChat
     };
     
     return capabilities;

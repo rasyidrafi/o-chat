@@ -24,4 +24,10 @@ export interface ModelCapabilities {
     hasTools: boolean;
     hasReasoning: boolean;
     hasVision: boolean;
+    hasImageGeneration: boolean;
+    hasImageGenerationJobs: boolean;
+    hasImageEditing: boolean;
+    hasTextGeneration: boolean;
+    hasAudioGeneration: boolean;
+    hasImageGenerationChat: boolean;
 }
