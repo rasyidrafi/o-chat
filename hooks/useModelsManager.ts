@@ -234,7 +234,7 @@ export const useModelsManager = () => {
       : modelsState.systemModels;
       
     return modelsToUse.map(model => {
-      const capabilities = getModelCapabilities(model.supported_parameters || []);
+      const capabilities = getModelCapabilities(model);
       
       // Handle image generation models (including jobs) - ONLY Image Generation
       if (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) {
@@ -244,6 +244,7 @@ export const useModelsManager = () => {
         if (capabilities.hasImageEditing) features.push("Image Editing");
         if (capabilities.hasVision) features.push("Vision");
         if (capabilities.hasTools) features.push("Tool Calling");
+        if (capabilities.hasAudioGeneration) features.push("Audio Generation");
         
         return {
           name: model.name,
@@ -265,6 +266,7 @@ export const useModelsManager = () => {
         if (capabilities.hasImageGeneration || capabilities.hasImageGenerationJobs) features.unshift("Image Generation");
         if (capabilities.hasVision) features.push("Vision");
         if (capabilities.hasTools) features.push("Tool Calling");
+        if (capabilities.hasAudioGeneration) features.push("Audio Generation");
         
         return {
           name: model.name,
@@ -290,6 +292,7 @@ export const useModelsManager = () => {
       if (capabilities.hasTools) features.push("Tool Calling");
       if (capabilities.hasReasoning) features.push("Reasoning");
       if (capabilities.hasVision) features.push("Vision");
+      if (capabilities.hasAudioGeneration) features.push("Audio Generation");
       
       // Ensure we always have at least "Text Generation" for fallback
       if (features.length === 0) {

@@ -3,42 +3,102 @@ import { DEFAULT_SYSTEM_MODELS, PROVIDER_NAMES } from '../constants/models';
 import { auth } from '../firebase';
 
 /**
- * Determines model capabilities based on supported parameters
- * @param supportedParameters - Array of supported parameter strings
+ * Determines model capabilities based on model object properties
+ * @param modelOrParams - Model object containing various capability indicators, or array of supported parameters for backward compatibility
  * @returns Object with capability flags
  */
-export const getModelCapabilities = (supportedParameters: string[]) => {
-    const params = supportedParameters.map(p => p.toLowerCase());
+export const getModelCapabilities = (modelOrParams: any) => {
+    // Handle backward compatibility - if it's an array, treat it as supported_parameters
+    if (Array.isArray(modelOrParams)) {
+        const params = modelOrParams.map((p: string) => p.toLowerCase());
+        
+        return {
+            hasTools: params.some((p: string) => 
+                p.includes('tools') || 
+                p.includes('tool_choice') || 
+                p.includes('function_calling')
+            ),
+            hasReasoning: params.some((p: string) => 
+                p.includes('reasoning') || 
+                p.includes('include_reasoning')
+            ),
+            hasVision: params.some((p: string) => 
+                p.includes('vision') || 
+                p.includes('multimodal') ||
+                (p.includes('image') && !p.includes('image_generation') && !p.includes('image_editing'))
+            ),
+            hasImageGeneration: params.some((p: string) => 
+                p.includes('image_generation')
+            ),
+            hasImageGenerationJobs: params.some((p: string) => 
+                p.includes('image_generation_jobs')
+            ),
+            hasImageEditing: params.some((p: string) => 
+                p.includes('image_editing')
+            ),
+            hasTextGeneration: params.some((p: string) => 
+                p.includes('text_generation') || 
+                p.includes('completion') ||
+                p.includes('chat')
+            ),
+            hasAudioGeneration: false
+        };
+    }
+    
+    // Handle model object
+    const model = modelOrParams;
+    
+    // Extract supported parameters if they exist
+    const supportedParameters = model.supported_parameters || [];
+    const params = supportedParameters.map((p: string) => p.toLowerCase());
+    
+    // Check direct boolean properties
+    const hasToolsDirect = model.tools === true;
+    const hasVisionDirect = model.vision === true;
+    const hasReasoningDirect = model.reasoning === true;
+    
+    // Check output modalities for audio generation
+    const outputModalities = model.output_modalities || [];
+    const hasAudioGeneration = outputModalities.some((modality: string) => 
+        modality.toLowerCase().includes('audio')
+    );
+    
+    // Check input modalities for vision support
+    const inputModalities = model.input_modalities || [];
+    const hasVisionFromInputModalities = inputModalities.some((modality: string) => 
+        modality.toLowerCase().includes('image')
+    );
     
     const capabilities = {
-        hasTools: params.some(p => 
+        hasTools: hasToolsDirect || params.some((p: string) => 
             p.includes('tools') || 
             p.includes('tool_choice') || 
             p.includes('function_calling')
         ),
-        hasReasoning: params.some(p => 
+        hasReasoning: hasReasoningDirect || params.some((p: string) => 
             p.includes('reasoning') || 
             p.includes('include_reasoning')
         ),
-        hasVision: params.some(p => 
+        hasVision: hasVisionDirect || hasVisionFromInputModalities || params.some((p: string) => 
             p.includes('vision') || 
             p.includes('multimodal') ||
             (p.includes('image') && !p.includes('image_generation') && !p.includes('image_editing'))
         ),
-        hasImageGeneration: params.some(p => 
+        hasImageGeneration: params.some((p: string) => 
             p.includes('image_generation')
         ),
-        hasImageGenerationJobs: params.some(p => 
+        hasImageGenerationJobs: params.some((p: string) => 
             p.includes('image_generation_jobs')
         ),
-        hasImageEditing: params.some(p => 
+        hasImageEditing: params.some((p: string) => 
             p.includes('image_editing')
         ),
-        hasTextGeneration: params.some(p => 
+        hasTextGeneration: params.some((p: string) => 
             p.includes('text_generation') || 
             p.includes('completion') ||
             p.includes('chat')
-        )
+        ),
+        hasAudioGeneration: hasAudioGeneration
     };
     
     return capabilities;
