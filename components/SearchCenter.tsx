@@ -6,7 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Chat } from "./Icons";
+import { Search, X, Chat, Clear } from "./Icons";
 import { useChat } from "../hooks/useChat";
 import { ChatConversation } from "../types/chat";
 import { useSettingsContext } from "../contexts/SettingsContext";
@@ -379,15 +379,17 @@ const SearchCenter: React.FC<SearchCenterProps> = ({
               >
                 <button
                   onClick={handleClearSearch}
-                  className={`flex items-center justify-center border-1 ${themes.sidebar.border} ${themes.sidebar.bg} ${themes.sidebar.bgHover} rounded-lg transition-all duration-200 cursor-pointer px-3 py-2`}
+                  className={`flex items-center justify-center border-1 ${themes.sidebar.border} ${themes.sidebar.bg} ${themes.sidebar.bgHover} rounded-lg transition-all duration-200 cursor-pointer w-auto px-3 h-9`}
                 >
+                  <Clear className="w-5 h-5 mr-1" />
                   <div>Clear</div>
                 </button>
                 <button
                   onClick={onClose}
-                  className={`flex items-center justify-center border-1 ${themes.sidebar.border} ${themes.sidebar.bg} ${themes.sidebar.bgHover} rounded-lg transition-all duration-200 cursor-pointer px-3 py-2`}
+                  className={`flex items-center justify-center bg-red-500 text-white rounded-lg transition-all duration-200 cursor-pointer w-9 h-9`}
+                  aria-label="Close search"
                 >
-                  <div>Close</div>
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             )}

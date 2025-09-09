@@ -1,5 +1,5 @@
 // Improved ChatView with better scroll handling
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
@@ -59,6 +59,22 @@ const ChatView: React.FC<ChatViewProps> = ({
   // Get isMobile and animationsDisabled from SettingsContext
   const { isMobile, settings } = useSettingsContext();
   const animationsDisabled = settings.animationsDisabled;
+
+  // Keyboard shortcut handler for Ctrl/Cmd + B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "b") {
+        event.preventDefault();
+        toggleSidebar();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [toggleSidebar]);
 
   // MessageList ref and scroll state
   const messageListRef = useRef<{ scrollToBottom: (smooth?: boolean) => void }>(

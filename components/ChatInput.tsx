@@ -90,6 +90,7 @@ const ChatInput = ({
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isModelSliderOpen, setIsModelSliderOpen] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
@@ -1350,6 +1351,7 @@ const ChatInput = ({
     setSelectedModel(option.value);
     setSelectedProviderId(option.providerId || "");
     setIsModelDropdownOpen(false);
+    setIsModelSliderOpen(false);
     setModelSearchQuery(""); // Clear search when selecting
 
     // Mark that user has manually selected a model
@@ -1369,6 +1371,16 @@ const ChatInput = ({
     // Notify parent component of model selection
     if (onModelSelect) {
       onModelSelect(option.value, option.source, option.providerId);
+    }
+  };
+
+  const handleModelSelectorClick = () => {
+    if (isLoadingSystemModels || isLoadingModelFromConversation) return;
+    
+    if (isMobile) {
+      setIsModelSliderOpen(true);
+    } else {
+      setIsModelDropdownOpen(!isModelDropdownOpen);
     }
   };
 
@@ -1539,11 +1551,7 @@ const ChatInput = ({
           {/* Model Selector */}
           <div ref={dropdownRef} className="relative">
             <button
-              onClick={() => {
-                if (isLoadingSystemModels || isLoadingModelFromConversation)
-                  return;
-                setIsModelDropdownOpen(!isModelDropdownOpen);
-              }}
+              onClick={handleModelSelectorClick}
               className={`flex items-center gap-2 p-2 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
             >
               <span
@@ -1563,8 +1571,10 @@ const ChatInput = ({
                 />
               )}
             </button>
+            
+            {/* Desktop Dropdown */}
             <AnimatePresence>
-              {isModelDropdownOpen && (
+              {isModelDropdownOpen && !isMobile && (
                 <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1574,7 +1584,7 @@ const ChatInput = ({
                 >
                   {/* Search Input */}
                   <div
-                    className={`p-3 border-b ${themes.chatview.border} ${themes.sidebar.fg}`}
+                    className={`p-3 ${themes.sidebar.fg}`}
                   >
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
@@ -1594,7 +1604,7 @@ const ChatInput = ({
                   </div>
 
                   {/* Model Options */}
-                  <div className="h-64 overflow-y-auto thin-scrollbar">
+                  <div className="h-76 overflow-y-auto thin-scrollbar scroll-fade">
                     {isLoadingSystemModels &&
                       modelOptions.filter((opt) => opt.source === "system")
                         .length === 0 && (
@@ -1863,6 +1873,156 @@ const ChatInput = ({
           </button>
         </div>
       </div>
+
+      {/* Mobile Model Slider */}
+      <AnimatePresence>
+        {isModelSliderOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: animationsDisabled ? 0 : 0.2 }}
+            onClick={() => setIsModelSliderOpen(false)}
+            className={`fixed inset-0 z-[80] flex items-end justify-center bg-black/50`}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{
+                duration: animationsDisabled ? 0 : 0.3,
+                ease: "easeOut",
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full max-h-[80vh] rounded-t-2xl shadow-md border-t overflow-hidden ${themes.chatview.inputBg} ${themes.chatview.border}`}
+            >
+              {/* Header */}
+              <div className={`pt-4 pb-0 px-4 flex items-center justify-between`}>
+                <h3 className={`text-lg font-semibold ${themes.sidebar.fgHoverAsFg}`}>
+                  Select Model
+                </h3>
+                <button
+                  onClick={() => setIsModelSliderOpen(false)}
+                  className={`p-2 rounded-lg transition-colors ${themes.sidebar.fg} ${themes.sidebar.fgHover}`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Search Input */}
+              <div className={`p-3 ${themes.sidebar.fg}`}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search models..."
+                    value={modelSearchQuery}
+                    onChange={(e) => setModelSearchQuery(e.target.value)}
+                    className={`w-full ${themes.chatview.inputBg} border ${
+                      themes.chatview.border
+                    } ${themes.sidebar.fgRaw("placeholder:")} ${
+                      themes.sidebar.fgHoverAsFg
+                    } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Model Options */}
+              <div className="h-76 overflow-y-auto thin-scrollbar scroll-fade">
+                {isLoadingSystemModels &&
+                  modelOptions.filter((opt) => opt.source === "system")
+                    .length === 0 && (
+                  <div
+                    className={`px-3 py-2 ${themes.sidebar.fg} flex items-center gap-2 text-sm`}
+                  >
+                    <LoadingState />
+                  </div>
+                )}
+                {(() => {
+                  const filteredOptions = modelOptions.filter((option) =>
+                    option.label
+                      .toLowerCase()
+                      .includes(modelSearchQuery.toLowerCase())
+                  );
+
+                  // Group models by provider
+                  const groupedModels = filteredOptions.reduce((groups: { [key: string]: ModelOption[] }, option) => {
+                    const providerName = (option.providerId && option.providerId.trim()) ? (option.providerName || "Other") : "Other";
+                    if (!groups[providerName]) {
+                      groups[providerName] = [];
+                    }
+                    groups[providerName].push(option);
+                    return groups;
+                  }, {});
+
+                  // Sort providers alphabetically, but put "Other" at the end
+                  return Object.keys(groupedModels)
+                    .sort((a, b) => {
+                      if (a === "Other" && b !== "Other") return 1;
+                      if (a !== "Other" && b === "Other") return -1;
+                      return a.localeCompare(b);
+                    })
+                    .map((providerName) => {
+                      const models = groupedModels[providerName];
+                      
+                      return (
+                        <div key={providerName} className="mb-2 last:mb-0 first:mt-2">
+                          {/* Provider header */}
+                          <div className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}>
+                            {providerName !== "Other" && getProviderIcon(providerName)}
+                            <span>{providerName}</span>
+                          </div>
+                          
+                          {/* Models in this provider */}
+                          {models.map((option) => {
+                            const isSelected =
+                              selectedModel === option.value &&
+                              selectedProviderId === (option.providerId || "");
+                            return (
+                              <button
+                                key={`${option.value}-${
+                                  option.providerId || "system"
+                                }`}
+                                onClick={() => handleModelSelect(option)}
+                                className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${themes.sidebar.fgHoverAsFg} ${
+                                  isSelected
+                                    ? `${themes.sidebar.bgHoverAsBg}`
+                                    : `${themes.sidebar.bgHover}`
+                                }`}
+                                title={option.label}
+                              >
+                                <span className="truncate flex-1 mr-2">
+                                  {option.label}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {getCapabilityIcons(option)}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    });
+                })()}
+                {modelOptions.filter((option) =>
+                  option.label
+                    .toLowerCase()
+                    .includes(modelSearchQuery.toLowerCase())
+                ).length === 0 &&
+                  modelSearchQuery && (
+                  <div
+                    className={`px-3 flex justify-center items-center text-sm text-center ${themes.sidebar.fg}`}
+                    style={{ height: "inherit" }}
+                  >
+                    No results found
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
