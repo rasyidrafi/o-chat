@@ -120,7 +120,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       (model) => model.category === "server"
     );
 
-    return serverFilter.filterItems(serverModels, ['name'], 'features');
+    const filtered = serverFilter.filterItems(serverModels, ['name'], 'features');
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [modelsManager.availableModels, serverFilter]);
 
   const paginatedServerModels = useMemo(() => {
@@ -167,7 +168,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       });
     }
 
-    return byokFilter.filterItems(models, ['name'], 'features');
+    // Filter and sort models
+    const filtered = byokFilter.filterItems(models, ['name'], 'features');
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [
     selectedProvider,
     activeByokTab,
@@ -496,9 +499,53 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
       {/* BYOK Models Section */}
       <section>
-        <h2 className="text-xl sm:text-2xl font-bold mb-6 text-zinc-900 dark:text-white">
-          Bring Your Own Key (BYOK) Models
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+            Bring Your Own Key (BYOK) Models
+          </h2>
+          {selectedProvider && (
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <button
+                onClick={() => {
+                  const provider = availableProviders.find(p => p.id === selectedProvider);
+                  if (provider) {
+                    modelsManager.fetchProviderModels(provider);
+                  }
+                }}
+                disabled={modelsManager.isLoadingModels}
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                title="Refresh BYOK models"
+              >
+                <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${modelsManager.isLoadingModels ? 'animate-spin' : ''}`} />
+                <span className="hidden xs:inline">
+                  {modelsManager.isLoadingModels ? 'Loading...' : 'Refresh'}
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  const allModels = modelsManager.fetchedModels.map(model => ({
+                    id: model.id,
+                    name: model.name,
+                    supported_parameters: model.supported_parameters,
+                    category: "byok",
+                  }));
+                  modelsManager.saveSelectedModelsForProvider(selectedProvider, allModels);
+                }}
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
+              >
+                <span className="sm:hidden">All</span>
+                <span className="hidden sm:inline">Select All</span>
+              </button>
+              <button
+                onClick={handleUnselectAll}
+                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
+              >
+                <span className="sm:hidden">None</span>
+                <span className="hidden sm:inline">Unselect All</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Provider Selection */}
         <div className={`mb-6 transition-all duration-300 ${
@@ -578,15 +625,6 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     disabled={modelsManager.isLoadingModels}
                   />
                 </div>
-                {activeByokTab === "selected" && (
-                  <button
-                    onClick={handleUnselectAll}
-                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors whitespace-nowrap self-start"
-                  >
-                    <span className="sm:hidden">Clear All</span>
-                    <span className="hidden sm:inline">Unselect All</span>
-                  </button>
-                )}
               </div>
             </div>
 
