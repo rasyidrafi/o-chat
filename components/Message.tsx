@@ -445,7 +445,8 @@ const Message: React.FC<MessageProps> = memo(
         // For text-only messages, keep original styling
         return "bg-[#f2eeec] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-xl px-3 py-[6px] max-w-[90%] sm:max-w-[85%] md:max-w-[75%] border border-[#e7e4e2] dark:border-zinc-700/50 break-words overflow-wrap-anywhere";
       }
-      if (message.isError) {
+      if (message.isError && !message.errorMessage) {
+        // Only apply error styling for legacy errors without errorMessage
         return "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-xl px-3 py-[6px] w-full max-w-full break-words overflow-wrap-anywhere";
       }
       return "text-zinc-900 dark:text-zinc-100 w-full max-w-full min-w-0";
@@ -777,6 +778,23 @@ const Message: React.FC<MessageProps> = memo(
                 {isStreaming && !isUser && (
                   <div className="mt-4 flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
                     <TypingIndicator />
+                  </div>
+                )}
+
+                {/* Show error message below incomplete content */}
+                {message.isError && message.errorMessage && (
+                  <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <div className="flex-shrink-0 text-red-500 mt-0.5">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="text-sm text-red-800 dark:text-red-200">
+                        <div className="font-medium">Error occurred during streaming</div>
+                        <div className="mt-1 text-red-700 dark:text-red-300">{message.errorMessage}</div>
+                      </div>
+                    </div>
                   </div>
                 )}
 

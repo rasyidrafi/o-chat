@@ -1,3 +1,16 @@
+export const CancelSquare: React.FC<IconProps> = ({ size = 24, ...props }) => (
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+  >
+    <rect x="3" y="3" width="18" height="18" rx="6" fill="#ef4444" />
+    <rect x="1" y="1" width="20" height="20" rx="3" fill="#fff" />
+  </svg>
+);
 import React from "react";
 
 type IconProps = {

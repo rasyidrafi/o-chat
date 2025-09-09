@@ -145,7 +145,8 @@ export class ChatService {
     providerId?: string,
     onReasoningChunk?: (reasoning: string) => void,
     onImageGenerated?: (imageUrl: string) => void,
-    hasImageGenerationChat?: boolean
+    hasImageGenerationChat?: boolean,
+    onStreamingError?: (errorMessage: string) => void
   ): Promise<void> {
 
     try {
@@ -217,6 +218,8 @@ export class ChatService {
         }
 
         try {
+          let currentEvent = '';
+          
           while (true) {
             const { done, value } = await reader.read();
             
@@ -228,6 +231,12 @@ export class ChatService {
             const lines = chunk.split('\n');
 
             for (const line of lines) {
+              // Handle event lines
+              if (line.startsWith('event: ')) {
+                currentEvent = line.slice(7); // 7 = 'event: '.length
+                continue;
+              }
+              
               if (line.startsWith('data: ')) {
                 const data = line.slice(6);
                 
@@ -238,6 +247,16 @@ export class ChatService {
 
                 try {
                   const parsed = JSON.parse(data);
+                  
+                  // Handle error events
+                  if (currentEvent === 'error' && parsed.error && onStreamingError) {
+                    const errorMessage = parsed.error.message || 'An error occurred during streaming';
+                    onStreamingError(errorMessage);
+                    continue;
+                  }
+                  
+                  // Reset event after processing
+                  currentEvent = '';
                   
                   // Handle reasoning chunks
                   if (parsed.choices?.[0]?.delta?.reasoning && onReasoningChunk) {

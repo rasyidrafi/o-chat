@@ -27,6 +27,7 @@ import {
   Zai,
   Qwen,
   Venice,
+  CancelSquare,
 } from "./Icons";
 import { motion, AnimatePresence } from "framer-motion";
 // import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
@@ -1772,75 +1773,97 @@ const ChatInput = ({
             </div>
           )}
 
-          {/* Send/Generate Button */}
-          <button
-            onClick={handleSendMessage}
-            className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors disabled:cursor-not-allowed cursor-pointer ${
-              (() => {
-                const capabilities = getCurrentModelCapabilities();
-                if (inputMode === "image_generation") {
-                  if (capabilities?.hasImageEditing) {
-                    return (
-                      prompt.trim() &&
-                      uploadedImageForEditing &&
-                      !disabled &&
-                      !isImageGenerating
-                    );
-                  } else {
-                    return prompt.trim() && !disabled && !isImageGenerating;
-                  }
-                } else {
-                  if (capabilities?.hasVision) {
-                    return (
-                      (prompt.trim() || attachments.length > 0) &&
-                      !disabled &&
-                      !isUploadingImage
-                    );
-                  } else {
-                    return prompt.trim() && !disabled && !isUploadingImage;
-                  }
-                }
-              })()
-                ? `${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover}`
-                : `${themes.disabled.bg} ${themes.sidebar.fg} cursor-not-allowed`
-            }`}
-            disabled={(() => {
-              const capabilities = getCurrentModelCapabilities();
-              if (inputMode === "image_generation") {
-                if (capabilities?.hasImageEditing) {
-                  return (
-                    !prompt.trim() ||
-                    !uploadedImageForEditing ||
-                    disabled ||
-                    isImageGenerating
-                  );
-                } else {
-                  return !prompt.trim() || disabled || isImageGenerating;
-                }
-              } else {
-                if (capabilities?.hasVision) {
-                  return (
-                    (!prompt.trim() && attachments.length === 0) ||
-                    disabled ||
-                    isUploadingImage
-                  );
-                } else {
-                  return !prompt.trim() || disabled || isUploadingImage;
-                }
-              }
-            })()}
-            aria-label={
-              inputMode === "image_generation"
-                ? isImageGenerating
-                  ? "Generating..."
-                  : "Generate image"
-                : disabled
-                ? "Sending..."
-                : "Send message"
+          {/* Send/Cancel Button for text generation */}
+          {(() => {
+            const capabilities = getCurrentModelCapabilities();
+            const isTextGen = inputMode === "chat" && !capabilities?.hasVision && !capabilities?.hasImageEditing;
+            if (isTextGen && disabled) {
+              // Show cancel button when streaming
+              return (
+                <button
+                  onClick={() => {
+                    if ((window as any).cancelStream) (window as any).cancelStream();
+                  }}
+                  className="py-1.5 px-2.5 rounded-lg flex items-center transition-colors cursor-pointer bg-red-500 hover:bg-red-600"
+                  aria-label="Cancel message"
+                  style={{ position: 'relative' }}
+                >
+                  <span className="flex items-center justify-center">
+                    <CancelSquare className="w-4 h-4" />
+                  </span>
+                </button>
+              );
             }
-          >
-            <ArrowUp className="w-4 h-4" />
-          </button>
+            // Default: show send button
+            return (
+              <button
+                onClick={handleSendMessage}
+                className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors disabled:cursor-not-allowed cursor-pointer ${
+                  (() => {
+                    if (inputMode === "image_generation") {
+                      if (capabilities?.hasImageEditing) {
+                        return (
+                          prompt.trim() &&
+                          uploadedImageForEditing &&
+                          !disabled &&
+                          !isImageGenerating
+                        );
+                      } else {
+                        return prompt.trim() && !disabled && !isImageGenerating;
+                      }
+                    } else {
+                      if (capabilities?.hasVision) {
+                        return (
+                          (prompt.trim() || attachments.length > 0) &&
+                          !disabled &&
+                          !isUploadingImage
+                        );
+                      } else {
+                        return prompt.trim() && !disabled && !isUploadingImage;
+                      }
+                    }
+                  })()
+                    ? `${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover}`
+                    : `${themes.disabled.bg} ${themes.sidebar.fg} cursor-not-allowed`
+                }`}
+                disabled={(() => {
+                  if (inputMode === "image_generation") {
+                    if (capabilities?.hasImageEditing) {
+                      return (
+                        !prompt.trim() ||
+                        !uploadedImageForEditing ||
+                        disabled ||
+                        isImageGenerating
+                      );
+                    } else {
+                      return !prompt.trim() || disabled || isImageGenerating;
+                    }
+                  } else {
+                    if (capabilities?.hasVision) {
+                      return (
+                        (!prompt.trim() && attachments.length === 0) ||
+                        disabled ||
+                        isUploadingImage
+                      );
+                    } else {
+                      return !prompt.trim() || disabled || isUploadingImage;
+                    }
+                  }
+                })()}
+                aria-label={
+                  inputMode === "image_generation"
+                    ? isImageGenerating
+                      ? "Generating..."
+                      : "Generate image"
+                    : disabled
+                    ? "Sending..."
+                    : "Send message"
+                }
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            );
+          })()}
         </div>
       </div>
 

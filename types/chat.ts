@@ -24,6 +24,7 @@ export interface ChatMessage {
   modelName?: string;
   isStreaming?: boolean;
   isError?: boolean;
+  errorMessage?: string; // Stores error details while preserving incomplete content
   isGeneratingImage?: boolean;
   timestamp: Date;
   source: 'server' | 'byok';

@@ -759,15 +759,77 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     // if (source !== 'system') return;
 
     // Start streaming for all sources
+
+    // --- Timeout and Cancel logic for text generation ---
+    let timeoutId: NodeJS.Timeout | null = null;
     const controller = new AbortController();
     setStreamingState({
       isStreaming: true,
       currentMessageId: aiMessage.id,
       controller
     });
-
     streamingMessageRef.current = '';
     streamingReasoningRef.current = '';
+
+    // Cancel stream function
+    const cancelStream = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      controller.abort();
+      
+      // Update the message to stop streaming and mark as cancelled
+      setConversations(prev => {
+        return prev.map(conv =>
+          conv.id === updatedConversation.id
+            ? {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id
+                    ? {
+                        ...msg,
+                        isStreaming: false,
+                        isError: true,
+                        errorMessage: 'Message was cancelled by user.'
+                      }
+                    : msg
+                ),
+                updatedAt: new Date()
+              }
+            : conv
+        );
+      });
+      
+      setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
+      streamingMessageRef.current = '';
+      streamingReasoningRef.current = '';
+    };
+    // Expose cancelStream for ChatInput
+    (window as any).cancelStream = cancelStream;
+
+    // Timeout for 2 minutes (120000 ms)
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      setConversations(prev => {
+        return prev.map(conv =>
+          conv.id === updatedConversation.id
+            ? {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id
+                    ? {
+                        ...msg,
+                        isError: true,
+                        isStreaming: false,
+                        errorMessage: 'Message timed out after 2 minutes.'
+                      }
+                    : msg
+                ),
+                updatedAt: new Date()
+              }
+            : conv
+        );
+      });
+      setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
+    }, 120000);
 
     try {
       // Build conversation history
@@ -781,7 +843,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
       // Always add system prompt - combines default prompt with user custom instruction
       if (settings?.customInstruction && settings.customInstruction.trim()) {
-        // const systemPrompt = buildSystemPrompt(settings?.customInstruction);
         const systemPrompt = settings.customInstruction.trim();
         messagesToSend = [
           { role: 'system', content: systemPrompt },
@@ -801,36 +862,28 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       };
 
       const onCompleteCallback = () => {
-        // Clear any pending debounced save to avoid duplicate saves
-        if (saveTimeoutRef.current) {
-          clearTimeout(saveTimeoutRef.current);
-          saveTimeoutRef.current = null;
-        }
-        
+        if (timeoutId) clearTimeout(timeoutId);
         // Get final content from refs before clearing them
         const finalContent = streamingMessageRef.current;
         const finalReasoning = streamingReasoningRef.current;
-        
-        // Single state update with final content
         setConversations(prev => {
           const updatedConversations = prev.map(conv =>
             conv.id === updatedConversation.id
               ? {
-                ...conv,
-                messages: conv.messages.map(msg =>
-                  msg.id === aiMessage.id ? {
-                    ...msg,
-                    content: finalContent, // Use final content from ref
-                    reasoning: finalReasoning, // Use final reasoning from ref
-                    isStreaming: false,
-                    isReasoningComplete: true
-                  } : msg
-                ),
-                updatedAt: new Date()
-              }
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === aiMessage.id ? {
+                      ...msg,
+                      content: finalContent,
+                      reasoning: finalReasoning,
+                      isStreaming: false,
+                      isReasoningComplete: true
+                    } : msg
+                  ),
+                  updatedAt: new Date()
+                }
               : conv
           );
-
           // Get the final conversation and save immediately (bypassing debounce)
           const finalConversation = updatedConversations.find(conv => conv.id === updatedConversation.id);
           if (finalConversation) {
@@ -839,53 +892,44 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               console.error('Error saving final streamed conversation:', error);
             });
           }
-
           return updatedConversations;
         });
-
-        setStreamingState({
-          isStreaming: false,
-          currentMessageId: null,
-          controller: null
-        });
+        setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
         streamingMessageRef.current = '';
         streamingReasoningRef.current = '';
       };
 
       const onErrorCallback = (error: Error) => {
-        // Handle error
-        const errorMessage = `Error: ${error.message}`;
-        updateMessage(updatedConversation.id, aiMessage.id, errorMessage);
-
+        if (timeoutId) clearTimeout(timeoutId);
+        // Handle non-streaming errors - preserve any existing content
+        const errorMessage = error.message || 'An error occurred';
         let errorConversation: ChatConversation | null = null;
-
         setConversations(prev => {
           const updatedConversations = prev.map(conv =>
             conv.id === updatedConversation.id
               ? {
-                ...conv,
-                messages: conv.messages.map(msg =>
-                  msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
-                )
-              }
+                  ...conv,
+                  messages: conv.messages.map(msg =>
+                    msg.id === aiMessage.id 
+                      ? { 
+                          ...msg, 
+                          isError: true, 
+                          isStreaming: false,
+                          errorMessage: errorMessage
+                        } 
+                      : msg
+                  )
+                }
               : conv
           );
-
-          // Store the error conversation for immediate save
           errorConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
           return updatedConversations;
         });
-
         // Force immediate save of error conversation (bypassing debounce)
         if (errorConversation) {
           debouncedSaveConversation(errorConversation, true);
         }
-
-        setStreamingState({
-          isStreaming: false,
-          currentMessageId: null,
-          controller: null
-        });
+        setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
         streamingMessageRef.current = '';
         streamingReasoningRef.current = '';
       };
@@ -957,6 +1001,47 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         }
       };
 
+      // Add streaming error callback to handle errors while preserving incomplete content
+      const onStreamingErrorCallback = (errorMessage: string) => {
+        console.warn('⚠️ Streaming error occurred:', errorMessage);
+        
+        // Preserve current content but add error message
+        setConversations(prev => {
+          const updatedConversations = prev.map(conv =>
+            conv.id === updatedConversation.id
+              ? {
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id 
+                    ? { 
+                        ...msg, 
+                        isError: true, 
+                        isStreaming: false,
+                        errorMessage: errorMessage
+                      } 
+                    : msg
+                )
+              }
+              : conv
+          );
+
+          // Store the error conversation for immediate save
+          const errorConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
+          if (errorConversation) {
+            debouncedSaveConversation(errorConversation, true);
+          }
+          return updatedConversations;
+        });
+
+        setStreamingState({
+          isStreaming: false,
+          currentMessageId: null,
+          controller: null
+        });
+        streamingMessageRef.current = '';
+        streamingReasoningRef.current = '';
+      };
+
       // Get model capabilities to determine if image generation in chat is supported
       const modelCapabilities = getModelCapabilitiesById(model);
       const hasImageGenerationChat = modelCapabilities.hasImageGenerationChat;
@@ -973,12 +1058,12 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         providerId,
         onReasoningChunkCallback,
         onImageGeneratedCallback,
-        hasImageGenerationChat
+        hasImageGenerationChat,
+        onStreamingErrorCallback
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      updateMessage(updatedConversation.id, aiMessage.id, `Error: ${errorMessage}`);
-
+      
       let catchErrorConversation: ChatConversation | null = null;
 
       setConversations(prev => {
@@ -987,7 +1072,14 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
             ? {
               ...conv,
               messages: conv.messages.map(msg =>
-                msg.id === aiMessage.id ? { ...msg, isError: true, isStreaming: false } : msg
+                msg.id === aiMessage.id 
+                  ? { 
+                      ...msg, 
+                      isError: true, 
+                      isStreaming: false,
+                      errorMessage: errorMessage
+                    } 
+                  : msg
               )
             }
             : conv
