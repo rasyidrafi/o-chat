@@ -52,25 +52,6 @@ export class ImageGenerationJobService {
       };
     }
 
-    if (source === 'builtin' && providerId) {
-      try {
-        const builtInProviders = localStorage.getItem('builtin_api_providers');
-        if (builtInProviders) {
-          const providers = JSON.parse(builtInProviders);
-          const provider = providers.find((p: any) => p.id === providerId);
-          if (provider) {
-            return {
-              baseURL: provider.base_url,
-              apiKey: provider.value,
-              requiresAuth: false
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error loading built-in provider config:', error);
-      }
-    }
-
     if (source === 'custom' && providerId) {
       try {
         const customProviders = localStorage.getItem('custom_api_providers');

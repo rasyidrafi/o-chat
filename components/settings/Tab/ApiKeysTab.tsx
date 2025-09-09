@@ -6,15 +6,8 @@ import { useLocalStorageData } from "../../../hooks/useLocalStorageData";
 
 // Storage keys - moved to constants for better maintainability
 const STORAGE_KEYS = {
-  BUILTIN_PROVIDERS: "builtin_api_providers",
   CUSTOM_PROVIDERS: "custom_api_providers",
 } as const;
-
-// Default built-in providers - made immutable
-const DEFAULT_BUILTIN_PROVIDERS: readonly Provider[] = [
-  { label: "Anthropic", value: "", id: "anthropic", base_url: "" },
-  { label: "OpenAI", value: "", id: "openai", base_url: "" },
-] as const;
 
 // Performance constants
 const SAVE_ANIMATION_DURATION = 500; // ms
@@ -24,22 +17,14 @@ const useProvidersLocalStorage = () => {
   const { loadProvidersFromStorage, saveProvidersToStorage } = useLocalStorageData();
   
   return useMemo(() => {
-    const loadBuiltInProviders = () => 
-      loadProvidersFromStorage(STORAGE_KEYS.BUILTIN_PROVIDERS, [...DEFAULT_BUILTIN_PROVIDERS]);
-    
     const loadCustomProviders = () => 
       loadProvidersFromStorage(STORAGE_KEYS.CUSTOM_PROVIDERS, []);
-    
-    const saveBuiltInProviders = (providers: Provider[]) =>
-      saveProvidersToStorage(STORAGE_KEYS.BUILTIN_PROVIDERS, providers);
     
     const saveCustomProviders = (providers: Provider[]) =>
       saveProvidersToStorage(STORAGE_KEYS.CUSTOM_PROVIDERS, providers);
 
     return {
-      loadBuiltInProviders,
       loadCustomProviders,
-      saveBuiltInProviders,
       saveCustomProviders,
     };
   }, [loadProvidersFromStorage, saveProvidersToStorage]);
@@ -57,59 +42,6 @@ const generateUUID = (): string => {
     return v.toString(16);
   });
 };
-
-// Memoized API Provider Card component for better performance
-const ApiProviderCard = React.memo<{
-  title: string;
-  consoleUrl: string;
-  placeholder: string;
-  consoleName: string;
-  providerKey: string;
-  value: string;
-  onChange: (value: string) => void;
-}>(({ title, consoleUrl, placeholder, consoleName, value, onChange }) => {
-  return (
-    <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-6 space-y-4">
-      {/* Title line */}
-      <div className="flex items-center gap-3">
-        <Key className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
-        <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-          {title}
-        </h3>
-      </div>
-
-      {/* Input line */}
-      <div className="flex items-center gap-4">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 min-w-[80px]">
-          API Key:
-        </label>
-        <input
-          type="password"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full bg-white dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
-          autoComplete="new-password"
-        />
-      </div>
-
-      {/* Console link line */}
-      <div>
-        <a
-          href={consoleUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-pink-500 hover:underline"
-        >
-          Get your API key from {consoleName}
-        </a>
-      </div>
-    </div>
-  );
-});
-
-// Set display name for debugging
-ApiProviderCard.displayName = 'ApiProviderCard';
 
 // Memoized OpenAI Compatible Provider Card with validation
 const OpenAICompatibleProviderCard = React.memo<{
@@ -199,14 +131,11 @@ OpenAICompatibleProviderCard.displayName = 'OpenAICompatibleProviderCard';
 const ApiKeysTab: React.FC = () => {
   // Use the enhanced localStorage hook
   const {
-    loadBuiltInProviders,
-    loadCustomProviders, 
-    saveBuiltInProviders,
+    loadCustomProviders,
     saveCustomProviders
   } = useProvidersLocalStorage();
 
   // State management
-  const [builtInProviders, setBuiltInProviders] = useState<Provider[]>([]);
   const [customProviders, setCustomProviders] = useState<Provider[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -217,20 +146,9 @@ const ApiKeysTab: React.FC = () => {
 
   // Load providers from localStorage on mount - memoized
   useEffect(() => {
-    const loadedBuiltInProviders = loadBuiltInProviders();
     const loadedCustomProviders = loadCustomProviders();
-    setBuiltInProviders(loadedBuiltInProviders);
     setCustomProviders(loadedCustomProviders);
-  }, [loadBuiltInProviders, loadCustomProviders]);
-
-  // Memoized built-in provider update handler
-  const updateBuiltInProviderValue = useCallback((providerId: string, value: string) => {
-    setBuiltInProviders((prev) =>
-      prev.map((p) => (p.id === providerId ? { ...p, value } : p))
-    );
-    setHasChanges(true);
-    setSaveError(null); // Clear any previous errors
-  }, []);
+  }, [loadCustomProviders]);
 
   // Memoized add new provider handler
   const addNewProvider = useCallback(() => {
@@ -313,10 +231,9 @@ const ApiKeysTab: React.FC = () => {
       }
 
       // Save to localStorage using the hook functions
-      const builtInSaved = saveBuiltInProviders(builtInProviders);
       const customSaved = saveCustomProviders(customProviders);
       
-      if (!builtInSaved || !customSaved) {
+      if (!customSaved) {
         throw new Error("Failed to save providers to localStorage");
       }
       
@@ -331,10 +248,8 @@ const ApiKeysTab: React.FC = () => {
       setIsSaving(false);
     }
   }, [
-    builtInProviders, 
     customProviders, 
     isSaving, 
-    saveBuiltInProviders, 
     saveCustomProviders,
     validateCustomProviders
   ]);
@@ -360,19 +275,13 @@ const ApiKeysTab: React.FC = () => {
     );
   }, [customProviders]);
 
-  // Memoized provider lookups
-  const { anthropicProvider, openaiProvider } = useMemo(() => ({
-    anthropicProvider: builtInProviders.find((p) => p.id === "anthropic"),
-    openaiProvider: builtInProviders.find((p) => p.id === "openai"),
-  }), [builtInProviders]);
-
   return (
     <div>
       <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
         API Keys
       </h2>
       <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-        Bring your own API keys for select models. Your keys are stored securely on your device and never sent to our servers.
+        Add OpenAI compatible API providers to bring your own models. Your keys are stored securely on your device and never sent to our servers.
       </p>
       
       {/* Error display */}
@@ -383,72 +292,47 @@ const ApiKeysTab: React.FC = () => {
       )}
       
       <div className="space-y-6">
-        <ApiProviderCard
-          title="Anthropic API Key"
-          consoleUrl="https://console.anthropic.com/"
-          placeholder="sk-ant-..."
-          consoleName="Anthropic's Console"
-          providerKey="anthropic"
-          value={anthropicProvider?.value || ""}
-          onChange={(value) => updateBuiltInProviderValue("anthropic", value)}
-        />
-        <ApiProviderCard
-          title="OpenAI API Key"
-          consoleUrl="https://platform.openai.com/api-keys"
-          placeholder="sk-..."
-          consoleName="OpenAI's Console"
-          providerKey="openai"
-          value={openaiProvider?.value || ""}
-          onChange={(value) => updateBuiltInProviderValue("openai", value)}
-        />
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+              Add custom API endpoints that are compatible with OpenAI's API
+              format.
+            </p>
+          </div>
+          <Button
+            onClick={addNewProvider}
+            className="gap-3"
+            disabled={!canAddNewProvider}
+            title={
+              !canAddNewProvider
+                ? "Please complete the current provider before adding a new one"
+                : ""
+            }
+          >
+            <Plus className="w-4 h-4 hidden sm:block" />
+            Add Provider
+          </Button>
+        </div>
 
-        {/* OpenAI Compatible Providers Section */}
-        <div className="border-t border-zinc-200 dark:border-zinc-800 pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-                OpenAI Compatible Providers
-              </h3>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                Add custom API endpoints that are compatible with OpenAI's API
-                format.
+        <div className="space-y-4">
+          {customProviders.map((provider) => (
+            <OpenAICompatibleProviderCard
+              key={provider.id}
+              provider={provider}
+              onUpdate={updateProvider}
+              onDelete={deleteProvider}
+            />
+          ))}
+
+          {customProviders.length === 0 && (
+            <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm">No custom providers added yet.</p>
+              <p className="text-xs mt-1">
+                Click "Add Provider" to add your first OpenAI compatible API
+                endpoint.
               </p>
             </div>
-            <Button
-              onClick={addNewProvider}
-              className="gap-3"
-              disabled={!canAddNewProvider}
-              title={
-                !canAddNewProvider
-                  ? "Please complete the current provider before adding a new one"
-                  : ""
-              }
-            >
-              <Plus className="w-4 h-4 hidden sm:block" />
-              Add Provider
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            {customProviders.map((provider) => (
-              <OpenAICompatibleProviderCard
-                key={provider.id}
-                provider={provider}
-                onUpdate={updateProvider}
-                onDelete={deleteProvider}
-              />
-            ))}
-
-            {customProviders.length === 0 && (
-              <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
-                <p className="text-sm">No custom providers added yet.</p>
-                <p className="text-xs mt-1">
-                  Click "Add Provider" to add your first OpenAI compatible API
-                  endpoint.
-                </p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Save All Button */}

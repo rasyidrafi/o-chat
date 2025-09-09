@@ -22,7 +22,6 @@ export const TABS = [
 ] as const;
 
 export const MOBILE_TABS = [
-  'Usage',
   'Account', 
   'Customization', 
   'Models', 
@@ -31,31 +30,22 @@ export const MOBILE_TABS = [
   'Contact Us'
 ] as const;
 
-export const USAGE_METRICS = {
-  CONVERSATIONS_SCALE: 30,
-  SERVER_MESSAGES_SCALE: 50,
-  BYOK_MESSAGES_SCALE: 80,
-  MIN_BAR_WIDTH: 20,
-  MAX_BAR_WIDTH: 100,
-  BASE_WIDTH: 30,
-  SCALE_MULTIPLIER: 70
-} as const;
-
-export const DEBOUNCE_DELAY = 300;
-
-export const LOADING_ANIMATION_DURATION = 0.3;
-export const CONTENT_ANIMATION_DURATION = 0.2;
-export const BAR_ANIMATION_DURATION = 0.8;
-
-// Helper function to calculate usage bar width
-export const calculateBarWidth = (
-  value: number
-): number => {
-  // If value is 0, show tiny progress (5%)
-  if (value === 0) {
-    return 5;
+export const KEYBOARD_SHORTCUTS = [
+  {
+    label: 'Search',
+    keys: ['⌘', 'K'],
+    description: 'Open command palette'
+  },
+  {
+    label: 'New Chat',
+    keys: ['⌘', 'Shift', 'O'],
+    description: 'Start a new conversation'
+  },
+  {
+    label: 'Toggle Sidebar',
+    keys: ['⌘', 'B'],
+    description: 'Show or hide the sidebar'
   }
-  
-  // If value is over 0, show as max/full (100%) since it's unlimited
-  return 100;
-};
+] as const;
+
+export const CONTENT_ANIMATION_DURATION = 0.2;

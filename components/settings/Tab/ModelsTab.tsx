@@ -76,23 +76,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     const loadProviders = () => {
       let providers: Array<Provider> = [];
 
-      // Load built-in providers
-      const builtInProviders = loadProvidersFromStorage("builtin_api_providers", [
-        {
-          label: "Anthropic",
-          value: "anthropic",
-          disabled: true,
-          id: "anthropic",
-          base_url: null,
-        },
-        {
-          label: "OpenAI",
-          value: "openai",
-          disabled: true,
-          id: "openai",
-          base_url: null,
-        }
-      ]);
+      // Load built-in providers (now empty since we removed built-in providers)
+      const builtInProviders = loadProvidersFromStorage("builtin_api_providers", []);
 
       providers = builtInProviders.map((p: Provider) => ({
         ...p,
@@ -118,7 +103,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       }
       modelsManager.loadSelectedModelsForProvider(selectedProvider);
     }
-  }, [selectedProvider, availableProviders, modelsManager]);
+  }, [selectedProvider, availableProviders, modelsManager.fetchProviderModels, modelsManager.loadSelectedModelsForProvider]);
 
   // Reset pagination when search or filters change
   useEffect(() => {
@@ -519,23 +504,25 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         <div className={`mb-6 transition-all duration-300 ${
           modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
         }`}>
-          <CustomDropdown
-            label="Select API Provider"
-            description=""
-            options={availableProviders.map(p => p.label)}
-            selected={selectedProvider 
-              ? availableProviders.find(p => p.id === selectedProvider)?.label || "Choose a provider..."
-              : "Choose a provider..."
-            }
-            onSelect={(option) => {
-              const provider = availableProviders.find(p => p.label === option);
-              if (provider) {
-                setSelectedProvider(provider.id);
+          <div className="w-full sm:max-w-md">
+            <CustomDropdown
+              label="Select API Provider"
+              description=""
+              options={availableProviders.map(p => p.label)}
+              selected={selectedProvider 
+                ? availableProviders.find(p => p.id === selectedProvider)?.label || "Choose a provider..."
+                : "Choose a provider..."
               }
-            }}
-            animationsDisabled={settings.animationsDisabled}
-            disabledOptions={availableProviders.filter(p => p.disabled).map(p => p.label)}
-          />
+              onSelect={(option) => {
+                const provider = availableProviders.find(p => p.label === option);
+                if (provider) {
+                  setSelectedProvider(provider.id);
+                }
+              }}
+              animationsDisabled={settings.animationsDisabled}
+              disabledOptions={availableProviders.filter(p => p.disabled).map(p => p.label)}
+            />
+          </div>
         </div>
 
         {selectedProvider && (

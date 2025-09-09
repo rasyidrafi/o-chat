@@ -552,60 +552,6 @@ const ChatInput = ({
         }
       );
 
-      // Load built-in provider models
-      try {
-        const builtInProviders = localStorage.getItem("builtin_api_providers");
-        if (builtInProviders) {
-          const providers = JSON.parse(builtInProviders);
-          const builtInOptions: ModelOption[] = [];
-
-          providers.forEach((provider: any) => {
-            if (provider.value?.trim()) {
-              // Add static models for built-in providers
-              if (provider.id === "openai") {
-                builtInOptions.push(
-                  {
-                    label: "GPT-4",
-                    value: "gpt-4",
-                    source: "builtin",
-                    providerId: provider.id,
-                    providerName: "OpenAI",
-                  },
-                  {
-                    label: "GPT-3.5 Turbo",
-                    value: "gpt-3.5-turbo",
-                    source: "builtin",
-                    providerId: provider.id,
-                    providerName: "OpenAI",
-                  }
-                );
-              } else if (provider.id === "anthropic") {
-                builtInOptions.push(
-                  {
-                    label: "Claude 3 Sonnet",
-                    value: "claude-3-sonnet-20240229",
-                    source: "builtin",
-                    providerId: provider.id,
-                    providerName: "Anthropic",
-                  },
-                  {
-                    label: "Claude 3 Haiku",
-                    value: "claude-3-haiku-20240307",
-                    source: "builtin",
-                    providerId: provider.id,
-                    providerName: "Anthropic",
-                  }
-                );
-              }
-            }
-          });
-
-          options.push(...builtInOptions);
-        }
-      } catch (error) {
-        console.error("Error loading built-in providers:", error);
-      }
-
       // Load custom provider models
       try {
         const customProviders = localStorage.getItem("custom_api_providers");
@@ -666,10 +612,14 @@ const ChatInput = ({
         console.error("Error loading custom providers:", error);
       }
 
-      // Set final options with localStorage data only (sorted by provider, then by model name)
-      // Models without provider_id go to bottom
+      // Set final options with localStorage data only (sorted by source, provider, then by model name)
+      // Custom models go to bottom after Other
       const sortedOptions = [...options].sort((a, b) => {
-        // First check if models have provider_id - those without go to bottom
+        // First separate by source: system models first, custom models last
+        if (a.source === "system" && b.source === "custom") return -1;
+        if (a.source === "custom" && b.source === "system") return 1;
+        
+        // Within same source, check if models have provider_id - those without go to bottom within their source
         const aHasProvider = Boolean(a.providerId && a.providerId.trim());
         const bHasProvider = Boolean(b.providerId && b.providerId.trim());
         
@@ -708,7 +658,11 @@ const ChatInput = ({
       }));
 
       const sortedFallbackModels = fallbackSystemModels.sort((a, b) => {
-        // First check if models have provider_id - those without go to bottom
+        // First separate by source: system models first, custom models last
+        if (a.source === "system" && b.source === "custom") return -1;
+        if (a.source === "custom" && b.source === "system") return 1;
+        
+        // Within same source, check if models have provider_id - those without go to bottom within their source
         const aHasProvider = Boolean(a.providerId && a.providerId.trim());
         const bHasProvider = Boolean(b.providerId && b.providerId.trim());
         
@@ -1621,21 +1575,30 @@ const ChatInput = ({
                           .includes(modelSearchQuery.toLowerCase())
                       );
 
-                      // Group models by provider
+                      // Group models by provider and source
                       const groupedModels = filteredOptions.reduce((groups: { [key: string]: ModelOption[] }, option) => {
-                        const providerName = (option.providerId && option.providerId.trim()) ? (option.providerName || "Other") : "Other";
-                        if (!groups[providerName]) {
-                          groups[providerName] = [];
+                        let groupName: string;
+                        
+                        if (option.source === "custom") {
+                          groupName = "Custom Models";
+                        } else {
+                          groupName = (option.providerId && option.providerId.trim()) ? (option.providerName || "Other") : "Other";
                         }
-                        groups[providerName].push(option);
+                        
+                        if (!groups[groupName]) {
+                          groups[groupName] = [];
+                        }
+                        groups[groupName].push(option);
                         return groups;
                       }, {});
 
-                      // Sort providers alphabetically, but put "Other" at the end
+                      // Sort providers alphabetically, but put "Other" and "Custom Models" at the end
                       return Object.keys(groupedModels)
                         .sort((a, b) => {
-                          if (a === "Other" && b !== "Other") return 1;
-                          if (a !== "Other" && b === "Other") return -1;
+                          if (a === "Custom Models" && b !== "Custom Models") return 1;
+                          if (a !== "Custom Models" && b === "Custom Models") return -1;
+                          if (a === "Other" && b !== "Other" && b !== "Custom Models") return 1;
+                          if (a !== "Other" && a !== "Custom Models" && b === "Other") return -1;
                           return a.localeCompare(b);
                         })
                         .map((providerName) => {
@@ -1645,7 +1608,7 @@ const ChatInput = ({
                             <div key={providerName} className="mb-2 last:mb-0 first:mt-2">
                               {/* Provider header */}
                               <div className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}>
-                                {providerName !== "Other" && getProviderIcon(providerName)}
+                                {providerName !== "Other" && providerName !== "Custom Models" && getProviderIcon(providerName)}
                                 <span>{providerName}</span>
                               </div>
                               
@@ -1667,9 +1630,16 @@ const ChatInput = ({
                                     }`}
                                     title={option.label}
                                   >
-                                    <span className="truncate flex-1 mr-2">
-                                      {option.label}
-                                    </span>
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      {option.source === "custom" && (
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${themes.special.bgGradient} ${themes.special.fg} flex-shrink-0`}>
+                                          Custom
+                                        </span>
+                                      )}
+                                      <span className="truncate flex-1">
+                                        {option.label}
+                                      </span>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                       {getCapabilityIcons(option)}
                                     </div>
@@ -1945,21 +1915,30 @@ const ChatInput = ({
                       .includes(modelSearchQuery.toLowerCase())
                   );
 
-                  // Group models by provider
+                  // Group models by provider and source
                   const groupedModels = filteredOptions.reduce((groups: { [key: string]: ModelOption[] }, option) => {
-                    const providerName = (option.providerId && option.providerId.trim()) ? (option.providerName || "Other") : "Other";
-                    if (!groups[providerName]) {
-                      groups[providerName] = [];
+                    let groupName: string;
+                    
+                    if (option.source === "custom") {
+                      groupName = "Custom Models";
+                    } else {
+                      groupName = (option.providerId && option.providerId.trim()) ? (option.providerName || "Other") : "Other";
                     }
-                    groups[providerName].push(option);
+                    
+                    if (!groups[groupName]) {
+                      groups[groupName] = [];
+                    }
+                    groups[groupName].push(option);
                     return groups;
                   }, {});
 
-                  // Sort providers alphabetically, but put "Other" at the end
+                  // Sort providers alphabetically, but put "Other" and "Custom Models" at the end
                   return Object.keys(groupedModels)
                     .sort((a, b) => {
-                      if (a === "Other" && b !== "Other") return 1;
-                      if (a !== "Other" && b === "Other") return -1;
+                      if (a === "Custom Models" && b !== "Custom Models") return 1;
+                      if (a !== "Custom Models" && b === "Custom Models") return -1;
+                      if (a === "Other" && b !== "Other" && b !== "Custom Models") return 1;
+                      if (a !== "Other" && a !== "Custom Models" && b === "Other") return -1;
                       return a.localeCompare(b);
                     })
                     .map((providerName) => {
@@ -1969,7 +1948,7 @@ const ChatInput = ({
                         <div key={providerName} className="mb-2 last:mb-0 first:mt-2">
                           {/* Provider header */}
                           <div className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}>
-                            {providerName !== "Other" && getProviderIcon(providerName)}
+                            {providerName !== "Other" && providerName !== "Custom Models" && getProviderIcon(providerName)}
                             <span>{providerName}</span>
                           </div>
                           
@@ -1991,9 +1970,16 @@ const ChatInput = ({
                                 }`}
                                 title={option.label}
                               >
-                                <span className="truncate flex-1 mr-2">
-                                  {option.label}
-                                </span>
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  {option.source === "custom" && (
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${themes.special.bgGradient} ${themes.special.fg} flex-shrink-0`}>
+                                      Custom
+                                    </span>
+                                  )}
+                                  <span className="truncate flex-1">
+                                    {option.label}
+                                  </span>
+                                </div>
                                 <div className="flex items-center gap-2">
                                   {getCapabilityIcons(option)}
                                 </div>

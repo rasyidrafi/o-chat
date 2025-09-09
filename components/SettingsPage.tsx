@@ -3,9 +3,8 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
-  useRef,
 } from "react";
-import { ArrowLeft, LogOut, Info } from "./Icons";
+import { ArrowLeft, LogOut } from "./Icons";
 import TabButton from "./settings/TabButton";
 import ApiKeysTab from "./settings/Tab/ApiKeysTab";
 import AccountTab from "./settings/Tab/AccountTab";
@@ -13,37 +12,18 @@ import CustomizationTab from "./settings/Tab/CustomizationTab";
 import ModelsTab from "./settings/Tab/ModelsTab";
 import AttachmentsTab from "./settings/Tab/AttachmentsTab";
 import ContactUsTab from "./settings/Tab/ContactUsTab";
-import UsageTab from "./settings/Tab/UsageTab";
 import { User } from "firebase/auth";
 import Button from "./ui/Button";
-import LoadingState from "./ui/LoadingState";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppSettings } from "../hooks/useSettings";
-import { ChatStorageService } from "../services/chatStorageService";
 import { useAuth } from "../contexts/AuthContext";
-import { useLocalStorageData } from "../hooks/useLocalStorageData";
 import { 
   AVATAR_COLORS, 
   TABS, 
   MOBILE_TABS,
-  DEBOUNCE_DELAY,
-  LOADING_ANIMATION_DURATION,
-  CONTENT_ANIMATION_DURATION,
-  BAR_ANIMATION_DURATION,
-  calculateBarWidth 
+  KEYBOARD_SHORTCUTS,
+  CONTENT_ANIMATION_DURATION
 } from "../constants/settingsPageConstants";
-
-// Type definitions for better type safety
-interface UsageData {
-  backedByServerCount: number;
-  byokCount: number;
-  totalConversations: number;
-}
-
-interface LoadingState {
-  isLoading: boolean;
-  error: string | null;
-}
 
 // Avatar component with fallback handling (same as in Sidebar) - Memoized for performance
 const UserAvatar = React.memo<{
@@ -90,7 +70,6 @@ const UserAvatar = React.memo<{
 });
 
 export type Tab =
-  | "Usage"
   | "Account"
   | "Customization"
   | "Models"
@@ -120,19 +99,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [activeTab, setActiveTab] = useState<Tab>(
     initialTab || "Customization"
   );
-  const [usageData, setUsageData] = useState<UsageData>({
-    backedByServerCount: 0,
-    byokCount: 0,
-    totalConversations: 0
-  });
-  const [loadingState, setLoadingState] = useState<LoadingState>({
-    isLoading: true,
-    error: null
-  });
-  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Use custom hook for localStorage operations
-  const { getUserMessagesBySource } = useLocalStorageData();
 
   // Mobile detection hook
   const [isMobile, setIsMobile] = useState(false);
@@ -151,68 +117,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   // Memoize tabs configuration to prevent unnecessary re-renders using constants
   const tabs = useMemo(() => isMobile ? MOBILE_TABS : TABS, [isMobile]);
 
-  // Enhanced debounced loading function with error handling
-  const debouncedLoadUsageData = useCallback(() => {
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-    }
-
-    loadingTimeoutRef.current = setTimeout(async () => {
-      setLoadingState({ isLoading: true, error: null });
-      
-      try {
-        if (user) {
-          // Get message counts using collection group queries
-          const chatStats = await ChatStorageService.getUserChatStats(user.uid);
-          setUsageData({
-            backedByServerCount: chatStats.serverMessages,
-            byokCount: chatStats.byokMessages,
-            totalConversations: chatStats.totalConversations
-          });
-        } else {
-          // Get message count from localStorage using custom hook
-          const localStats = getUserMessagesBySource();
-          setUsageData({
-            backedByServerCount: localStats.serverMessages,
-            byokCount: localStats.byokMessages,
-            totalConversations: localStats.totalConversations
-          });
-        }
-        
-        setLoadingState({ isLoading: false, error: null });
-      } catch (error) {
-        console.error('Error loading usage data:', error);
-        setLoadingState({ 
-          isLoading: false, 
-          error: 'Failed to load usage data. Please try again.' 
-        });
-      }
-    }, DEBOUNCE_DELAY);
-  }, [user, getUserMessagesBySource]);
-
-  // Load message usage data when component mounts or user changes
-  useEffect(() => {
-    debouncedLoadUsageData();
-
-    // Cleanup function to cancel debounced calls
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-    };
-  }, [debouncedLoadUsageData]);
-
   // Memoized content rendering to prevent unnecessary re-renders
   const renderContent = useCallback(() => {
     const contentMap = {
-      Usage: () => (
-        <UsageTab
-          usageData={usageData}
-          loadingState={loadingState}
-          onRetry={debouncedLoadUsageData}
-          animationsDisabled={settings.animationsDisabled}
-        />
-      ),
       Account: () => (
         <AccountTab
           onOpenAuthModal={onOpenAuthModal}
@@ -260,9 +167,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     onSignOutClick,
     settings,
     updateSettings,
-    usageData,
-    loadingState,
-    debouncedLoadUsageData,
   ]);
 
   return (
@@ -319,144 +223,41 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 </div>
               )}
 
-              {/* Hide usage section on mobile since it's now in Usage tab */}
+              {/* Keyboard shortcuts section - hide on mobile */}
               {!isMobile && (
                 <div className="p-6 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl">
-                <div>
-                  <div className="flex items-center mb-2">
+                  <div className="flex items-center mb-4">
                     <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">
-                      Usage
+                      Keyboard Shortcuts
                     </h3>
                   </div>
-                  {loadingState.isLoading ? (
-                    <div className="h-50 flex items-center justify-center py-8">
-                      <LoadingState 
-                        message="Loading usage data..." 
-                        size="sm" 
-                        centerContent={true}
-                      />
-                    </div>
-                  ) : loadingState.error ? (
-                    <div className="flex flex-col items-center justify-center py-8">
-                      <div className="text-red-500 text-sm mb-2">{loadingState.error}</div>
-                      <button 
-                        onClick={debouncedLoadUsageData}
-                        className="text-xs text-blue-500 hover:text-blue-700 underline"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  ) : (
-                    <motion.div
-                      className="space-y-4"
-                      initial={
-                        settings.animationsDisabled ? {} : { opacity: 0, y: 10 }
-                      }
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: settings.animationsDisabled ? 0 : LOADING_ANIMATION_DURATION,
-                      }}
-                    >
-                      <div>
-                        <div className="flex justify-between text-xs font-medium mb-1">
-                          <span className="text-zinc-600 dark:text-zinc-300">
-                            Conversations
-                          </span>
-                          <span className="text-zinc-500 dark:text-zinc-400">
-                            {usageData.totalConversations}
-                          </span>
+                  <div className="space-y-3">
+                    {KEYBOARD_SHORTCUTS.map((shortcut, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-zinc-900 dark:text-white">
+                            {shortcut.label}
+                          </div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {shortcut.description}
+                          </div>
                         </div>
-                        <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                          <motion.div
-                            className="bg-gradient-to-r from-blue-400 to-blue-500 h-1.5 rounded-full"
-                            initial={
-                              settings.animationsDisabled ? {} : { width: 0 }
-                            }
-                            animate={{
-                              width: `${calculateBarWidth(usageData.totalConversations)}%`,
-                            }}
-                            transition={{
-                              duration: settings.animationsDisabled ? 0 : BAR_ANIMATION_DURATION,
-                              ease: "easeOut",
-                            }}
-                          />
+                        <div className="flex items-center gap-1">
+                          {shortcut.keys.map((key, keyIndex) => (
+                            <React.Fragment key={keyIndex}>
+                              <div className="px-1 py-0.5 text-xs font-semibold text-zinc-800 bg-zinc-200 border border-zinc-300 rounded dark:bg-zinc-700 dark:text-zinc-200 dark:border-zinc-600 flex items-center justify-center">
+                                {key}
+                              </div>
+                              {keyIndex < shortcut.keys.length - 1 && (
+                                <span className="text-zinc-400 dark:text-zinc-500 text-xs">+</span>
+                              )}
+                            </React.Fragment>
+                          ))}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                          {usageData.totalConversations} total conversations
-                        </p>
                       </div>
-                      <div>
-                        <div className="flex justify-between text-xs font-medium mb-1">
-                          <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1.5">
-                            Backed by Us
-                            <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
-                              Unlimited
-                            </span>
-                          </span>
-                          <span className="text-zinc-500 dark:text-zinc-400">
-                            {usageData.backedByServerCount}
-                          </span>
-                        </div>
-                        <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                          <motion.div
-                            className="bg-gradient-to-r from-green-400 to-green-500 h-1.5 rounded-full"
-                            initial={
-                              settings.animationsDisabled ? {} : { width: 0 }
-                            }
-                            animate={{
-                              width: `${calculateBarWidth(usageData.backedByServerCount)}%`,
-                            }}
-                            transition={{
-                              duration: settings.animationsDisabled ? 0 : BAR_ANIMATION_DURATION,
-                              ease: "easeOut",
-                              delay: settings.animationsDisabled ? 0 : 0.1,
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                          {usageData.backedByServerCount} messages sent
-                        </p>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-xs font-medium mb-1">
-                          <span className="text-zinc-600 dark:text-zinc-300 flex items-center gap-1">
-                            Your Own API
-                            <Info className="w-3.5 h-3.5 text-pink-500" />
-                          </span>
-                          <span className="text-zinc-500 dark:text-zinc-400">
-                            {usageData.byokCount}
-                          </span>
-                        </div>
-                        <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                          <motion.div
-                            className="bg-gradient-to-r from-pink-400 to-pink-500 h-1.5 rounded-full"
-                            initial={
-                              settings.animationsDisabled ? {} : { width: 0 }
-                            }
-                            animate={{
-                              width: `${calculateBarWidth(usageData.byokCount)}%`,
-                            }}
-                            transition={{
-                              duration: settings.animationsDisabled ? 0 : BAR_ANIMATION_DURATION,
-                              ease: "easeOut",
-                              delay: settings.animationsDisabled ? 0 : 0.2,
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                          {usageData.byokCount} messages sent
-                        </p>
-                      </div>
-                      <div className="bg-zinc-200/50 dark:bg-zinc-900/50 rounded-lg p-3 flex items-start gap-2.5">
-                        <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                          Personal API key usage results in direct account billing. We disclaim responsibility for all associated charges and billing matters.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
               )}
             </div>
           </aside>
