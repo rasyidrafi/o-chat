@@ -1,4 +1,7 @@
 // Chat service for handling AI model interactions
+// Supports both streaming and non-streaming responses:
+// - First attempts streaming for real-time response delivery
+// - Falls back to non-streaming if streaming is not supported by the provider
 import OpenAI from "openai";
 import { User } from 'firebase/auth';
 import { MessageContent } from '../types/chat';
@@ -49,6 +52,16 @@ export interface ChatResponse {
       content?: string;
       reasoning?: string;
       reasoning_details?: any[];
+    };
+  }[];
+}
+
+export interface NonStreamingChatResponse {
+  choices: {
+    message: {
+      content?: string;
+      reasoning?: string;
+      role: string;
     };
   }[];
 }
@@ -137,29 +150,75 @@ export class ChatService {
       // Convert our message format to OpenAI format
       const openAIMessages = messages.map(convertToOpenAIMessage);
 
-      const completion = await openai.chat.completions.create({
-        model,
-        messages: openAIMessages,
-        stream: true
-      }, {
-        signal: abortController?.signal
-      });
+      // Try streaming first
+      try {
+        const completion = await openai.chat.completions.create({
+          model,
+          messages: openAIMessages,
+          stream: true
+        }, {
+          signal: abortController?.signal
+        });
 
-      for await (const chunk of completion) {
-        // Handle reasoning chunks
-        // @ts-ignore
-        if (chunk.choices[0]?.delta?.reasoning && onReasoningChunk) {
+        for await (const chunk of completion) {
+          // Handle reasoning chunks
           // @ts-ignore
-          onReasoningChunk(chunk.choices[0].delta.reasoning);
+          if (chunk.choices[0]?.delta?.reasoning && onReasoningChunk) {
+            // @ts-ignore
+            onReasoningChunk(chunk.choices[0].delta.reasoning);
+          }
+          
+          // Handle content chunks
+          if (chunk.choices[0]?.delta?.content) {
+            onChunk(chunk.choices[0].delta.content);
+          }
         }
-        
-        // Handle content chunks
-        if (chunk.choices[0]?.delta?.content) {
-          onChunk(chunk.choices[0].delta.content);
+
+        onComplete();
+      } catch (streamError: any) {
+        // Check if the error indicates streaming is not supported
+        const isStreamingNotSupported = 
+          streamError?.message?.toLowerCase().includes('stream') ||
+          streamError?.message?.toLowerCase().includes('sse') ||
+          streamError?.message?.toLowerCase().includes('event-stream') ||
+          streamError?.status === 400 ||
+          streamError?.status === 422;
+
+        if (isStreamingNotSupported) {
+          console.log('Streaming not supported, falling back to non-streaming mode');
+          
+          try {
+            const completion = await openai.chat.completions.create({
+              model,
+              messages: openAIMessages,
+              stream: false
+            }, {
+              signal: abortController?.signal
+            });
+
+            // For non-streaming response, send the complete content at once
+            const content = completion.choices[0]?.message?.content;
+            if (content) {
+              onChunk(content);
+            }
+
+            // Handle reasoning if present in non-streaming response
+            // @ts-ignore
+            const reasoning = completion.choices[0]?.message?.reasoning;
+            if (reasoning && onReasoningChunk) {
+              onReasoningChunk(reasoning);
+            }
+
+            onComplete();
+          } catch (nonStreamError) {
+            // If both streaming and non-streaming fail, throw the non-streaming error
+            throw nonStreamError;
+          }
+        } else {
+          // If it's not a streaming-related error, rethrow the original error
+          throw streamError;
         }
       }
-
-      onComplete();
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         // Request was cancelled, don't call onError
