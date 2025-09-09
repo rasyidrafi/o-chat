@@ -13,8 +13,19 @@ import { auth } from '../firebase';
 import { AppSettings } from '../hooks/useSettings';
 import { getSystemModels } from '../services/modelService';
 import { DEFAULT_SYSTEM_MODELS, DEFAULT_MODEL_ID } from '../constants/models';
-import { buildSystemPrompt } from '../constants/systemPrompt';
 
+/**
+ * STREAMING IMPLEMENTATION:
+ * 
+ * 1. IMMEDIATE RENDERING: 
+ *    - Zero debouncing for UI updates - chunks are rendered instantly
+ *    - updateMessage() returns state immediately for real-time display
+ * 
+ * 2. DEBOUNCED FIRESTORE SAVES:
+ *    - 2s delay between saves during streaming (original settings)
+ *    - 5s minimum interval between actual saves (original settings)
+ *    - Force immediate save on completion/error
+ */
 
 // Add conversation cache interface
 interface ConversationCache {
@@ -493,13 +504,14 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         return conv;
       });
 
-      // Use debounced save instead of immediate save during streaming
-      if (updatedConversation) {
-        debouncedSaveConversation(updatedConversation);
-      }
-      return newConversations;
+      return newConversations; // Return immediately for instant rendering
     });
-  }, [user, debouncedSaveConversation]);
+
+    // Debounce saves separately from state updates
+    if (updatedConversation) {
+      debouncedSaveConversation(updatedConversation);
+    }
+  }, [debouncedSaveConversation]);
 
   const updateMessageReasoning = useCallback((conversationId: string, messageId: string, reasoning: string) => {
     let updatedConversation: ChatConversation | null = null;
@@ -519,13 +531,14 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         return conv;
       });
 
-      // Use debounced save instead of immediate save during streaming
-      if (updatedConversation) {
-        debouncedSaveConversation(updatedConversation);
-      }
-      return newConversations;
+      return newConversations; // Return immediately for instant rendering
     });
-  }, [user, debouncedSaveConversation]);
+
+    // Debounce saves separately from state updates  
+    if (updatedConversation) {
+      debouncedSaveConversation(updatedConversation);
+    }
+  }, [debouncedSaveConversation]);
 
   // Helper function to extract text from MessageContent for title generation
   const extractTextFromContent = (content: MessageContent): string => {
@@ -766,9 +779,17 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       };
 
       const onCompleteCallback = () => {
-        // Mark message as complete including reasoning
-        let finalConversation: ChatConversation | null = null;
-
+        // Clear any pending debounced save to avoid duplicate saves
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
+        
+        // Get final content from refs before clearing them
+        const finalContent = streamingMessageRef.current;
+        const finalReasoning = streamingReasoningRef.current;
+        
+        // Single state update with final content
         setConversations(prev => {
           const updatedConversations = prev.map(conv =>
             conv.id === updatedConversation.id
@@ -777,23 +798,28 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                 messages: conv.messages.map(msg =>
                   msg.id === aiMessage.id ? {
                     ...msg,
+                    content: finalContent, // Use final content from ref
+                    reasoning: finalReasoning, // Use final reasoning from ref
                     isStreaming: false,
                     isReasoningComplete: true
                   } : msg
-                )
+                ),
+                updatedAt: new Date()
               }
               : conv
           );
 
-          // Store the final conversation for immediate save
-          finalConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
+          // Get the final conversation and save immediately (bypassing debounce)
+          const finalConversation = updatedConversations.find(conv => conv.id === updatedConversation.id);
+          if (finalConversation) {
+            lastSaveTimeRef.current = Date.now();
+            ChatStorageService.saveConversation(finalConversation, user).catch(error => {
+              console.error('Error saving final streamed conversation:', error);
+            });
+          }
+
           return updatedConversations;
         });
-
-        // Force immediate save of final conversation (bypassing debounce)
-        if (finalConversation) {
-          debouncedSaveConversation(finalConversation, true);
-        }
 
         setStreamingState({
           isStreaming: false,
