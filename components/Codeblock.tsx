@@ -145,7 +145,7 @@ export const Codeblock = memo<CodeblockProps>(({
       style={{
         marginLeft: negativeMargin > 0 ? `-${negativeMargin}px` : '0',
         marginRight: negativeMargin > 0 ? `-${negativeMargin}px` : '0',
-        maxWidth: negativeMargin > 0 ? `calc(100% + ${negativeMargin * 2}px)` : '100%'
+        width: negativeMargin > 0 ? `calc(100% + ${negativeMargin}px)` : '100%'
       }}
     >
       {/* Header with three buttons */}
