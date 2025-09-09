@@ -60,7 +60,8 @@ interface ChatInputProps {
     model: string,
     source: string,
     providerId?: string,
-    attachments?: MessageAttachment[]
+    attachments?: MessageAttachment[],
+    isMessagesMode?: boolean
   ) => void;
   onImageGenerate?: (
     prompt: string,
@@ -108,6 +109,14 @@ const ChatInput = ({
     useState<string>("");
   const [persistentUploadedImage, setPersistentUploadedImage] =
     useState<string>(""); // Persists across model switches
+  const [isMessagesMode, setIsMessagesMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('messagesMode');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  }); // Messages Mode toggle
   const dropdownRef = useRef<HTMLDivElement>(null);
   const sizeDropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1282,6 +1291,15 @@ const ChatInput = ({
     };
   }, []);
 
+  // Save messages mode preference to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('messagesMode', JSON.stringify(isMessagesMode));
+    } catch (error) {
+      console.error('Failed to save messages mode preference:', error);
+    }
+  }, [isMessagesMode]);
+
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value);
     // Auto-resize textarea
@@ -1405,7 +1423,8 @@ const ChatInput = ({
           currentModel,
           selectedModelOption?.source || "system",
           selectedModelOption?.providerId,
-          [imageEditingData] // Pass as single-item array with special flag
+          [imageEditingData], // Pass as single-item array with special flag
+          isMessagesMode
         );
       } else {
         // For vision models or models without image capabilities, use regular attachments
@@ -1414,7 +1433,8 @@ const ChatInput = ({
           currentModel,
           selectedModelOption?.source || "system",
           selectedModelOption?.providerId,
-          currentAttachments
+          currentAttachments,
+          isMessagesMode
         );
       }
     }
@@ -1668,6 +1688,34 @@ const ChatInput = ({
               )}
             </AnimatePresence>
           </div>
+
+          {/* Messages Mode Toggle - Only show in text generation mode */}
+          {inputMode === "chat" && (
+            <div className="flex items-center">
+              <div className="flex items-center gap-1.5 p-2">
+                <span className={`text-xs font-medium ${themes.sidebar.fgHoverAsFg}`}>
+                  Messages Mode
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isMessagesMode}
+                  onClick={() => setIsMessagesMode(!isMessagesMode)}
+                  className={`relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 dark:ring-offset-zinc-800 ${
+                    isMessagesMode ? 'bg-pink-500' : 'bg-zinc-300 dark:bg-zinc-700'
+                  }`}
+                  title="Toggle Messages Mode for conversation context"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      isMessagesMode ? 'translate-x-3' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-stretch gap-1">

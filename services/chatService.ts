@@ -69,6 +69,11 @@ export interface NonStreamingChatResponse {
 }
 
 export class ChatService {
+  // Helper method to sanitize base URLs by removing trailing slashes
+  private static sanitizeBaseURL(baseURL: string): string {
+    return baseURL.replace(/\/+$/, '');
+  }
+
   private static createOpenAIInstance(idToken?: string, baseURL?: string, apiKey?: string) {
     const headers: Record<string, string> = {};
 
@@ -78,7 +83,7 @@ export class ChatService {
     }
 
     // Sanitize base URL to avoid double slashes
-    const sanitizedBaseURL = baseURL ? baseURL.replace(/\/+$/, '') : baseURL;
+    const sanitizedBaseURL = baseURL ? this.sanitizeBaseURL(baseURL) : baseURL;
 
     return new OpenAI({
       apiKey: apiKey || "",
@@ -163,7 +168,7 @@ export class ChatService {
         const openAIMessages = messages.map(convertToOpenAIMessage);
         
         // Sanitize the base URL to avoid double slashes
-        const sanitizedBaseURL = config.baseURL.replace(/\/+$/, ''); // Remove trailing slashes
+        const sanitizedBaseURL = this.sanitizeBaseURL(config.baseURL);
         const completionsURL = `${sanitizedBaseURL}/chat/completions`;
         
         const response = await fetch(completionsURL, {
@@ -341,6 +346,199 @@ export class ChatService {
         return;
       }
       onError(error as Error);
+    }
+  }
+
+  // Messages Mode - Conversation Context Support
+  static async sendMessageWithConversation(
+    message: string,
+    model: string,
+    source: string = 'system',
+    providerId?: string,
+    conversationContext?: string,
+    user?: User | null,
+    abortController?: AbortController,
+    onChunk?: (chunk: string) => void,
+    onReasoningChunk?: (reasoning: string) => void,
+    onComplete?: () => void,
+    onError?: (error: Error) => void
+  ) {
+    try {
+      const config = this.getProviderConfig(source, providerId);
+      
+      // Get Firebase ID token if user is authenticated and using system source
+      let idToken = '';
+      if (config.requiresAuth && user) {
+        try {
+          idToken = await user.getIdToken();
+        } catch (error) {
+          console.error('Failed to get ID token:', error);
+          throw new Error('Authentication failed');
+        }
+      }
+
+      // Check if this might be a text-only API first
+      try {
+        // Try direct fetch to see response content type
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        
+        if (idToken) {
+          headers['Authorization'] = `Bearer ${idToken}`;
+        }
+
+        // For Messages Mode, we use a simplified message format that preserves conversation context
+        const messagePayload = {
+          messages: message,
+          conversation: conversationContext,
+          model: model,
+          stream: false
+        };
+
+        // Sanitize base URL to prevent double slashes
+        const sanitizedBaseURL = this.sanitizeBaseURL(config.baseURL);
+        const conversationURL = `${sanitizedBaseURL}/chat/conversation`;
+        
+        const response = await fetch(conversationURL, {
+          method: 'POST',
+          headers,
+          signal: abortController?.signal,
+          body: JSON.stringify(messagePayload)
+        });
+
+        const contentType = response.headers.get('content-type');
+        
+        // If response is plain text, handle it directly
+        if (contentType && contentType.includes('text/plain')) {
+          console.log('Detected plain text response for conversation, handling directly');
+          const textContent = await response.text();
+          if (onChunk) onChunk(textContent);
+          if (onComplete) onComplete();
+          return;
+        }
+
+        // If it's JSON, try to parse it as conversation format
+        if (contentType && contentType.includes('application/json')) {
+          const jsonResponse = await response.json();
+          
+          // Handle standard conversation format
+          if (jsonResponse.choices && jsonResponse.choices[0] && jsonResponse.choices[0].message) {
+            const content = jsonResponse.choices[0].message.content;
+            if (content && onChunk) {
+              onChunk(content);
+            }
+            
+            // Handle reasoning if present
+            const reasoning = jsonResponse.choices[0].message.reasoning;
+            if (reasoning && onReasoningChunk) {
+              onReasoningChunk(reasoning);
+            }
+            
+            if (onComplete) onComplete();
+            return;
+          }
+        }
+
+        // If we get here, the response format is unexpected
+        throw new Error(`Unexpected response format. Content-Type: ${contentType}`);
+
+      } catch (directFetchError) {
+        console.log('Direct fetch failed for conversation, trying streaming approach:', directFetchError);
+        
+        // Fallback to streaming approach
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+
+        if (idToken) {
+          headers['Authorization'] = `Bearer ${idToken}`;
+        }
+
+        // For Messages Mode, we use a simplified message format that preserves conversation context
+        const messagePayload = {
+          messages: message,
+          conversation: conversationContext,
+          model: model,
+          stream: true
+        };
+
+        // Sanitize base URL to prevent double slashes
+        const sanitizedBaseURL = this.sanitizeBaseURL(config.baseURL);
+
+        const response = await fetch(`${sanitizedBaseURL}/chat/conversation`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(messagePayload),
+          signal: abortController?.signal
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        // Handle streaming response
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('No response body');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          
+          // Process complete lines
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          
+          for (const line of lines) {
+            if (line.trim() === '') continue;
+            if (!line.startsWith('data: ')) continue;
+            
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              if (onComplete) onComplete();
+              return;
+            }
+            
+            try {
+              const parsed = JSON.parse(data);
+              
+              // Handle different response formats
+              if (parsed.choices?.[0]?.delta?.content && onChunk) {
+                onChunk(parsed.choices[0].delta.content);
+              }
+              
+              if (parsed.choices?.[0]?.delta?.reasoning && onReasoningChunk) {
+                onReasoningChunk(parsed.choices[0].delta.reasoning);
+              }
+              
+              // Handle conversation context updates
+              if (parsed.conversation) {
+                // This would be the updated conversation context from the server
+                // You can store this for the next message
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse streaming data:', parseError);
+            }
+          }
+        }
+
+        if (onComplete) onComplete();
+      }
+      
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
+      if (onError) onError(error as Error);
     }
   }
 }

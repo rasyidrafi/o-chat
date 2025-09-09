@@ -95,9 +95,10 @@ const ChatView: React.FC<ChatViewProps> = ({
       model: string,
       source: string = "system",
       providerId?: string,
-      attachments?: any[]
+      attachments?: any[],
+      isMessagesMode?: boolean
     ) => {
-      sendMessage(message, model, source, providerId, attachments);
+      sendMessage(message, model, source, providerId, attachments, isMessagesMode);
 
       // Force scroll to bottom after sending a message with a slight delay
       // to ensure the message is added to the DOM

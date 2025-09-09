@@ -83,6 +83,7 @@ export interface ChatConversation {
   updatedAt: Date;
   model: string;
   source: string;
+  conversationContext?: string; // For Messages Mode conversation context
 }
 
 export interface StreamingState {

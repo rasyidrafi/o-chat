@@ -570,7 +570,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     model: string,
     source: string = 'system',
     providerId?: string,
-    attachments?: MessageAttachment[]
+    attachments?: MessageAttachment[],
+    isMessagesMode?: boolean
   ) => {
     // Build the message content
     let messageContent: MessageContent;
@@ -868,18 +869,44 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         streamingReasoningRef.current = '';
       };
 
-      await ChatService.sendMessage(
-        model,
-        messagesToSend,
-        onChunkCallback,
-        onCompleteCallback,
-        onErrorCallback,
-        user,
-        controller,
-        source,
-        providerId,
-        onReasoningChunkCallback
-      );
+      if (isMessagesMode) {
+        // Use Messages Mode with conversation context
+        const conversationContext = conversation.conversationContext || '';
+        const messageText = typeof content === 'string' ? content : extractTextFromContent(content);
+        
+        await ChatService.sendMessageWithConversation(
+          messageText,
+          model,
+          source,
+          providerId,
+          conversationContext,
+          user,
+          controller,
+          onChunkCallback,
+          onReasoningChunkCallback,
+          () => {
+            // On complete callback for Messages Mode
+            // Note: In real implementation, you'd get the updated conversation context from the response
+            // For now, we'll use the same onCompleteCallback
+            onCompleteCallback();
+          },
+          onErrorCallback
+        );
+      } else {
+        // Use regular chat completions
+        await ChatService.sendMessage(
+          model,
+          messagesToSend,
+          onChunkCallback,
+          onCompleteCallback,
+          onErrorCallback,
+          user,
+          controller,
+          source,
+          providerId,
+          onReasoningChunkCallback
+        );
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       updateMessage(updatedConversation.id, aiMessage.id, `Error: ${errorMessage}`);
