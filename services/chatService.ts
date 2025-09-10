@@ -208,6 +208,19 @@ export class ChatService {
         body: JSON.stringify(requestBody)
       });
 
+      // CHECK HTTP STATUS FIRST - throw error if not OK
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error?.message || errorData.error || errorMessage;
+        } catch (parseError) {
+          // If we can't parse the error response, use the status text
+          console.warn('Failed to parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
+      }
+
       const contentType = response.headers.get('content-type');
       console.log('📦 Response Content-Type:', contentType);
 
