@@ -28,7 +28,7 @@ export const themes = {
     backdrop: "bg-[#f9f9f9] dark:bg-[#1c1c1c]",
     card: "bg-[#e9eaea] dark:bg-[#27272a]",
     inputBg: "bg-[#fbf9f7] dark:bg-zinc-800",
-    inputBgTransparent: "bg-[#fbf9f7]/80 dark:bg-zinc-800/80",
+    inputBgTransparent: "bg-[#fbf9f7] dark:bg-zinc-800",
     border: "border-[#e7e4e2] dark:border-zinc-700",
   },
 

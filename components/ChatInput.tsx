@@ -1462,11 +1462,7 @@ const ChatInput = ({
 
   return (
     <div
-      className={`${
-        isMobile ? themes.chatview.inputBg : themes.chatview.inputBgTransparent
-      } ${
-        themes.chatview.border
-      } md:backdrop-blur-md border-1 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-sm`}
+      className={`${themes.chatview.inputBg} ${themes.chatview.border} border-1 p-3 rounded-3xl w-full sm:rounded-3xl rounded-t-3xl rounded-b-none shadow-sm`}
     >
       {/* Image Preview Section */}
       {inputMode === "image_generation" && uploadedImageForEditing && (
