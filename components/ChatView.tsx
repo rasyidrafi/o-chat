@@ -292,7 +292,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       </motion.div>
 
       <div
-        className="fixed z-50 md:hidden"
+        className="fixed z-10 md:hidden"
         style={{
           ...sidebarButtonStyle,
           left: "10px",
@@ -421,6 +421,7 @@ const ChatView: React.FC<ChatViewProps> = ({
             onImageGenerate={handleImageGenerate}
             onModelSelect={handleModelSelection}
             disabled={streamingState.isStreaming || isLoading}
+            isStreaming={streamingState.isStreaming}
             animationsDisabled={animationsDisabled}
             currentConversation={currentConversation}
           />

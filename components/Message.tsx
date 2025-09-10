@@ -738,16 +738,42 @@ const Message: React.FC<MessageProps> = memo(
           !message.isError &&
           (!message.content || message.content === "") &&
           !isStreaming ? (
-            <motion.div
-              variants={fadeVariants}
-              initial={animationsDisabled ? {} : "initial"}
-              animate="animate"
-              className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
-            >
-              <div className="mt-4 flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
-                <TypingIndicator />
-              </div>
-            </motion.div>
+            (() => {
+              // Check if AI response message has timed out (more than 5 minutes)
+              const messageAge = Date.now() - message.timestamp.getTime();
+              const fiveMinutesInMs = 5 * 60 * 1000; // 5 minutes in milliseconds
+              const hasTimedOut = messageAge > fiveMinutesInMs;
+
+              if (hasTimedOut) {
+                // Show timeout error state instead of typing indicator
+                return (
+                  <motion.div
+                    variants={fadeVariants}
+                    initial={animationsDisabled ? {} : "initial"}
+                    animate="animate"
+                    className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
+                  >
+                    <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-xl px-3 py-[6px] max-w-[90%] sm:max-w-[85%] md:max-w-[75%] break-words overflow-wrap-anywhere">
+                      Response timeout - The AI took too long to respond
+                    </div>
+                  </motion.div>
+                );
+              }
+
+              // Show normal typing indicator
+              return (
+                <motion.div
+                  variants={fadeVariants}
+                  initial={animationsDisabled ? {} : "initial"}
+                  animate="animate"
+                  className="text-sm leading-relaxed w-full max-w-full min-w-0 overflow-hidden"
+                >
+                  <div className="mt-4 flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
+                    <TypingIndicator />
+                  </div>
+                </motion.div>
+              );
+            })()
           ) : (
             <motion.div
               variants={fadeVariants}
@@ -776,9 +802,30 @@ const Message: React.FC<MessageProps> = memo(
 
                 {/* Show typing indicator at the end when streaming with content */}
                 {isStreaming && !isUser && (
-                  <div className="mt-4 flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
-                    <TypingIndicator />
-                  </div>
+                  (() => {
+                    // Check if streaming AI response message has timed out (more than 5 minutes)
+                    const messageAge = Date.now() - message.timestamp.getTime();
+                    const fiveMinutesInMs = 5 * 60 * 1000; // 5 minutes in milliseconds
+                    const hasTimedOut = messageAge > fiveMinutesInMs;
+
+                    if (hasTimedOut) {
+                      // Show timeout error instead of typing indicator
+                      return (
+                        <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                          <div className="text-sm text-red-800 dark:text-red-200">
+                            Response timeout - The AI took too long to respond (over 5 minutes)
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Show normal typing indicator during streaming
+                    return (
+                      <div className="mt-4 flex items-center space-x-2 text-zinc-500 dark:text-zinc-400">
+                        <TypingIndicator />
+                      </div>
+                    );
+                  })()
                 )}
 
                 {/* Show error message below incomplete content */}

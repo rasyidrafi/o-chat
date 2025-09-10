@@ -180,12 +180,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     };
   }, []);
 
-  // Check for timed-out non-async image generation messages
+  // Check for timed-out non-async image generation messages and AI response messages
   React.useEffect(() => {
     if (!user) return;
 
     const checkTimeouts = () => {
-      const oneHourInMs = 60 * 60 * 1000; // 1 hour in milliseconds
+      const oneHourInMs = 60 * 60 * 1000; // 1 hour in milliseconds for image generation
+      const fiveMinutesInMs = 5 * 60 * 1000; // 5 minutes in milliseconds for AI responses
       const now = Date.now();
 
       setConversations(prev => {
@@ -210,6 +211,25 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                 isError: true,
               };
             }
+
+            // Check if AI response message has timed out (more than 5 minutes) - conditions that trigger typing indicator
+            if (
+              msg.role === 'assistant' &&
+              !msg.isError &&
+              (!msg.content || msg.content === "") &&
+              msg.messageType !== 'image_generation' && // Not image generation
+              now - msg.timestamp.getTime() > fiveMinutesInMs
+            ) {
+              hasChanges = true;
+              console.log(`⏰ Timing out AI response message ${msg.id} in conversation ${conv.id} - ${Math.round((now - msg.timestamp.getTime()) / (60 * 1000))} minutes old`);
+              
+              return {
+                ...msg,
+                content: 'Response timeout - The AI took too long to respond (over 5 minutes)',
+                isError: true,
+              };
+            }
+
             return msg;
           });
 

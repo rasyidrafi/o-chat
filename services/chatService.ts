@@ -258,19 +258,33 @@ export class ChatService {
                   // Reset event after processing
                   currentEvent = '';
                   
-                  // Handle reasoning chunks
-                  if (parsed.choices?.[0]?.delta?.reasoning && onReasoningChunk) {
-                    onReasoningChunk(parsed.choices[0].delta.reasoning);
+                  // Check for completion before processing content
+                  const choice = parsed.choices?.[0];
+                  if (choice?.finish_reason === 'stop' || choice?.finish_reason === 'length' || choice?.finish_reason === 'tool_calls') {
+                    // Handle any final content before completing
+                    if (choice.delta?.content) {
+                      onChunk(choice.delta.content);
+                    }
+                    if (choice.delta?.reasoning && onReasoningChunk) {
+                      onReasoningChunk(choice.delta.reasoning);
+                    }
+                    // Don't call onComplete here - wait for [DONE] marker
+                    continue;
                   }
                   
-                  // Handle content chunks
-                  if (parsed.choices?.[0]?.delta?.content) {
-                    onChunk(parsed.choices[0].delta.content);
+                  // Handle reasoning chunks
+                  if (choice?.delta?.reasoning && onReasoningChunk) {
+                    onReasoningChunk(choice.delta.reasoning);
+                  }
+                  
+                  // Handle content chunks (including empty content which can be valid)
+                  if (choice?.delta?.content !== undefined) {
+                    onChunk(choice.delta.content);
                   }
                   
                   // Handle image chunks
-                  if (parsed.choices?.[0]?.delta?.images && onImageGenerated) {
-                    const images = parsed.choices[0].delta.images;
+                  if (choice?.delta?.images && onImageGenerated) {
+                    const images = choice.delta.images;
                     images.forEach((image: any) => {
                       if (image.image_url && image.image_url.url) {
                         onImageGenerated(image.image_url.url);
@@ -278,7 +292,7 @@ export class ChatService {
                     });
                   }
                 } catch (parseError) {
-                  console.warn('Failed to parse SSE data:', data);
+                  console.warn('Failed to parse SSE data:', data, 'Error:', parseError);
                 }
               }
             }
