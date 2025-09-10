@@ -2,18 +2,26 @@
 
 A modern, full-featured AI chat platform built with React, TypeScript, and Firebase. Experience seamless conversations with multiple AI providers, advanced features like image generation, vision capabilities, and real-time collaboration.  
 
-### Dashboard
-<img width="1920" height="1080" alt="Screenshot 2025-09-10 091737" src="https://github.com/user-attachments/assets/25799e11-0d59-48f2-87be-559760ac0b32" />    
+<!-- Dashboard Screenshot -->
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/25799e11-0d59-48f2-87be-559760ac0b32" alt="Dashboard Screenshot" style="width:100%;aspect-ratio:16/9;border-radius:12px;object-fit:cover;" />
+</p>
 
-### Chat
-<img width="1920" height="1080" alt="Screenshot 2025-09-10 093654" src="https://github.com/user-attachments/assets/32563b9f-3eb5-425d-a17f-239b66e70e55" />  
+<!-- Chat Screenshot -->
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/32563b9f-3eb5-425d-a17f-239b66e70e55" alt="Chat Screenshot" style="width:100%;aspect-ratio:16/9;border-radius:12px;object-fit:cover;" />
+</p>
 
-### Settings
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/87f3a89e-89af-4598-9925-07316b3dfbd3" />  
+<!-- Settings Screenshot -->
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/87f3a89e-89af-4598-9925-07316b3dfbd3" alt="Settings Screenshot" style="width:100%;aspect-ratio:16/9;border-radius:12px;object-fit:cover;" />
+</p>
 
-### Api Keys Tab
+<!-- API Keys Tab Screenshot -->
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/2e16e878-cbe3-49e0-8b82-6d664d811b04" alt="API Keys Tab Screenshot" style="width:100%;aspect-ratio:16/9;border-radius:12px;object-fit:cover;" />
+</p>
 
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2e16e878-cbe3-49e0-8b82-6d664d811b04" />  
 
 
 
@@ -75,6 +83,13 @@ A modern, full-featured AI chat platform built with React, TypeScript, and Fireb
 - **Offline Support**: Local storage fallback
 - **Performance Optimized**: Lazy loading and efficient rendering
 - **TypeScript**: Full type safety throughout the application
+## 📚 Rich Content Support
+
+O-Chat supports advanced content rendering in chat messages:
+
+- **LaTeX Math**: Render mathematical formulas and equations using KaTeX. Just type math in `$...$` or `$$...$$` and it will be beautifully rendered.
+- **Code Blocks**: Syntax-highlighted code blocks with Shiki, including copy and expand features. Supports dozens of programming languages.
+- **Mermaid Diagrams**: Render flowcharts, sequence diagrams, and more using Mermaid syntax (```mermaid ... ```). Diagrams are rendered live and adapt to dark/light themes.
 
 ## 🚀 Quick Start
 
@@ -192,7 +207,7 @@ src/
    - **OpenAI**: `https://api.openai.com/v1`
    - **Anthropic**: `https://api.anthropic.com`
    - **Local LLM**: `http://localhost:11434/v1` (Ollama)
-   - **Any OpenAI-compatible API**
+   - **Any OpenAI-compatible API`
 4. Add your API keys for each provider
 5. Start chatting! All conversations are saved locally
 
