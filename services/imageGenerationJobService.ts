@@ -120,13 +120,21 @@ export class ImageGenerationJobService {
 
       // Make the job creation request
       const jobsUrl = `${config.baseURL.replace(/\/$/, '')}/images/jobs`;
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Set authorization header based on provider type
+      if (source === 'system' && idToken) {
+        headers['Authorization'] = `Bearer ${idToken}`;
+      } else if (source === 'custom' && config.apiKey) {
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+      }
+      
       const response = await fetch(jobsUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
-          ...(config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : {}),
-        },
+        headers,
         body: JSON.stringify(jobParams),
       });
 
@@ -177,13 +185,20 @@ export class ImageGenerationJobService {
 
       // Make the job status request
       const jobsUrl = `${config.baseURL.replace(/\/$/, '')}/images/jobs/${jobId}`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Set authorization header based on provider type
+      if (source === 'system' && idToken) {
+        headers['Authorization'] = `Bearer ${idToken}`;
+      } else if (source === 'custom' && config.apiKey) {
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+      }
+      
       const response = await fetch(jobsUrl, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {}),
-          ...(config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : {}),
-        },
+        headers,
       });
 
       if (!response.ok) {

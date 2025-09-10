@@ -85,9 +85,11 @@ export class ChatService {
   private static createOpenAIInstance(idToken?: string, baseURL?: string, apiKey?: string) {
     const headers: Record<string, string> = {};
 
-    // Add Firebase ID token as Authorization header if available
+    // Add Authorization header - prioritize idToken for system providers, apiKey for custom providers
     if (idToken) {
       headers['Authorization'] = `Bearer ${idToken}`;
+    } else if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
     // Sanitize base URL to avoid double slashes
@@ -175,8 +177,11 @@ export class ChatService {
         'Content-Type': 'application/json',
       };
       
-      if (idToken) {
+      // Set authorization header based on provider type
+      if (source === 'system' && idToken) {
         headers['Authorization'] = `Bearer ${idToken}`;
+      } else if (source === 'custom' && config.apiKey) {
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
 
       // Prepare request body with conditional modalities

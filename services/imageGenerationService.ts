@@ -26,9 +26,11 @@ export class ImageGenerationService {
       'Content-Type': 'application/json',
     };
 
-    // Add Firebase ID token as Authorization header if available
+    // Add Authorization header - prioritize idToken for system providers, apiKey for custom providers
     if (idToken) {
       headers['Authorization'] = `Bearer ${idToken}`;
+    } else if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
     return new OpenAI({
