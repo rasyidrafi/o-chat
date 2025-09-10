@@ -1,6 +1,23 @@
 # O-Chat - AI Chat Platform
 
-A modern, full-featured AI chat platform built with React, TypeScript, and Firebase. Experience seamless conversations with multiple AI providers, advanced features like image generation, vision capabilities, and real-time collaboration.
+A modern, full-featured AI chat platform built with React, TypeScript, and Firebase. Experience seamless conversations with multiple AI providers, advanced features like image generation, vision capabilities, and real-time collaboration.  
+
+### Dashboard
+<img width="1920" height="1080" alt="Screenshot 2025-09-10 091737" src="https://github.com/user-attachments/assets/25799e11-0d59-48f2-87be-559760ac0b32" />    
+
+### Chat
+<img width="1920" height="1080" alt="Screenshot 2025-09-10 093654" src="https://github.com/user-attachments/assets/32563b9f-3eb5-425d-a17f-239b66e70e55" />  
+
+### Settings
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/87f3a89e-89af-4598-9925-07316b3dfbd3" />  
+
+### Api Keys Tab
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2e16e878-cbe3-49e0-8b82-6d664d811b04" />  
+
+
+
+
 
 🌐 **Live Demo:** [https://chat.r45.dev](https://chat.r45.dev)
 
@@ -228,7 +245,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🙏 Acknowledgments
 
-- **inspired by t3 Chat**
+- **inspired from t3 Chat, intern3 chat**
 - **Firebase** - For the incredible backend infrastructure
 - **OpenAI** - For the powerful AI models and APIs
 - **All AI Providers** - For making advanced AI accessible
