@@ -84,7 +84,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
           </div>
           
           <div className="flex items-center gap-2 flex-shrink-0">
-            {layout === "row" && onToggleExpansion && (
+            {layout === "row" && onToggleExpansion && description && description.trim() && (
               <button
                 onClick={onToggleExpansion}
                 className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"

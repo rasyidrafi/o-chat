@@ -3,6 +3,7 @@ import CustomDropdown from "../../ui/CustomDropdown";
 import ModelCard from "../ModelCard";
 import AdvancedFilter from "../../ui/AdvancedFilter";
 import { LoadingOverlay } from "../../ui/LoadingOverlay";
+import TabButtonGroup from "../../ui/TabButtonGroup";
 import { AppSettings } from "../../../hooks/useSettings";
 import { Provider } from "../../../types/providers";
 import { useModelsManager } from "../../../hooks/useModelsManager";
@@ -26,6 +27,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   const { isMobile } = useSettingsContext();
 
   // State management
+  const [activeMainTab, setActiveMainTab] = useState<"system" | "byok">("system");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [activeByokTab, setActiveByokTab] = useState<"selected" | "available">("available");
   const [availableProviders, setAvailableProviders] = useState<Array<Provider>>([]);
@@ -114,6 +116,18 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     serverPagination.goToPage(1);
   }, [serverFilter.searchQuery, serverFilter.selectedFeatures]);
 
+  // Reset BYOK tab to "available" when provider changes
+  useEffect(() => {
+    if (selectedProvider) {
+      setActiveByokTab("available");
+    }
+  }, [selectedProvider]);
+
+  // Reset pagination when switching between BYOK tabs
+  useEffect(() => {
+    byokPagination.goToPage(1);
+  }, [activeByokTab]);
+
   // Memoized filtered and paginated models
   const filteredServerModels = useMemo(() => {
     const serverModels = modelsManager.availableModels.filter(
@@ -122,7 +136,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
     const filtered = serverFilter.filterItems(serverModels, ['name'], 'features');
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [modelsManager.availableModels, serverFilter]);
+  }, [modelsManager.availableModels, serverFilter.searchQuery, serverFilter.selectedFeatures]);
 
   const paginatedServerModels = useMemo(() => {
     const paginatedItems = serverPagination.getPaginatedItems(filteredServerModels);
@@ -131,12 +145,12 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     return {
       models: paginatedItems,
       totalItems: filteredServerModels.length,
-      totalPages,
+      totalPages: totalPages || 1,
       currentPage: serverPagination.currentPage,
-      hasNextPage: serverPagination.currentPage < totalPages,
-      hasPreviousPage: serverPagination.hasPreviousPage,
+      hasNextPage: serverPagination.currentPage < (totalPages || 1),
+      hasPreviousPage: serverPagination.currentPage > 1,
     };
-  }, [filteredServerModels, serverPagination]);
+  }, [filteredServerModels, serverPagination.currentPage]);
 
   const filteredByokModels = useMemo(() => {
     if (!selectedProvider) return [];
@@ -144,28 +158,33 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     let models: any[] = [];
 
     if (activeByokTab === "available") {
-      models = modelsManager.fetchedModels.map(model => ({
-        name: model.name,
-        description: model.description,
-        features: ["Text Generation"],
-        category: "byok",
-        id: model.id,
-        supported_parameters: model.supported_parameters,
-      }));
-    } else {
-      // Show selected models
-      models = modelsManager.selectedModels.map(model => {
-        const fullModel = modelsManager.fetchedModels.find(m => m.id === model.id) || 
-                         modelsManager.availableModels.find(m => m.id === model.id);
-        return {
+      // Only show fetched models if they exist and are not loading
+      if (modelsManager.fetchedModels && modelsManager.fetchedModels.length > 0) {
+        models = modelsManager.fetchedModels.map(model => ({
           name: model.name,
-          description: fullModel?.description || "",
+          description: model.description,
           features: ["Text Generation"],
           category: "byok",
           id: model.id,
-          supported_parameters: model.supported_parameters || [],
-        };
-      });
+          supported_parameters: model.supported_parameters,
+        }));
+      }
+    } else {
+      // Show selected models
+      if (modelsManager.selectedModels && modelsManager.selectedModels.length > 0) {
+        models = modelsManager.selectedModels.map(model => {
+          const fullModel = modelsManager.fetchedModels.find(m => m.id === model.id) || 
+                           modelsManager.availableModels.find(m => m.id === model.id);
+          return {
+            name: model.name,
+            description: fullModel?.description || "",
+            features: ["Text Generation"],
+            category: "byok",
+            id: model.id,
+            supported_parameters: model.supported_parameters || [],
+          };
+        });
+      }
     }
 
     // Filter and sort models
@@ -177,7 +196,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     modelsManager.fetchedModels,
     modelsManager.selectedModels,
     modelsManager.availableModels,
-    byokFilter
+    byokFilter.searchQuery,
+    byokFilter.selectedFeatures
   ]);
 
   const paginatedByokModels = useMemo(() => {
@@ -187,12 +207,12 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     return {
       models: paginatedItems,
       totalItems: filteredByokModels.length,
-      totalPages,
+      totalPages: totalPages || 1,
       currentPage: byokPagination.currentPage,
-      hasNextPage: byokPagination.currentPage < totalPages,
-      hasPreviousPage: byokPagination.hasPreviousPage,
+      hasNextPage: byokPagination.currentPage < (totalPages || 1),
+      hasPreviousPage: byokPagination.currentPage > 1,
     };
-  }, [filteredByokModels, byokPagination]);
+  }, [filteredByokModels, byokPagination.currentPage]);
 
   // Event handlers
   const handleModelToggle = useCallback((modelId: string, modelName: string, enabled: boolean) => {
@@ -354,352 +374,434 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   }, [paginatedServerModels, paginatedByokModels, serverPagination, byokPagination, isMobile]);
 
   return (
-    <div className="space-y-8">
-      {/* Server Models Section */}
-      <section>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-            Server Models
-          </h2>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            <button
-              onClick={handleRefreshServerModels}
-              disabled={modelsManager.isLoadingSystemModels}
-              className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
-              title="Refresh server models"
-            >
-              <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
-              <span className="hidden xs:inline">
-                {modelsManager.isLoadingSystemModels ? 'Loading...' : 'Refresh'}
-              </span>
-            </button>
-            <button
-              onClick={handleServerSelectAll}
-              className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
-            >
-              <span className="sm:hidden">All</span>
-              <span className="hidden sm:inline">Select All</span>
-            </button>
-            <button
-              onClick={handleServerUnselectAll}
-              className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
-            >
-              <span className="sm:hidden">None</span>
-              <span className="hidden sm:inline">Unselect All</span>
-            </button>
+    <div>
+      {/* Main Tab Switcher */}
+      <div>
+        <h2 className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+          Models Management
+        </h2>
+        <div className="space-y-6 mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h4 className="font-medium text-zinc-900 dark:text-white">
+                  Model Type
+                </h4>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Choose between built-in system models or bring your own API key models.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2 ml-auto">
+              <TabButtonGroup
+                options={[
+                  { value: "system", label: "System Models" },
+                  { value: "byok", label: "BYOK" },
+                ]}
+                value={activeMainTab}
+                onChange={(activeMainTab: "system" | "byok") =>
+                  setActiveMainTab(activeMainTab)
+                }
+                animationsDisabled={settings.animationsDisabled}
+              />
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Server Models Filters */}
-        <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
-          modelsManager.isLoadingSystemModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
-        }`}>
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search server models..."
-              value={serverFilter.searchQuery}
-              onChange={(e) => serverFilter.handleSearchChange(e.target.value)}
-              disabled={modelsManager.isLoadingSystemModels}
-              className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-          </div>
-          <div className="flex-shrink-0 lg:w-80">
-            <AdvancedFilter
-              categories={MODEL_FILTER_CATEGORIES}
-              selectedFilters={convertFeaturesToFilterIds(serverFilter.selectedFeatures)}
-              onFilterChange={handleServerFilterChange}
-              onClearAll={handleServerClearAllFilters}
-              placeholder="Filter by capabilities"
-              disabled={modelsManager.isLoadingSystemModels}
-            />
-          </div>
-        </div>
-
-        {/* Server Models Content Area */}
-        <div className="relative min-h-[400px]">
-          {/* Loading Overlay */}
-          <LoadingOverlay
-            isVisible={modelsManager.isLoadingSystemModels}
-            title="Loading server models..."
-            subtitle="Please wait while we fetch the latest models from our servers"
-            className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md"
-          />
-
-          {/* Error State */}
-          {modelsManager.systemModelsError && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-yellow-800 dark:text-yellow-200 font-medium">
-                    Failed to fetch server models
-                  </p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
-                    {modelsManager.systemModelsError}
-                  </p>
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
-                    Using fallback models. This might be due to:
-                  </p>
-                  <ul className="text-sm text-yellow-600 dark:text-yellow-400 mt-1 ml-4 list-disc">
-                    <li>Network connectivity issues</li>
-                    <li>Server maintenance</li>
-                    <li>Missing Firebase configuration</li>
-                  </ul>
-                </div>
+      {/* Content Based on Active Tab */}
+      <div className="mt-8">
+        {activeMainTab === "system" && (
+          /* Server Models Section */
+          <section>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                System Models
+              </h2>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 <button
                   onClick={handleRefreshServerModels}
                   disabled={modelsManager.isLoadingSystemModels}
-                  className="ml-4 px-3 py-1 text-sm bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shrink-0 cursor-pointer"
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                  title="Refresh server models"
                 >
-
-                  <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
-                  Retry
+                  <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
+                  <span className="hidden xs:inline">
+                    {modelsManager.isLoadingSystemModels ? 'Loading...' : 'Refresh'}
+                  </span>
+                </button>
+                <button
+                  onClick={handleServerSelectAll}
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
+                >
+                  <span className="sm:hidden">All</span>
+                  <span className="hidden sm:inline">Select All</span>
+                </button>
+                <button
+                  onClick={handleServerUnselectAll}
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
+                >
+                  <span className="sm:hidden">None</span>
+                  <span className="hidden sm:inline">Unselect All</span>
                 </button>
               </div>
             </div>
-          )}
 
-          {/* Server Models List */}
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch transition-all duration-300 ${
-            modelsManager.isLoadingSystemModels ? 'opacity-50 blur-sm pointer-events-none' : 'opacity-100 blur-none'
-          }`}>
-            <AnimatePresence mode="wait">
-              {paginatedServerModels.models.map((model, index) => (
-                <motion.div
-                  key={model.id}
-                  className="h-full"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ 
-                    duration: settings.animationsDisabled ? 0 : 0.2, 
-                    delay: settings.animationsDisabled ? 0 : index * 0.05 
-                  }}
-                >
-                  <ModelCard
-                    key={model.id}
-                    name={model.name}
-                    description={model.description}
-                    features={model.features}
-                    isEnabled={isServerModelEnabled(model.id)}
-                    onToggle={(enabled) => handleServerModelToggle(model.id, model.name, enabled)}
-                    disabled={modelsManager.isLoadingSystemModels || model.id === DEFAULT_MODEL_ID}
-                    isExpanded={expandedModels.has(model.id)}
-                    onToggleExpansion={() => toggleModelExpansion(model.id)}
-                    layout="row"
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {renderPagination('server')}
-      </section>
-
-      {/* BYOK Models Section */}
-      <section>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-            Bring Your Own Key (BYOK) Models
-          </h2>
-          {selectedProvider && (
-            <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              <button
-                onClick={() => {
-                  const provider = availableProviders.find(p => p.id === selectedProvider);
-                  if (provider) {
-                    modelsManager.fetchProviderModels(provider);
-                  }
-                }}
-                disabled={modelsManager.isLoadingModels}
-                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
-                title="Refresh BYOK models"
-              >
-                <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${modelsManager.isLoadingModels ? 'animate-spin' : ''}`} />
-                <span className="hidden xs:inline">
-                  {modelsManager.isLoadingModels ? 'Loading...' : 'Refresh'}
-                </span>
-              </button>
-              <button
-                onClick={() => {
-                  const allModels = modelsManager.fetchedModels.map(model => ({
-                    id: model.id,
-                    name: model.name,
-                    supported_parameters: model.supported_parameters,
-                    category: "byok",
-                  }));
-                  modelsManager.saveSelectedModelsForProvider(selectedProvider, allModels);
-                }}
-                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
-              >
-                <span className="sm:hidden">All</span>
-                <span className="hidden sm:inline">Select All</span>
-              </button>
-              <button
-                onClick={handleUnselectAll}
-                className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
-              >
-                <span className="sm:hidden">None</span>
-                <span className="hidden sm:inline">Unselect All</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Provider Selection */}
-        <div className={`mb-6 transition-all duration-300 ${
-          modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
-        }`}>
-          <div className="w-full sm:max-w-md">
-            <CustomDropdown
-              label="Select API Provider"
-              description=""
-              options={availableProviders.map(p => p.label)}
-              selected={selectedProvider 
-                ? availableProviders.find(p => p.id === selectedProvider)?.label || "Choose a provider..."
-                : "Choose a provider..."
-              }
-              onSelect={(option) => {
-                const provider = availableProviders.find(p => p.label === option);
-                if (provider) {
-                  setSelectedProvider(provider.id);
-                }
-              }}
-              animationsDisabled={settings.animationsDisabled}
-              disabledOptions={availableProviders.filter(p => p.disabled).map(p => p.label)}
-            />
-          </div>
-        </div>
-
-        {selectedProvider && (
-          <>
-            {/* BYOK Tab Navigation */}
-            <div className={`flex border-b border-zinc-200 dark:border-zinc-700 mb-6 transition-all duration-300 ${
-              modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
-            }`}>
-              <button
-                onClick={() => setActiveByokTab("available")}
-                className={`px-4 py-2 border-b-2 transition-colors ${
-                  activeByokTab === "available"
-                    ? "border-pink-500 text-pink-600 dark:text-pink-400"
-                    : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-                }`}
-              >
-                Available Models
-              </button>
-              <button
-                onClick={() => setActiveByokTab("selected")}
-                className={`px-4 py-2 border-b-2 transition-colors ${
-                  activeByokTab === "selected"
-                    ? "border-pink-500 text-pink-600 dark:text-pink-400"
-                    : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-                }`}
-              >
-                Selected Models ({modelsManager.selectedModels.length})
-              </button>
-            </div>
-
-            {/* BYOK Models Filters */}
+            {/* Server Models Filters */}
             <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
-              modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+              modelsManager.isLoadingSystemModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
             }`}>
               <div className="flex-1">
                 <input
                   type="text"
-                  placeholder="Search BYOK models..."
-                  value={byokFilter.searchQuery}
-                  onChange={(e) => byokFilter.handleSearchChange(e.target.value)}
-                  disabled={modelsManager.isLoadingModels}
+                  placeholder="Search system models..."
+                  value={serverFilter.searchQuery}
+                  onChange={(e) => serverFilter.handleSearchChange(e.target.value)}
+                  disabled={modelsManager.isLoadingSystemModels}
                   className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
-                <div className="flex-shrink-0 lg:w-80">
-                  <AdvancedFilter
-                    categories={MODEL_FILTER_CATEGORIES}
-                    selectedFilters={convertFeaturesToFilterIds(byokFilter.selectedFeatures)}
-                    onFilterChange={handleByokFilterChange}
-                    onClearAll={handleByokClearAllFilters}
-                    placeholder="Filter by capabilities"
-                    disabled={modelsManager.isLoadingModels}
-                  />
-                </div>
+              <div className="flex-shrink-0 lg:w-80">
+                <AdvancedFilter
+                  categories={MODEL_FILTER_CATEGORIES}
+                  selectedFilters={convertFeaturesToFilterIds(serverFilter.selectedFeatures)}
+                  onFilterChange={handleServerFilterChange}
+                  onClearAll={handleServerClearAllFilters}
+                  placeholder="Filter by capabilities"
+                  disabled={modelsManager.isLoadingSystemModels}
+                />
               </div>
             </div>
 
-            {/* BYOK Models Content Area */}
+            {/* Server Models Content Area */}
             <div className="relative min-h-[400px]">
               {/* Loading Overlay */}
               <LoadingOverlay
-                isVisible={modelsManager.isLoadingModels}
-                title="Loading models..."
-                subtitle="Please wait while we fetch models from your selected provider"
-                className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md"
+                isVisible={modelsManager.isLoadingSystemModels}
+                title="Loading system models..."
+                subtitle="Please wait while we fetch the latest models from our servers"
               />
 
               {/* Error State */}
-              {modelsManager.modelsError && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-                  <p className="text-red-800 dark:text-red-200">
-                    {modelsManager.modelsError}
-                  </p>
+              {modelsManager.systemModelsError && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-yellow-800 dark:text-yellow-200 font-medium">
+                        Failed to fetch system models
+                      </p>
+                      <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                        {modelsManager.systemModelsError}
+                      </p>
+                      <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+                        Using fallback models. This might be due to:
+                      </p>
+                      <ul className="text-sm text-yellow-600 dark:text-yellow-400 mt-1 ml-4 list-disc">
+                        <li>Network connectivity issues</li>
+                        <li>Server maintenance</li>
+                        <li>Missing Firebase configuration</li>
+                      </ul>
+                    </div>
+                    <button
+                      onClick={handleRefreshServerModels}
+                      disabled={modelsManager.isLoadingSystemModels}
+                      className="ml-4 px-3 py-1 text-sm bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shrink-0 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
+                      Retry
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* Empty State */}
-              {!modelsManager.isLoadingModels && !modelsManager.modelsError && paginatedByokModels.models.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-zinc-500 dark:text-zinc-400">
-                    {activeByokTab === "selected" 
-                      ? "No models selected yet. Switch to 'Available Models' to select some."
-                      : "No models found."
-                    }
-                  </p>
-                </div>
-              )}
-
-              {/* BYOK Models List */}
-              {paginatedByokModels.models.length > 0 && (
-                <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch transition-all duration-300 ${
-                  modelsManager.isLoadingModels ? 'opacity-50 blur-sm pointer-events-none' : 'opacity-100 blur-none'
-                }`}>
-                  <AnimatePresence mode="wait">
-                    {paginatedByokModels.models.map((model, index) => (
-                      <motion.div
+              {/* Server Models List */}
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch transition-all duration-300`}>
+                <AnimatePresence mode="wait">
+                  {paginatedServerModels.models.map((model, index) => (
+                    <motion.div
+                      key={model.id}
+                      className="h-full"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ 
+                        duration: settings.animationsDisabled ? 0 : 0.2, 
+                        delay: settings.animationsDisabled ? 0 : index * 0.05 
+                      }}
+                    >
+                      <ModelCard
                         key={model.id}
-                        className="h-full"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ 
-                          duration: settings.animationsDisabled ? 0 : 0.2, 
-                          delay: settings.animationsDisabled ? 0 : index * 0.05 
-                        }}
-                      >
-                        <ModelCard
-                          name={model.name}
-                          description={model.description}
-                          features={model.features}
-                          isEnabled={isModelSelected(model.id)}
-                          onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
-                          disabled={modelsManager.isLoadingModels}
-                          isExpanded={expandedModels.has(model.id)}
-                          onToggleExpansion={() => toggleModelExpansion(model.id)}
-                          layout="row"
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-
-              {/* Pagination */}
-              {paginatedByokModels.models.length > 0 && renderPagination('byok')}
+                        name={model.name}
+                        description={model.description}
+                        features={model.features}
+                        isEnabled={isServerModelEnabled(model.id)}
+                        onToggle={(enabled) => handleServerModelToggle(model.id, model.name, enabled)}
+                        disabled={modelsManager.isLoadingSystemModels || model.id === DEFAULT_MODEL_ID}
+                        isExpanded={expandedModels.has(model.id)}
+                        onToggleExpansion={() => toggleModelExpansion(model.id)}
+                        layout="row"
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
-          </>
+
+            {renderPagination('server')}
+          </section>
         )}
-      </section>
+
+        {activeMainTab === "byok" && (
+          /* BYOK Models Section */
+          <section>
+            <div className="mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                Bring Your Own Key (BYOK) Models
+              </h2>
+            </div>
+
+            {/* Provider Selection */}
+            <div className={`mb-6 transition-all duration-300 ${
+              modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+            }`}>
+              <div className="w-full sm:max-w-md">
+                <CustomDropdown
+                  label="Select API Provider"
+                  description=""
+                  options={availableProviders.map(p => p.label)}
+                  selected={selectedProvider 
+                    ? availableProviders.find(p => p.id === selectedProvider)?.label || "Choose a provider..."
+                    : "Choose a provider..."
+                  }
+                  onSelect={(option) => {
+                    const provider = availableProviders.find(p => p.label === option);
+                    if (provider) {
+                      setSelectedProvider(provider.id);
+                    }
+                  }}
+                  animationsDisabled={settings.animationsDisabled}
+                  disabledOptions={availableProviders.filter(p => p.disabled).map(p => p.label)}
+                />
+              </div>
+            </div>
+
+            {/* Action buttons for mobile - shown below provider dropdown */}
+            {selectedProvider && (
+              <div className={`sm:hidden mb-6 transition-all duration-300 ${
+                modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+              }`}>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => {
+                      const provider = availableProviders.find(p => p.id === selectedProvider);
+                      if (provider) {
+                        modelsManager.fetchProviderModels(provider);
+                      }
+                    }}
+                    disabled={modelsManager.isLoadingModels}
+                    className="px-2 py-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                    title="Refresh BYOK models"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${modelsManager.isLoadingModels ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                  <button
+                    onClick={() => {
+                      const allModels = modelsManager.fetchedModels.map(model => ({
+                        id: model.id,
+                        name: model.name,
+                        supported_parameters: model.supported_parameters,
+                        category: "byok",
+                      }));
+                      modelsManager.saveSelectedModelsForProvider(selectedProvider, allModels);
+                    }}
+                    className="px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={handleUnselectAll}
+                    className="px-2 py-1 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
+                  >
+                    Unselect All
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {selectedProvider && (
+              <>
+                {/* BYOK Tab Navigation */}
+                <div className={`flex justify-between items-center border-b border-zinc-200 dark:border-zinc-700 mb-6 transition-all duration-300 ${
+                  modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+                }`}>
+                  <div className="flex">
+                    <button
+                      onClick={() => setActiveByokTab("available")}
+                      className={`cursor-pointer px-4 py-2 border-b-2 transition-colors ${
+                        activeByokTab === "available"
+                          ? "border-pink-500 text-pink-600 dark:text-pink-400"
+                          : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+                      }`}
+                    >
+                      Available Models
+                    </button>
+                    <button
+                      onClick={() => setActiveByokTab("selected")}
+                      className={`cursor-pointer px-4 py-2 border-b-2 transition-colors ${
+                        activeByokTab === "selected"
+                          ? "border-pink-500 text-pink-600 dark:text-pink-400"
+                          : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+                      }`}
+                    >
+                      Selected Models ({modelsManager.selectedModels.length})
+                    </button>
+                  </div>
+                  
+                  {/* Action buttons for desktop - only show for Available Models tab */}
+                  {activeByokTab === "available" && (
+                    <div className="hidden sm:flex gap-2 mb-2">
+                      <button
+                        onClick={() => {
+                          const provider = availableProviders.find(p => p.id === selectedProvider);
+                          if (provider) {
+                            modelsManager.fetchProviderModels(provider);
+                          }
+                        }}
+                        disabled={modelsManager.isLoadingModels}
+                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                        title="Refresh BYOK models"
+                      >
+                        <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${modelsManager.isLoadingModels ? 'animate-spin' : ''}`} />
+                        <span className="hidden xs:inline">
+                          {modelsManager.isLoadingModels ? 'Loading...' : 'Refresh'}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const allModels = modelsManager.fetchedModels.map(model => ({
+                            id: model.id,
+                            name: model.name,
+                            supported_parameters: model.supported_parameters,
+                            category: "byok",
+                          }));
+                          modelsManager.saveSelectedModelsForProvider(selectedProvider, allModels);
+                        }}
+                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
+                      >
+                        <span className="sm:hidden">All</span>
+                        <span className="hidden sm:inline">Select All</span>
+                      </button>
+                      <button
+                        onClick={handleUnselectAll}
+                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
+                      >
+                        <span className="sm:hidden">None</span>
+                        <span className="hidden sm:inline">Unselect All</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* BYOK Models Filters */}
+                <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
+                  modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+                }`}>
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      placeholder="Search BYOK models..."
+                      value={byokFilter.searchQuery}
+                      onChange={(e) => byokFilter.handleSearchChange(e.target.value)}
+                      disabled={modelsManager.isLoadingModels}
+                      className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
+                    <div className="flex-shrink-0 lg:w-80">
+                      <AdvancedFilter
+                        categories={MODEL_FILTER_CATEGORIES}
+                        selectedFilters={convertFeaturesToFilterIds(byokFilter.selectedFeatures)}
+                        onFilterChange={handleByokFilterChange}
+                        onClearAll={handleByokClearAllFilters}
+                        placeholder="Filter by capabilities"
+                        disabled={modelsManager.isLoadingModels}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* BYOK Models Content Area */}
+                <div className="relative min-h-[400px]">
+                  {/* Loading Overlay */}
+                  <LoadingOverlay
+                    isVisible={modelsManager.isLoadingModels}
+                    title="Loading models..."
+                    subtitle="Please wait while we fetch models from your selected provider"
+                  />
+
+                  {/* Error State */}
+                  {modelsManager.modelsError && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+                      <p className="text-red-800 dark:text-red-200">
+                        {modelsManager.modelsError}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Empty State */}
+                  {!modelsManager.isLoadingModels && !modelsManager.modelsError && paginatedByokModels.models.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-zinc-500 dark:text-zinc-400">
+                        {activeByokTab === "selected" 
+                          ? "No models selected yet. Switch to 'Available Models' to select some."
+                          : "No models found."
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {/* BYOK Models List */}
+                  {paginatedByokModels.models.length > 0 && (
+                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch transition-all duration-300`}>
+                      <AnimatePresence mode="wait">
+                        {paginatedByokModels.models.map((model, index) => (
+                          <motion.div
+                            key={model.id}
+                            className="h-full"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ 
+                              duration: settings.animationsDisabled ? 0 : 0.2, 
+                              delay: settings.animationsDisabled ? 0 : index * 0.05 
+                            }}
+                          >
+                            <ModelCard
+                              name={model.name}
+                              description={model.description}
+                              features={model.features}
+                              isEnabled={isModelSelected(model.id)}
+                              onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
+                              disabled={modelsManager.isLoadingModels}
+                              isExpanded={expandedModels.has(model.id)}
+                              onToggleExpansion={() => toggleModelExpansion(model.id)}
+                              layout="row"
+                            />
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* Pagination */}
+                  {paginatedByokModels.models.length > 0 && renderPagination('byok')}
+                </div>
+              </>
+            )}
+          </section>
+        )}
+      </div>
     </div>
   );
 };

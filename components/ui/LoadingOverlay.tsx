@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import LoadingState from "./LoadingState";
+import { themes } from "@/constants/themes";
 
 interface LoadingOverlayProps {
   title: string;
@@ -23,7 +24,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className={`absolute inset-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm z-20 flex items-center justify-center rounded-lg ${className}`}
+      className={`absolute inset-0 z-20 flex items-center justify-center ${themes.chatview.backdrop} ${className}`}
     >
       <LoadingState
         message={title}
