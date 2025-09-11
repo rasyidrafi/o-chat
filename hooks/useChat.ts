@@ -654,8 +654,12 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     if (isContentEmpty(messageContent)) return;
 
+    // Decode model ID if it's URL encoded (fix for custom provider models)
+    const decodedModel = model.includes('%') ? decodeURIComponent(model) : model;
+    console.log('🔧 Model ID processing:', { originalModel: model, decodedModel });
+
     // Get model name for BYOK models
-    let modelName = model;
+    let modelName = decodedModel;
     if (source === 'custom' && providerId) {
       try {
         const customProviders = localStorage.getItem('custom_api_providers');
@@ -670,7 +674,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               const modelArray = models.length > 0 && typeof models[0] === 'string'
                 ? models.map((id: string) => ({ id, name: id }))
                 : models;
-              const foundModel = modelArray.find((m: { id: string, name: string }) => m.id === model);
+              const foundModel = modelArray.find((m: { id: string, name: string }) => m.id === decodedModel);
               if (foundModel) {
                 modelName = foundModel.name;
               }
@@ -696,8 +700,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         messages: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        model,
-        source: getModelSource(model)
+        model: decodedModel, // Use decoded model ID
+        source: getModelSource(decodedModel)
       };
       setCurrentConversationId(conversation.id);
 
@@ -711,6 +715,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       conversation = {
         ...conversation,
         title: messageTitle,
+        model: decodedModel, // Use decoded model ID
+        source: getModelSource(decodedModel),
         updatedAt: new Date()
       };
 
@@ -726,7 +732,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       role: 'user',
       content: messageContent,
       timestamp: new Date(),
-      source: getModelSource(model),
+      source: getModelSource(decodedModel), // Use decoded model ID
       attachments: attachments
     };
 
@@ -735,11 +741,11 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       id: generateId(),
       role: 'assistant',
       content: '',
-      model,
+      model: decodedModel, // Use decoded model ID
       modelName: source === 'custom' ? modelName : undefined,
       isStreaming: true,
       timestamp: new Date(Date.now() + 1),
-      source: getModelSource(model),
+      source: getModelSource(decodedModel), // Use decoded model ID
       reasoning: '',
       isReasoningComplete: false
     };
@@ -1063,11 +1069,11 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       };
 
       // Get model capabilities to determine if image generation in chat is supported
-      const modelCapabilities = getModelCapabilitiesById(model);
+      const modelCapabilities = getModelCapabilitiesById(decodedModel);
       const hasImageGenerationChat = modelCapabilities.hasImageGenerationChat;
 
       await ChatService.sendMessage(
-        model,
+        decodedModel, // Use decoded model ID for API call
         messagesToSend,
         onChunkCallback,
         onCompleteCallback,

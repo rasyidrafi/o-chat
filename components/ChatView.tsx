@@ -108,11 +108,11 @@ const ChatView: React.FC<ChatViewProps> = ({
           }
         }
       }
-      // Focus Chat Input: Ctrl/Cmd + L
+      // Focus Chat Input: Ctrl/Cmd + Shift + L
       if (
         (event.metaKey || event.ctrlKey) &&
         event.shiftKey &&
-        (event.key === "l" || event.key === "l")
+        (event.key === "L" || event.key === "l")
       ) {
         event.preventDefault();
         if (chatInputRef.current) {
