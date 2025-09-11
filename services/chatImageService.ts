@@ -29,7 +29,6 @@ export class ChatImageService {
 
         // Upload to Firebase Storage
         const attachment = await ImageUploadService.uploadImage(file, userId, filename);
-        console.log('✅ Successfully uploaded chat image to Firebase Storage');
         
         return attachment;
       } catch (uploadError) {
