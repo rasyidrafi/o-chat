@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import {
   ChevronDown,
   Paperclip,
@@ -78,7 +78,11 @@ interface ChatInputProps {
   isStreaming?: boolean;
 }
 
-const ChatInput = ({
+interface ChatInputRef {
+  focus: () => void;
+}
+
+const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   onMessageSend,
   onImageGenerate,
   onModelSelect,
@@ -86,7 +90,7 @@ const ChatInput = ({
   animationsDisabled = false,
   isStreaming = false,
   currentConversation,
-}: ChatInputProps) => {
+}, ref) => {
   const { user } = useAuth();
   const { 
     selected_server_models: cloudSelectedServerModels,
@@ -142,6 +146,15 @@ const ChatInput = ({
   const currentAttachmentsRef = useRef<MessageAttachment[]>(attachments);
   const isCheckingCapabilitiesRef = useRef(false);
   const { isMobile } = useSettingsContext();
+
+  // Expose focus method to parent component
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }
+  }));
 
   // Track if model selection should be automatic or manual
   const hasAutoSelectedModelRef = useRef(false);
@@ -2146,6 +2159,8 @@ const ChatInput = ({
       </AnimatePresence>
     </div>
   );
-};
+});
+
+ChatInput.displayName = 'ChatInput';
 
 export default ChatInput;

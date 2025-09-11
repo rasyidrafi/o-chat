@@ -50,6 +50,11 @@ export const KEYBOARD_SHORTCUTS = [
     label: 'Toggle Settings',
     keys: ['⌘',  'Shift', 'S'],
     description: 'Open/close settings page'
+  },
+  {
+    label: 'Focus Chat Input',
+    keys: ['⌘',  'L'],
+    description: 'Focus the chat input box'
   }                
 ] as const;
 

@@ -108,6 +108,13 @@ const ChatView: React.FC<ChatViewProps> = ({
           }
         }
       }
+      // Focus Chat Input: Ctrl/Cmd + L
+      if ((event.metaKey || event.ctrlKey) && event.key === "l") {
+        event.preventDefault();
+        if (chatInputRef.current) {
+          chatInputRef.current.focus();
+        }
+      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -121,6 +128,7 @@ const ChatView: React.FC<ChatViewProps> = ({
   const messageListRef = useRef<{ scrollToBottom: (smooth?: boolean) => void }>(
     null
   );
+  const chatInputRef = useRef<{ focus: () => void }>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   // State to track selected model info from ChatInput
@@ -458,6 +466,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           style={chatInputPadding}
         >
           <ChatInput
+            ref={chatInputRef}
             onMessageSend={handleSendMessage}
             onImageGenerate={handleImageGenerate}
             onModelSelect={handleModelSelection}
