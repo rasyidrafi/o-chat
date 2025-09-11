@@ -771,15 +771,14 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       }
     });
 
-    // Save conversation with user message immediately
-    try {
-      await ChatStorageService.saveConversation({
-        ...updatedConversation,
-        messages: [...conversation.messages, userMessage] // Only save user message initially
-      }, user);
-    } catch (error) {
+    // Save conversation with user message in background (non-blocking)
+    // Don't await this - let it run in parallel with the API call for better performance
+    ChatStorageService.saveConversation({
+      ...updatedConversation,
+      messages: [...conversation.messages, userMessage] // Only save user message initially
+    }, user).catch(error => {
       console.error('Error saving user message:', error);
-    }
+    });
 
     // Remove the early return that was blocking API calls for non-system sources
     // if (source !== 'system') return;
