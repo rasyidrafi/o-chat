@@ -44,6 +44,21 @@ export class CloudStorageService {
   } as const;
 
   /**
+   * Helper method to deduplicate models by ID
+   */
+  private static deduplicateModels(models: any[]): any[] {
+    if (!models || !Array.isArray(models)) return [];
+    const seen = new Set<string>();
+    return models.filter(model => {
+      if (!model?.id || seen.has(model.id)) {
+        return false;
+      }
+      seen.add(model.id);
+      return true;
+    });
+  }
+
+  /**
    * Generate a random UUID for unauthenticated users
    */
   private static generateUUID(): string {
@@ -99,14 +114,16 @@ export class CloudStorageService {
         if (key.startsWith(this.STORAGE_KEYS.MODELS_PREFIX)) {
           const providerId = key.replace(this.STORAGE_KEYS.MODELS_PREFIX, '');
           try {
-            selected_provider_models[providerId] = JSON.parse(localStorage.getItem(key) || '[]');
+            const models = JSON.parse(localStorage.getItem(key) || '[]');
+            selected_provider_models[providerId] = this.deduplicateModels(models);
           } catch (error) {
             console.error(`Error parsing models for provider ${providerId}:`, error);
           }
         } else if (key.startsWith('custom_models_')) {
           const providerId = key.replace('custom_models_', '');
           try {
-            customModelsData[`custom_models_${providerId}`] = JSON.parse(localStorage.getItem(key) || '[]');
+            const models = JSON.parse(localStorage.getItem(key) || '[]');
+            customModelsData[`custom_models_${providerId}`] = this.deduplicateModels(models);
           } catch (error) {
             console.error(`Error parsing custom models for provider ${providerId}:`, error);
           }
@@ -117,7 +134,7 @@ export class CloudStorageService {
         custom_providers,
         selected_server_models: [], // Not persisted in localStorage anymore
         selected_provider_models,
-        custom_models,
+        custom_models: this.deduplicateModels(custom_models),
         last_updated: new Date(),
         ...customModelsData, // Include all custom models data
       };
@@ -664,14 +681,17 @@ export class CloudStorageService {
             });
           });
           
-          result[providerId] = models;
+          // Apply deduplication to each provider's models
+          result[providerId] = this.deduplicateModels(models);
         });
       } else {
         // Anonymous user - load from localStorage
         providerIds.forEach(providerId => {
           try {
             const stored = localStorage.getItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`);
-            result[providerId] = stored ? JSON.parse(stored) : [];
+            const models = stored ? JSON.parse(stored) : [];
+            // Apply deduplication to localStorage models as well
+            result[providerId] = this.deduplicateModels(models);
           } catch (error) {
             console.error(`Error loading models for provider ${providerId} from localStorage:`, error);
             result[providerId] = [];
@@ -742,9 +762,12 @@ export class CloudStorageService {
     models: any[]
   ): Promise<void> {
     try {
+      // Deduplicate models before saving
+      const deduplicatedModels = this.deduplicateModels(models);
+      
       if (user && !user.isAnonymous) {
         // For authenticated users, only save to cloud (no localStorage needed)
-        await this.saveModelsToCloud(user, this.SYSTEM_COLLECTION_ID, models);
+        await this.saveModelsToCloud(user, this.SYSTEM_COLLECTION_ID, deduplicatedModels);
       } else {
         // Anonymous users don't need to persist system model selections
         // They can reselect models each session since it's just UI state
@@ -765,7 +788,8 @@ export class CloudStorageService {
       if (user && !user.isAnonymous) {
         try {
           const models = await this.loadModelsFromCloud(user, this.SYSTEM_COLLECTION_ID);
-          return models.filter(model => model.category !== 'custom');
+          const serverModels = models.filter(model => model.category !== 'custom');
+          return this.deduplicateModels(serverModels);
         } catch (error) {
           console.error('Error loading server models from cloud:', error);
           // Return empty array for authenticated users if cloud fails
@@ -792,18 +816,21 @@ export class CloudStorageService {
     models: any[]
   ): Promise<void> {
     try {
+      // Deduplicate models before saving
+      const deduplicatedModels = this.deduplicateModels(models);
+      
       if (user && !user.isAnonymous) {
         // Save to localStorage first
-        localStorage.setItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`, JSON.stringify(models));
+        localStorage.setItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`, JSON.stringify(deduplicatedModels));
         // Then save to cloud
-        await this.saveModelsToCloud(user, providerId, models);
+        await this.saveModelsToCloud(user, providerId, deduplicatedModels);
       } else {
         // Anonymous user - save to localStorage only
-        localStorage.setItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`, JSON.stringify(models));
+        localStorage.setItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`, JSON.stringify(deduplicatedModels));
       }
     } catch (error) {
       console.error('Error saving selected models for provider:', error);
-      localStorage.setItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`, JSON.stringify(models));
+      localStorage.setItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`, JSON.stringify(this.deduplicateModels(models)));
     }
   }
 
@@ -817,15 +844,18 @@ export class CloudStorageService {
     try {
       if (user && !user.isAnonymous) {
         try {
-          return await this.loadModelsFromCloud(user, providerId);
+          const models = await this.loadModelsFromCloud(user, providerId);
+          return this.deduplicateModels(models);
         } catch (error) {
           console.error(`Error loading models for provider ${providerId} from cloud, falling back to local:`, error);
           const stored = localStorage.getItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`);
-          return stored ? JSON.parse(stored) : [];
+          const localModels = stored ? JSON.parse(stored) : [];
+          return this.deduplicateModels(localModels);
         }
       } else {
         const stored = localStorage.getItem(`${this.STORAGE_KEYS.MODELS_PREFIX}${providerId}`);
-        return stored ? JSON.parse(stored) : [];
+        const models = stored ? JSON.parse(stored) : [];
+        return this.deduplicateModels(models);
       }
     } catch (error) {
       console.error('Error loading selected models for provider:', error);
@@ -841,19 +871,22 @@ export class CloudStorageService {
     models: any[]
   ): Promise<void> {
     try {
+      // Deduplicate models before saving
+      const deduplicatedModels = this.deduplicateModels(models);
+      
       if (user && !user.isAnonymous) {
         // Save to localStorage first
-        this.saveLocalData({ custom_models: models });
+        this.saveLocalData({ custom_models: deduplicatedModels });
         // Then save to cloud (custom models go in system collection with category='custom')
-        const modelsWithCategory = models.map(model => ({ ...model, category: 'custom' }));
+        const modelsWithCategory = deduplicatedModels.map(model => ({ ...model, category: 'custom' }));
         await this.saveModelsToCloud(user, this.SYSTEM_COLLECTION_ID, modelsWithCategory);
       } else {
         // Anonymous user - save to localStorage only
-        this.saveLocalData({ custom_models: models });
+        this.saveLocalData({ custom_models: deduplicatedModels });
       }
     } catch (error) {
       console.error('Error saving custom models:', error);
-      this.saveLocalData({ custom_models: models });
+      this.saveLocalData({ custom_models: this.deduplicateModels(models) });
     }
   }
 
@@ -865,20 +898,21 @@ export class CloudStorageService {
       if (user && !user.isAnonymous) {
         try {
           const models = await this.loadModelsFromCloud(user, this.SYSTEM_COLLECTION_ID);
-          return models.filter(model => model.category === 'custom');
+          const customModels = models.filter(model => model.category === 'custom');
+          return this.deduplicateModels(customModels);
         } catch (error) {
           console.error('Error loading custom models from cloud, falling back to local:', error);
           const localData = this.loadLocalData();
-          return localData.custom_models || [];
+          return this.deduplicateModels(localData.custom_models || []);
         }
       } else {
         const localData = this.loadLocalData();
-        return localData.custom_models || [];
+        return this.deduplicateModels(localData.custom_models || []);
       }
     } catch (error) {
       console.error('Error loading custom models:', error);
       const localData = this.loadLocalData();
-      return localData.custom_models || [];
+      return this.deduplicateModels(localData.custom_models || []);
     }
   }
 
@@ -928,21 +962,21 @@ export class CloudStorageService {
           const models = await this.loadModelsFromCloud(user, customCollectionId);
           // Filter by category only - if it's in the custom_{providerId} collection, it belongs to this provider
           const filteredModels = models.filter(model => model.category === 'custom');
-          return filteredModels;
+          return this.deduplicateModels(filteredModels);
         } catch (error) {
           console.error('Error loading custom models from cloud for provider, falling back to local:', error);
           const localData = this.loadLocalData();
-          return localData[storageKey] || [];
+          return this.deduplicateModels(localData[storageKey] || []);
         }
       } else {
         const localData = this.loadLocalData();
-        return localData[storageKey] || [];
+        return this.deduplicateModels(localData[storageKey] || []);
       }
     } catch (error) {
       console.error('Error loading custom models for provider:', error);
       const localData = this.loadLocalData();
       const storageKey = `custom_models_${providerId}`;
-      return localData[storageKey] || [];
+      return this.deduplicateModels(localData[storageKey] || []);
     }
   }
 
@@ -1004,6 +1038,55 @@ export class CloudStorageService {
       const updatedModels = [...existingModels.filter((m: any) => m.id !== model.id), model];
       this.saveLocalData({ [storageKey]: updatedModels });
       throw error;
+    }
+  }
+
+  /**
+   * Clean up duplicate models from localStorage and cloud storage
+   */
+  static async cleanupAllDuplicateModels(user: User | null): Promise<void> {
+    try {
+      console.log('Starting cleanup of duplicate models...');
+      
+      // Load all data
+      const allData = await this.loadAllData(user);
+      
+      // Clean up provider models
+      const cleanedProviderModels: Record<string, any[]> = {};
+      Object.keys(allData.selected_provider_models || {}).forEach(providerId => {
+        const models = allData.selected_provider_models![providerId] || [];
+        const deduplicatedModels = this.deduplicateModels(models);
+        
+        if (deduplicatedModels.length !== models.length) {
+          console.log(`Removed ${models.length - deduplicatedModels.length} duplicate models for provider ${providerId}`);
+          cleanedProviderModels[providerId] = deduplicatedModels;
+        }
+      });
+      
+      // Save cleaned provider models
+      for (const [providerId, models] of Object.entries(cleanedProviderModels)) {
+        await this.saveSelectedModelsForProvider(user, providerId, models);
+      }
+      
+      // Clean up custom models if needed
+      const customModels = allData.custom_models || [];
+      const deduplicatedCustomModels = this.deduplicateModels(customModels);
+      if (deduplicatedCustomModels.length !== customModels.length) {
+        console.log(`Removed ${customModels.length - deduplicatedCustomModels.length} duplicate custom models`);
+        await this.saveCustomModels(user, deduplicatedCustomModels);
+      }
+      
+      // Clean up server models if needed
+      const serverModels = allData.selected_server_models || [];
+      const deduplicatedServerModels = this.deduplicateModels(serverModels);
+      if (deduplicatedServerModels.length !== serverModels.length) {
+        console.log(`Removed ${serverModels.length - deduplicatedServerModels.length} duplicate server models`);
+        await this.saveSelectedServerModels(user, deduplicatedServerModels);
+      }
+      
+      console.log('Cleanup of duplicate models completed');
+    } catch (error) {
+      console.error('Error during duplicate cleanup:', error);
     }
   }
 

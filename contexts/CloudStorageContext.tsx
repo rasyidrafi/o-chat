@@ -38,6 +38,9 @@ interface CloudStorageContextType {
   removeCustomModel: (providerId: string, modelId: string) => Promise<void>;
   cleanupDuplicateCustomModels: (providerId: string) => Promise<void>;
   
+  // Cleanup operations
+  cleanupAllDuplicateModels: () => Promise<void>;
+  
   // Conflict resolution
   onDataConflict?: (conflict: ConflictData) => Promise<'local' | 'cloud' | 'merge'>;
   setConflictResolver: (resolver: (conflict: ConflictData) => Promise<'local' | 'cloud' | 'merge'>) => void;
@@ -115,17 +118,39 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     },
   }), []);
 
+  // Helper function to deduplicate models by ID
+  const deduplicateModels = (models: any[]): any[] => {
+    const seen = new Set<string>();
+    return models.filter(model => {
+      if (seen.has(model.id)) {
+        return false;
+      }
+      seen.add(model.id);
+      return true;
+    });
+  };
+
+  // Helper function to deduplicate provider models
+  const deduplicateProviderModels = (providerModels: Record<string, any[]>): Record<string, any[]> => {
+    const result: Record<string, any[]> = {};
+    Object.keys(providerModels).forEach(providerId => {
+      result[providerId] = deduplicateModels(providerModels[providerId] || []);
+    });
+    return result;
+  };
+
   // Load data from appropriate source - SIMPLE, no automatic model loading
   const loadData = useCallback(async () => {
     try {
       const allData = await CloudStorageService.loadAllData(user);
       
       setCustomProviders(allData.custom_providers || []);
-      setSelectedServerModels(allData.selected_server_models || []);
-      setCustomModels(allData.custom_models || []);
+      setSelectedServerModels(deduplicateModels(allData.selected_server_models || []));
+      setCustomModels(deduplicateModels(allData.custom_models || []));
       
       // DON'T automatically load provider models - let the models tab handle that when needed
-      setSelectedProviderModels(allData.selected_provider_models || {});
+      // But ensure we deduplicate any models that might have been duplicated during sync
+      setSelectedProviderModels(deduplicateProviderModels(allData.selected_provider_models || {}));
     } catch (error) {
       console.error('Error loading data:', error);
       setSyncError('Failed to load data');
@@ -145,9 +170,9 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
       
       // Update local state with synced data
       setCustomProviders(syncedData.custom_providers || []);
-      setSelectedServerModels(syncedData.selected_server_models || []);
-      setSelectedProviderModels(syncedData.selected_provider_models || {});
-      setCustomModels(syncedData.custom_models || []);
+      setSelectedServerModels(deduplicateModels(syncedData.selected_server_models || []));
+      setSelectedProviderModels(deduplicateProviderModels(syncedData.selected_provider_models || {}));
+      setCustomModels(deduplicateModels(syncedData.custom_models || []));
       
     } catch (error) {
       console.error('Error syncing with cloud:', error);
@@ -199,7 +224,7 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     try {
       // Use the efficient batch loading method
       const allData = await CloudStorageService.loadAllData(user);
-      const models = allData.selected_server_models || [];
+      const models = deduplicateModels(allData.selected_server_models || []);
       setSelectedServerModels(models);
       return models;
     } catch (error) {
@@ -227,7 +252,7 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     try {
       // Use the efficient batch loading method
       const allData = await CloudStorageService.loadAllData(user);
-      const models = allData.selected_provider_models?.[providerId] || [];
+      const models = deduplicateModels(allData.selected_provider_models?.[providerId] || []);
       setSelectedProviderModels(prev => ({
         ...prev,
         [providerId]: models,
@@ -255,7 +280,7 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     try {
       // Use the efficient batch loading method
       const allData = await CloudStorageService.loadAllData(user);
-      const models = allData.custom_models || [];
+      const models = deduplicateModels(allData.custom_models || []);
       setCustomModels(models);
       return models;
     } catch (error) {
@@ -383,6 +408,17 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     }
   }, [user]);
 
+  const cleanupAllDuplicateModels = useCallback(async () => {
+    try {
+      await CloudStorageService.cleanupAllDuplicateModels(user);
+      // Reload data to refresh the UI
+      await loadData();
+    } catch (error) {
+      console.error('Error cleaning up all duplicate models:', error);
+      throw error;
+    }
+  }, [user, loadData]);
+
   // Initial data load when user changes
   useEffect(() => {
     const userId = user?.uid || 'anonymous';
@@ -406,9 +442,9 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
           try {
             const mergedData = await CloudStorageService.handleUserLogin(user);
             setCustomProviders(mergedData.custom_providers || []);
-            setSelectedServerModels(mergedData.selected_server_models || []);
-            setSelectedProviderModels(mergedData.selected_provider_models || {});
-            setCustomModels(mergedData.custom_models || []);
+            setSelectedServerModels(deduplicateModels(mergedData.selected_server_models || []));
+            setSelectedProviderModels(deduplicateProviderModels(mergedData.selected_provider_models || {}));
+            setCustomModels(deduplicateModels(mergedData.custom_models || []));
           } catch (error) {
             console.error('Error during login merge:', error);
             loadData();
@@ -416,7 +452,14 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
         })();
       } else if (user && !user.isAnonymous) {
         // Regular authenticated user, sync with cloud
-        syncWithCloud();
+        syncWithCloud().then(async () => {
+          // After initial sync, run cleanup to remove any duplicates
+          try {
+            await CloudStorageService.cleanupAllDuplicateModels(user);
+          } catch (error) {
+            console.error('Error during initial duplicate cleanup:', error);
+          }
+        });
       } else {
         // Anonymous user, just load local data
         loadData();
@@ -480,6 +523,9 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     addCustomModel,
     removeCustomModel,
     cleanupDuplicateCustomModels,
+    
+    // Cleanup operations
+    cleanupAllDuplicateModels,
     
     // Conflict resolution
     onDataConflict: conflictResolverRef.current,
