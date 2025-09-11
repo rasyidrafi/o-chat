@@ -42,7 +42,7 @@ import { ImageGenerationJobService } from "../services/imageGenerationJobService
 import { MessageAttachment, ChatConversation } from "../types/chat";
 import { useAuth } from "../contexts/AuthContext";
 import { useSettingsContext } from "@/contexts/SettingsContext";
-import { useLocalStorageData } from "../hooks/useLocalStorageData";
+import { useCloudStorage } from "../contexts/CloudStorageContext";
 import { themes } from "@/constants/themes";
 import LoadingState from "./ui/LoadingState";
 
@@ -88,8 +88,31 @@ const ChatInput = ({
   currentConversation,
 }: ChatInputProps) => {
   const { user } = useAuth();
-  const { saveLastSelectedModel, loadLastSelectedModel } =
-    useLocalStorageData();
+  const { 
+    selectedServerModels: cloudSelectedServerModels,
+    selectedProviderModels: cloudSelectedProviderModels,
+    customProviders: cloudCustomProviders
+  } = useCloudStorage();
+
+  // Simple localStorage functions for last selected model (UI preference)
+  const saveLastSelectedModel = useCallback((modelData: { model: string; source: string; providerId: string }) => {
+    try {
+      localStorage.setItem('last_selected_model', JSON.stringify(modelData));
+    } catch (error) {
+      console.error('Error saving last selected model:', error);
+    }
+  }, []);
+
+  const loadLastSelectedModel = useCallback(() => {
+    try {
+      const stored = localStorage.getItem('last_selected_model');
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      console.error('Error loading last selected model:', error);
+      return null;
+    }
+  }, []);
+
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_ID);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
@@ -490,16 +513,11 @@ const ChatInput = ({
     try {
       setIsLoadingSystemModels(true);
 
-      // Load selected server models from localStorage
-      const selectedServerModels = (() => {
-        try {
-          const stored = localStorage.getItem("selected_server_models");
-          return stored ? JSON.parse(stored) : [];
-        } catch (error) {
-          console.error("Error loading selected server models:", error);
-          return [];
-        }
-      })();
+      // Load selected server models from cloud storage
+      const selectedServerModels = cloudSelectedServerModels;
+      console.log('ChatInput: Loading models, selected server models:', selectedServerModels);
+      console.log('ChatInput: Selected provider models:', cloudSelectedProviderModels);
+      console.log('ChatInput: Custom providers:', cloudCustomProviders);
 
       // Load cached system models synchronously (no API call)
       const syncSystemModels = getSystemModelsSync();
@@ -584,56 +602,38 @@ const ChatInput = ({
         }
       );
 
-      // Load custom provider models
+      // Load custom provider models from cloud storage
       try {
-        const customProviders = localStorage.getItem("custom_api_providers");
-        if (customProviders) {
-          const providers = JSON.parse(customProviders);
+        if (cloudCustomProviders && cloudCustomProviders.length > 0) {
           const customOptions: ModelOption[] = [];
 
-          providers.forEach((provider: any) => {
+          cloudCustomProviders.forEach((provider: any) => {
             if (
               provider.label?.trim() &&
               provider.value?.trim() &&
               provider.base_url?.trim()
             ) {
-              // Check if this provider has selected models
-              const providerModelsKey = `models_${provider.id}`;
-              const selectedModels = localStorage.getItem(providerModelsKey);
-              if (selectedModels) {
-                try {
-                  const models = JSON.parse(selectedModels);
-                  // Handle both legacy format (array of strings) and new format (array of objects)
-                  const modelArray =
-                    models.length > 0 && typeof models[0] === "string"
-                      ? models.map((id: string) => ({
-                          id,
-                          name: id,
-                          supported_parameters: [],
-                        }))
-                      : models;
-
-                  modelArray.forEach(
-                    (model: {
-                      id: string;
-                      name: string;
-                      supported_parameters?: string[];
-                      provider_id?: string;
-                      provider_name?: string;
-                    }) => {
-                      customOptions.push({
-                        label: `${provider.label} - ${model.name}`,
-                        value: model.id,
-                        source: "custom",
-                        providerId: provider.id,
-                        providerName: provider.label,
-                        supportedParameters: model.supported_parameters || [],
-                      });
-                    }
-                  );
-                } catch (error) {
-                  console.error("Error parsing selected models:", error);
-                }
+              // Check if this provider has selected models in cloud storage
+              const providerModels = cloudSelectedProviderModels[provider.id] || [];
+              if (providerModels.length > 0) {
+                providerModels.forEach(
+                  (model: {
+                    id: string;
+                    name: string;
+                    supported_parameters?: string[];
+                    provider_id?: string;
+                    provider_name?: string;
+                  }) => {
+                    customOptions.push({
+                      label: `${provider.label} - ${model.name}`,
+                      value: model.id,
+                      source: "custom",
+                      providerId: provider.id,
+                      providerName: provider.label,
+                      supportedParameters: model.supported_parameters || [],
+                    });
+                  }
+                );
               }
             }
           });
@@ -674,6 +674,7 @@ const ChatInput = ({
         return a.label.localeCompare(b.label);
       });
       setModelOptions(sortedOptions);
+      console.log('ChatInput: Final model options:', sortedOptions);
 
       // Check capabilities for loaded models
       checkCurrentModelCapabilities([...options]);
@@ -721,7 +722,7 @@ const ChatInput = ({
     } finally {
       setIsLoadingSystemModels(false);
     }
-  }, [checkCurrentModelCapabilities]);
+  }, [checkCurrentModelCapabilities, cloudSelectedServerModels, cloudSelectedProviderModels, cloudCustomProviders]);
 
   // Load models on mount
   useEffect(() => {

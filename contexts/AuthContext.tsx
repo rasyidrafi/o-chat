@@ -57,6 +57,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
+      
+      // Clear all localStorage data before signing out
+      try {
+        localStorage.clear();
+        console.log('All localStorage data cleared on sign out');
+      } catch (clearError) {
+        console.error('Error clearing localStorage:', clearError);
+      }
+      
       await signOut(auth);
       // After sign out, Firebase will automatically trigger onAuthStateChanged
       // which will sign in anonymously again

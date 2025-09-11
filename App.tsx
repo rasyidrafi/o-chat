@@ -13,6 +13,7 @@ import {
   SettingsProvider,
   useSettingsContext,
 } from "./contexts/SettingsContext";
+import { CloudStorageProvider } from "./contexts/CloudStorageContext";
 
 const defaultConfirmDialogProps = {
   title: "",
@@ -309,13 +310,15 @@ const App: React.FC = () => {
 
   return (
     <SettingsProvider user={user} onConfirmationDialog={openConfirmationDialog}>
-      <AppContent
-        modal={modal}
-        setModal={setModal}
-        isConfirmDialogOpen={isConfirmDialogOpen}
-        setIsConfirmDialogOpen={setIsConfirmDialogOpen}
-        openConfirmationDialog={openConfirmationDialog}
-      />
+      <CloudStorageProvider user={user}>
+        <AppContent
+          modal={modal}
+          setModal={setModal}
+          isConfirmDialogOpen={isConfirmDialogOpen}
+          setIsConfirmDialogOpen={setIsConfirmDialogOpen}
+          openConfirmationDialog={openConfirmationDialog}
+        />
+      </CloudStorageProvider>
     </SettingsProvider>
   );
 };

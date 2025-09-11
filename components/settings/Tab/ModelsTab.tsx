@@ -8,12 +8,14 @@ import { AppSettings } from "../../../hooks/useSettings";
 import { Provider } from "../../../types/providers";
 import { useModelsManager } from "../../../hooks/useModelsManager";
 import { usePagination, useSearchAndFilter } from "../../../hooks/usePagination";
-import { useLocalStorageData } from "../../../hooks/useLocalStorageData";
+import { useCloudStorage } from "../../../contexts/CloudStorageContext";
 import { useSettingsContext } from "../../../contexts/SettingsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw } from "../../Icons";
-import { MODEL_FILTER_CATEGORIES, FILTER_ID_MAPPING, REVERSE_FILTER_ID_MAPPING } from "../../../constants/modelFilters";
+import { FILTER_ID_MAPPING, REVERSE_FILTER_ID_MAPPING, MODEL_FILTER_CATEGORIES } from "../../../constants/modelFilters";
 import { DEFAULT_MODEL_ID } from "../../../constants/models";
+import CloudConflictModal from "../../ui/CloudConflictModal";
+import { ConflictData } from "../../../services/cloudStorageService";
 
 interface ModelsTabProps {
   settings: AppSettings;
@@ -26,16 +28,27 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // Get isMobile from SettingsContext
   const { isMobile } = useSettingsContext();
 
+  // Get cloud storage context
+  const {
+    customProviders,
+    selectedServerModels: cloudSelectedServerModels,
+    selectedProviderModels: cloudSelectedProviderModels,
+    saveSelectedServerModels: cloudSaveSelectedServerModels,
+    saveSelectedModelsForProvider: cloudSaveSelectedModelsForProvider,
+    setConflictResolver
+  } = useCloudStorage();
+
   // State management
   const [activeMainTab, setActiveMainTab] = useState<"system" | "byok">("system");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [activeByokTab, setActiveByokTab] = useState<"selected" | "available">("available");
   const [availableProviders, setAvailableProviders] = useState<Array<Provider>>([]);
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set());
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictData, setConflictData] = useState<ConflictData | null>(null);
 
   // Custom hooks
   const modelsManager = useModelsManager();
-  const { loadProvidersFromStorage } = useLocalStorageData();
 
   // Pagination and filtering for BYOK models
   const byokPagination = usePagination<any>({ itemsPerPage: ITEMS_PER_PAGE });
@@ -44,6 +57,31 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // Pagination and filtering for server models
   const serverPagination = usePagination<any>({ itemsPerPage: ITEMS_PER_PAGE });
   const serverFilter = useSearchAndFilter();
+
+  // Set up conflict resolver
+  useEffect(() => {
+    const handleConflict = async (conflict: ConflictData): Promise<'local' | 'cloud' | 'merge'> => {
+      return new Promise((resolve) => {
+        setConflictData(conflict);
+        setShowConflictModal(true);
+        
+        // Store resolver in a way that the modal can call it
+        (window as any).resolveModelConflict = resolve;
+      });
+    };
+    
+    setConflictResolver(handleConflict);
+  }, [setConflictResolver]);
+
+  // Handle conflict resolution
+  const handleConflictResolve = useCallback((resolution: 'local' | 'cloud' | 'merge') => {
+    if ((window as any).resolveModelConflict) {
+      (window as any).resolveModelConflict(resolution);
+      delete (window as any).resolveModelConflict;
+    }
+    setShowConflictModal(false);
+    setConflictData(null);
+  }, []);
 
   // Convert between old feature names and new filter IDs
   const convertFeaturesToFilterIds = useCallback((features: string[]): string[] => {
@@ -78,23 +116,22 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     const loadProviders = () => {
       let providers: Array<Provider> = [];
 
-      // Load built-in providers (now empty since we removed built-in providers)
-      const builtInProviders = loadProvidersFromStorage("builtin_api_providers", []);
+      // Load built-in providers (now empty since we removed built-in providers) 
+      const builtInProviders: Provider[] = []; // No built-in providers anymore
 
       providers = builtInProviders.map((p: Provider) => ({
         ...p,
         disabled: !p.value?.trim(),
       }));
 
-      // Load custom providers
-      const customProviders = loadProvidersFromStorage("custom_api_providers", []);
+      // Load custom providers from cloud storage
       providers = [...providers, ...customProviders];
 
       setAvailableProviders(providers);
     };
 
     loadProviders();
-  }, [loadProvidersFromStorage]);
+  }, [customProviders]);
 
   // Fetch models when provider changes
   useEffect(() => {
@@ -218,7 +255,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   const handleModelToggle = useCallback((modelId: string, modelName: string, enabled: boolean) => {
     if (!selectedProvider) return;
 
-    const currentSelected = [...modelsManager.selectedModels];
+    const currentSelected = [...(cloudSelectedProviderModels[selectedProvider] || [])];
     
     if (enabled) {
       // Add model if not already selected
@@ -233,19 +270,19 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     } else {
       // Remove model
       const filtered = currentSelected.filter(m => m.id !== modelId);
-      modelsManager.saveSelectedModelsForProvider(selectedProvider, filtered);
+      cloudSaveSelectedModelsForProvider(selectedProvider, filtered);
       return;
     }
 
-    modelsManager.saveSelectedModelsForProvider(selectedProvider, currentSelected);
-  }, [selectedProvider, modelsManager]);
+    cloudSaveSelectedModelsForProvider(selectedProvider, currentSelected);
+  }, [selectedProvider, cloudSelectedProviderModels, cloudSaveSelectedModelsForProvider, modelsManager.fetchedModels]);
 
   const handleServerModelToggle = useCallback((modelId: string, modelName: string, enabled: boolean) => {
     if (modelId == DEFAULT_MODEL_ID) {
       return;
     }
 
-    const currentSelected = [...modelsManager.selectedServerModels];
+    const currentSelected = [...cloudSelectedServerModels];
     
     if (enabled) {
       if (!currentSelected.find(m => m.id === modelId)) {
@@ -261,22 +298,22 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       }
     } else {
       const filtered = currentSelected.filter(m => m.id !== modelId);
-      modelsManager.saveSelectedServerModels(filtered);
+      cloudSaveSelectedServerModels(filtered);
       return;
     }
 
-    modelsManager.saveSelectedServerModels(currentSelected);
-  }, [modelsManager]);
+    cloudSaveSelectedServerModels(currentSelected);
+  }, [cloudSelectedServerModels, cloudSaveSelectedServerModels, modelsManager.availableModels]);
 
   const handleUnselectAll = useCallback(() => {
     if (selectedProvider) {
-      modelsManager.saveSelectedModelsForProvider(selectedProvider, []);
+      cloudSaveSelectedModelsForProvider(selectedProvider, []);
     }
-  }, [selectedProvider, modelsManager]);
+  }, [selectedProvider, cloudSaveSelectedModelsForProvider]);
 
   const handleServerUnselectAll = useCallback(() => {
-    modelsManager.saveSelectedServerModels([]);
-  }, [modelsManager]);
+    cloudSaveSelectedServerModels([]);
+  }, [cloudSaveSelectedServerModels]);
 
   const handleServerSelectAll = useCallback(() => {
     const allSelectableModels = modelsManager.availableModels
@@ -289,8 +326,8 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         provider_name: model.provider_name || "",
       }));
     
-    modelsManager.saveSelectedServerModels(allSelectableModels);
-  }, [modelsManager]);
+    cloudSaveSelectedServerModels(allSelectableModels);
+  }, [modelsManager, cloudSaveSelectedServerModels]);
 
   const handleRefreshServerModels = useCallback(() => {
     modelsManager.refreshSystemModels(true); // Force refresh to bypass cache
@@ -312,12 +349,14 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // Helper functions
   const isServerModelEnabled = useCallback((modelId: string): boolean => {
     if (modelId === DEFAULT_MODEL_ID) return true;
-    return modelsManager.selectedServerModels.some(m => m.id === modelId);
-  }, [modelsManager.selectedServerModels, DEFAULT_MODEL_ID]);
+    return cloudSelectedServerModels.some(m => m.id === modelId);
+  }, [cloudSelectedServerModels, DEFAULT_MODEL_ID]);
 
   const isModelSelected = useCallback((modelId: string): boolean => {
-    return modelsManager.selectedModels.some(m => m.id === modelId);
-  }, [modelsManager.selectedModels]);
+    if (!selectedProvider) return false;
+    const providerModels = cloudSelectedProviderModels[selectedProvider] || [];
+    return providerModels.some(m => m.id === modelId);
+  }, [cloudSelectedProviderModels, selectedProvider]);
 
   // Render pagination component
   const renderPagination = useCallback((type: 'server' | 'byok' = 'byok') => {
@@ -802,6 +841,16 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
           </section>
         )}
       </div>
+
+      {/* Conflict Resolution Modal */}
+      {showConflictModal && conflictData && (
+        <CloudConflictModal
+          isOpen={showConflictModal}
+          onClose={() => handleConflictResolve('local')}
+          onResolve={handleConflictResolve}
+          conflictData={conflictData}
+        />
+      )}
     </div>
   );
 };

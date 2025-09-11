@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Key, Plus, X } from "../../Icons";
 import Button from "../../ui/Button";
 import { Provider } from "../../../types/providers";
-import { useLocalStorageData } from "../../../hooks/useLocalStorageData";
+import { useCloudStorage } from "../../../contexts/CloudStorageContext";
+import CloudConflictModal from "../../ui/CloudConflictModal";
+import { ConflictData } from "../../../services/cloudStorageService";
 
 // Storage keys - moved to constants for better maintainability
 const STORAGE_KEYS = {
@@ -11,24 +13,6 @@ const STORAGE_KEYS = {
 
 // Performance constants
 const SAVE_ANIMATION_DURATION = 500; // ms
-
-// Enhanced localStorage hook for providers
-const useProvidersLocalStorage = () => {
-  const { loadProvidersFromStorage, saveProvidersToStorage } = useLocalStorageData();
-  
-  return useMemo(() => {
-    const loadCustomProviders = () => 
-      loadProvidersFromStorage(STORAGE_KEYS.CUSTOM_PROVIDERS, []);
-    
-    const saveCustomProviders = (providers: Provider[]) =>
-      saveProvidersToStorage(STORAGE_KEYS.CUSTOM_PROVIDERS, providers);
-
-    return {
-      loadCustomProviders,
-      saveCustomProviders,
-    };
-  }, [loadProvidersFromStorage, saveProvidersToStorage]);
-};
 
 // Enhanced UUID generator with better randomness
 const generateUUID = (): string => {
@@ -129,26 +113,56 @@ const OpenAICompatibleProviderCard = React.memo<{
 OpenAICompatibleProviderCard.displayName = 'OpenAICompatibleProviderCard';
 
 const ApiKeysTab: React.FC = () => {
-  // Use the enhanced localStorage hook
+  // Use the cloud storage context
   const {
-    loadCustomProviders,
-    saveCustomProviders
-  } = useProvidersLocalStorage();
+    customProviders,
+    saveCustomProviders,
+    isSyncing,
+    syncError,
+    clearSyncError,
+    setConflictResolver
+  } = useCloudStorage();
 
   // State management
-  const [customProviders, setCustomProviders] = useState<Provider[]>([]);
+  const [localProviders, setLocalProviders] = useState<Provider[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictData, setConflictData] = useState<ConflictData | null>(null);
   
   // Refs for performance optimization
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load providers from localStorage on mount - memoized
+  // Initialize local providers from cloud storage
   useEffect(() => {
-    const loadedCustomProviders = loadCustomProviders();
-    setCustomProviders(loadedCustomProviders);
-  }, [loadCustomProviders]);
+    setLocalProviders(customProviders);
+  }, [customProviders]);
+
+  // Set up conflict resolver
+  useEffect(() => {
+    const handleConflict = async (conflict: ConflictData): Promise<'local' | 'cloud' | 'merge'> => {
+      return new Promise((resolve) => {
+        setConflictData(conflict);
+        setShowConflictModal(true);
+        
+        // Store resolver in a way that the modal can call it
+        (window as any).resolveConflict = resolve;
+      });
+    };
+    
+    setConflictResolver(handleConflict);
+  }, [setConflictResolver]);
+
+  // Handle conflict resolution
+  const handleConflictResolve = useCallback((resolution: 'local' | 'cloud' | 'merge') => {
+    if ((window as any).resolveConflict) {
+      (window as any).resolveConflict(resolution);
+      delete (window as any).resolveConflict;
+    }
+    setShowConflictModal(false);
+    setConflictData(null);
+  }, []);
 
   // Memoized add new provider handler
   const addNewProvider = useCallback(() => {
@@ -158,34 +172,37 @@ const ApiKeysTab: React.FC = () => {
       value: "",
       base_url: "",
     };
-    setCustomProviders((prev) => [...prev, newProvider]);
+    setLocalProviders((prev) => [...prev, newProvider]);
     setHasChanges(true);
     setSaveError(null);
-  }, []);
+    clearSyncError();
+  }, [clearSyncError]);
 
   // Memoized update provider handler
   const updateProvider = useCallback((updatedProvider: Provider) => {
-    setCustomProviders((prev) =>
+    setLocalProviders((prev) =>
       prev.map((provider) =>
         provider.id === updatedProvider.id ? updatedProvider : provider
       )
     );
     setHasChanges(true);
     setSaveError(null);
-  }, []);
+    clearSyncError();
+  }, [clearSyncError]);
 
   // Memoized delete provider handler
   const deleteProvider = useCallback((providerId: string) => {
-    setCustomProviders((prev) =>
+    setLocalProviders((prev) =>
       prev.filter((provider) => provider.id !== providerId)
     );
     setHasChanges(true);
     setSaveError(null);
+    clearSyncError();
 
     // Clean up associated model data
     const modelProviderKey = `models_${providerId}`;
     localStorage.removeItem(modelProviderKey);
-  }, []);
+  }, [clearSyncError]);
 
   // Enhanced validation function
   const validateCustomProviders = useCallback((providers: Provider[]): string | null => {
@@ -217,26 +234,21 @@ const ApiKeysTab: React.FC = () => {
 
   // Enhanced save handler with better error handling
   const handleSaveAll = useCallback(async () => {
-    if (isSaving) return; // Prevent double-saves
+    if (isSaving || isSyncing) return; // Prevent double-saves
 
     setIsSaving(true);
     setSaveError(null);
     
     try {
       // Validate custom providers
-      const validationError = validateCustomProviders(customProviders);
+      const validationError = validateCustomProviders(localProviders);
       if (validationError) {
         setSaveError(validationError);
         return;
       }
 
-      // Save to localStorage using the hook functions
-      const customSaved = saveCustomProviders(customProviders);
-      
-      if (!customSaved) {
-        throw new Error("Failed to save providers to localStorage");
-      }
-      
+      // Save using cloud storage
+      await saveCustomProviders(localProviders);
       setHasChanges(false);
 
       // Brief delay to show saving state
@@ -248,8 +260,9 @@ const ApiKeysTab: React.FC = () => {
       setIsSaving(false);
     }
   }, [
-    customProviders, 
+    localProviders, 
     isSaving, 
+    isSyncing,
     saveCustomProviders,
     validateCustomProviders
   ]);
@@ -265,15 +278,18 @@ const ApiKeysTab: React.FC = () => {
 
   // Memoized computed values for better performance
   const canAddNewProvider = useMemo(() => {
-    if (customProviders.length === 0) return true;
+    if (localProviders.length === 0) return true;
     
-    const lastProvider = customProviders[customProviders.length - 1];
+    const lastProvider = localProviders[localProviders.length - 1];
     return !!(
       lastProvider.label.trim() &&
       lastProvider.base_url?.trim() &&
       (lastProvider.value ?? "").trim()
     );
-  }, [customProviders]);
+  }, [localProviders]);
+
+  // Show current error (sync error takes precedence)
+  const currentError = syncError || saveError;
 
   return (
     <div>
@@ -284,10 +300,30 @@ const ApiKeysTab: React.FC = () => {
         Add OpenAI compatible API providers to bring your own models. Your keys are stored securely on your device and never sent to our servers.
       </p>
       
+      {/* Sync status indicator */}
+      {isSyncing && (
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm text-blue-700 dark:text-blue-300">Syncing with cloud...</p>
+          </div>
+        </div>
+      )}
+      
       {/* Error display */}
-      {saveError && (
+      {currentError && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-700 dark:text-red-400">{saveError}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-red-700 dark:text-red-400">{currentError}</p>
+            {syncError && (
+              <button
+                onClick={clearSyncError}
+                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm underline"
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
         </div>
       )}
       
@@ -302,10 +338,12 @@ const ApiKeysTab: React.FC = () => {
           <Button
             onClick={addNewProvider}
             className="gap-3"
-            disabled={!canAddNewProvider}
+            disabled={!canAddNewProvider || isSyncing}
             title={
               !canAddNewProvider
                 ? "Please complete the current provider before adding a new one"
+                : isSyncing
+                ? "Please wait for sync to complete"
                 : ""
             }
           >
@@ -315,7 +353,7 @@ const ApiKeysTab: React.FC = () => {
         </div>
 
         <div className="space-y-4">
-          {customProviders.map((provider) => (
+          {localProviders.map((provider) => (
             <OpenAICompatibleProviderCard
               key={provider.id}
               provider={provider}
@@ -324,7 +362,7 @@ const ApiKeysTab: React.FC = () => {
             />
           ))}
 
-          {customProviders.length === 0 && (
+          {localProviders.length === 0 && (
             <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
               <p className="text-sm">No custom providers added yet.</p>
               <p className="text-xs mt-1">
@@ -340,7 +378,7 @@ const ApiKeysTab: React.FC = () => {
           <div className="flex justify-end">
             <Button
               onClick={handleSaveAll}
-              disabled={!hasChanges || isSaving}
+              disabled={!hasChanges || isSaving || isSyncing}
               className={`gap-2 ${!hasChanges ? "opacity-50" : ""}`}
             >
               {isSaving ? (
@@ -353,13 +391,27 @@ const ApiKeysTab: React.FC = () => {
               )}
             </Button>
           </div>
-          {hasChanges && (
+          {hasChanges && !isSyncing && (
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 text-right">
               You have unsaved changes
             </p>
           )}
         </div>
       </div>
+
+      {/* Conflict Resolution Modal */}
+      {showConflictModal && conflictData && (
+        <CloudConflictModal
+          isOpen={showConflictModal}
+          onClose={() => {
+            setShowConflictModal(false);
+            setConflictData(null);
+          }}
+          conflictData={conflictData}
+          onResolve={handleConflictResolve}
+          animationsDisabled={false}
+        />
+      )}
     </div>
   );
 };
