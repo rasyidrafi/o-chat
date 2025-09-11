@@ -6,7 +6,6 @@ import {
   getDocs,
   query,
   orderBy,
-  onSnapshot,
   getCountFromServer,
   collectionGroup,
   where,
@@ -659,35 +658,14 @@ export class ChatStorageService {
     // Could implement cache clearing here if needed
   }
 
-  // Subscribe to conversation changes (Firestore only)
+  // Subscribe to conversation changes (DISABLED - no real-time listeners)
   static subscribeToConversations(
-    user: User,
-    callback: (conversations: ChatConversation[]) => void
+    _user: User,
+    _callback: (conversations: ChatConversation[]) => void
   ): () => void {
-    const chatRef = doc(db, 'chats', user.uid);
-    const conversationsRef = collection(chatRef, 'conversations');
-    const q = query(conversationsRef, orderBy('updatedAt', 'desc'));
-
-    return onSnapshot(q, async (snapshot) => {
-      const conversations: ChatConversation[] = [];
-
-      for (const docSnap of snapshot.docs) {
-        const data = docSnap.data();
-        const messages = await this.getMessagesFromFirestore(user.uid, data.id);
-
-        conversations.push({
-          id: data.id,
-          title: data.title,
-          model: data.model,
-          source: data.source || 'server', // Default to server for existing conversations
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-          messages
-        });
-      }
-
-      callback(conversations);
-    });
+    // Return an empty unsubscribe function - no real-time listeners
+    console.log('Real-time listeners disabled - use manual refresh instead');
+    return () => {};
   }
 
   // Get conversation counts by source

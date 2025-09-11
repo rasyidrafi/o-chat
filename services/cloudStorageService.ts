@@ -130,7 +130,7 @@ export class CloudStorageService {
         }
       });
 
-      return {
+      const result = {
         custom_providers,
         selected_server_models: [], // Not persisted in localStorage anymore
         selected_provider_models,
@@ -138,6 +138,8 @@ export class CloudStorageService {
         last_updated: new Date(),
         ...customModelsData, // Include all custom models data
       };
+      
+      return result;
     } catch (error) {
       console.error('Error loading local data:', error);
       return {
@@ -311,10 +313,15 @@ export class CloudStorageService {
   }
 
   /**
-   * Save models to Firestore: /models/{userId}/{collectionId}/{modelId}
+   * Save models to cloud storage
    */
   private static async saveModelsToCloud(user: User, collectionId: string, models: any[]): Promise<void> {
     try {
+      
+      // Add stack trace to see what's calling this
+      if (models.length === 0 && collectionId.includes('custom_')) {
+      }
+      
       const userId = this.getUserId(user);
       const batch = writeBatch(db);
 
@@ -389,6 +396,7 @@ export class CloudStorageService {
 
       // Load custom models for each provider from their respective custom_ collections
       const customModelsData: Record<string, any[]> = {};
+      
       if (custom_providers.length > 0) {
         await Promise.allSettled(
           custom_providers.map(async (provider) => {
@@ -1068,13 +1076,7 @@ export class CloudStorageService {
         await this.saveSelectedModelsForProvider(user, providerId, models);
       }
       
-      // Clean up custom models if needed
-      const customModels = allData.custom_models || [];
-      const deduplicatedCustomModels = this.deduplicateModels(customModels);
-      if (deduplicatedCustomModels.length !== customModels.length) {
-        console.log(`Removed ${customModels.length - deduplicatedCustomModels.length} duplicate custom models`);
-        await this.saveCustomModels(user, deduplicatedCustomModels);
-      }
+      // Skip custom model cleanup - they are now stored per-provider and handled differently
       
       // Clean up server models if needed
       const serverModels = allData.selected_server_models || [];

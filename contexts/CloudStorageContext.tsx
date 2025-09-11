@@ -146,7 +146,18 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
       
       setCustomProviders(allData.custom_providers || []);
       setSelectedServerModels(deduplicateModels(allData.selected_server_models || []));
-      setCustomModels(deduplicateModels(allData.custom_models || []));
+      
+      // Aggregate all custom models from provider-specific keys
+      const aggregatedCustomModels: any[] = [...(allData.custom_models || [])];
+      
+      // Add custom models from each provider
+      Object.keys(allData).forEach(key => {
+        if (key.startsWith('custom_models_') && Array.isArray(allData[key])) {
+          aggregatedCustomModels.push(...allData[key]);
+        }
+      });
+      
+      setCustomModels(deduplicateModels(aggregatedCustomModels));
       
       // DON'T automatically load provider models - let the models tab handle that when needed
       // But ensure we deduplicate any models that might have been duplicated during sync
@@ -172,7 +183,18 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
       setCustomProviders(syncedData.custom_providers || []);
       setSelectedServerModels(deduplicateModels(syncedData.selected_server_models || []));
       setSelectedProviderModels(deduplicateProviderModels(syncedData.selected_provider_models || {}));
-      setCustomModels(deduplicateModels(syncedData.custom_models || []));
+      
+      // Aggregate all custom models from provider-specific keys
+      const aggregatedCustomModels: any[] = [...(syncedData.custom_models || [])];
+      
+      // Add custom models from each provider
+      Object.keys(syncedData).forEach(key => {
+        if (key.startsWith('custom_models_') && Array.isArray(syncedData[key])) {
+          aggregatedCustomModels.push(...syncedData[key]);
+        }
+      });
+      
+      setCustomModels(deduplicateModels(aggregatedCustomModels));
       
     } catch (error) {
       console.error('Error syncing with cloud:', error);
@@ -362,14 +384,13 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
   const saveCustomModelsForProvider = useCallback(async (providerId: string, models: any[]) => {
     try {
       await CloudStorageService.saveCustomModelsForProvider(user, providerId, models);
-      // Update local state by loading the specific provider's models
-      const updatedModels = await loadCustomModelsForProvider(providerId);
-      setCustomModels(updatedModels);
+      // Reload all data to get updated custom models from all providers
+      await loadData();
     } catch (error) {
       console.error('Error saving custom models for provider:', error);
       throw error;
     }
-  }, [user]);
+  }, [user, loadData]);
 
   const loadCustomModelsForProvider = useCallback(async (providerId: string): Promise<any[]> => {
     try {
@@ -444,7 +465,18 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
             setCustomProviders(mergedData.custom_providers || []);
             setSelectedServerModels(deduplicateModels(mergedData.selected_server_models || []));
             setSelectedProviderModels(deduplicateProviderModels(mergedData.selected_provider_models || {}));
-            setCustomModels(deduplicateModels(mergedData.custom_models || []));
+            
+            // Aggregate all custom models from the merged data
+            const aggregatedCustomModels: any[] = [...(mergedData.custom_models || [])];
+            
+            // Add custom models from each provider in merged data
+            Object.keys(mergedData).forEach(key => {
+              if (key.startsWith('custom_models_') && Array.isArray(mergedData[key])) {
+                aggregatedCustomModels.push(...mergedData[key]);
+              }
+            });
+            
+            setCustomModels(deduplicateModels(aggregatedCustomModels));
           } catch (error) {
             console.error('Error during login merge:', error);
             loadData();

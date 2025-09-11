@@ -654,6 +654,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             ) {
               // Check if this provider has selected models in cloud storage
               const providerModels = cloudSelectedProviderModels[provider.id] || [];
+              
               if (providerModels.length > 0) {
                 providerModels.forEach(
                   (model: {
@@ -663,14 +664,15 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                     provider_id?: string;
                     provider_name?: string;
                   }) => {
-                    customOptions.push({
+                    const modelOption = {
                       label: `${provider.label} - ${model.name}`,
                       value: model.id,
                       source: "custom",
                       providerId: provider.id,
                       providerName: provider.label,
                       supported_parameters: model.supported_parameters || [],
-                    });
+                    };
+                    customOptions.push(modelOption);
                   }
                 );
               }
@@ -686,16 +688,20 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       // Load custom models from cloud storage
       try {
         if (cloudCustomModels && cloudCustomModels.length > 0) {
-          const customModelOptions: ModelOption[] = cloudCustomModels.map((model: any) => ({
-            label: model.name,
-            value: model.id,
-            source: "custom",
-            providerId: "custom",
-            providerName: "Custom",
-            supported_parameters: model.supported_parameters || [],
-          }));
+          const customModelOptions: ModelOption[] = cloudCustomModels.map((model: any) => {
+            const option = {
+              label: model.name,
+              value: model.id,
+              source: "custom",
+              providerId: "custom",
+              providerName: "Custom",
+              supported_parameters: model.supported_parameters || [],
+            };
+            return option;
+          });
 
           options.push(...customModelOptions);
+        } else {
         }
       } catch (error) {
         console.error("Error loading custom models:", error);
@@ -730,6 +736,8 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         // If same provider (or both have no provider), sort by model name
         return a.label.localeCompare(b.label);
       });
+      
+      
       setModelOptions(sortedOptions);
 
       // Check capabilities for loaded models
@@ -917,7 +925,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
             onModelSelect(model, source, providerId);
           }
         } else {
-          console.log('ChatInput: Model option not found despite existence check passing');
         }
       } else {
         // Model doesn't exist, fallback to default
