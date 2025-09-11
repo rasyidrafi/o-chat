@@ -190,10 +190,38 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           if (message.source) {
             source = message.source === "server" ? "system" : "custom";
           }
-          // If has modelName, it's likely a custom model
-          if (message.modelName && message.modelName !== message.model) {
-            source = "custom";
-            providerId = message.modelName; // Use modelName as providerId for custom models
+          
+          // For custom models, we need to find the providerId from available models
+          if (source === "custom" && message.model) {
+            // Look for the model in our available model options to find the correct providerId
+            const modelOption = modelOptions.find(option => {
+              if (option.source !== "custom") return false;
+              
+              // Try multiple matching strategies:
+              // 1. Direct match
+              if (option.value === message.model) return true;
+              
+              // 2. Encoded message model vs option value
+              try {
+                const encodedMessageModel = encodeURIComponent(message.model!);
+                if (option.value === encodedMessageModel) return true;
+              } catch (e) {}
+              
+              // 3. Decoded option value vs message model  
+              try {
+                const decodedOptionValue = option.value.includes('%') ? decodeURIComponent(option.value) : option.value;
+                if (decodedOptionValue === message.model) return true;
+              } catch (e) {}
+              
+              return false;
+            });
+            
+            if (modelOption && modelOption.providerId) {
+              providerId = modelOption.providerId;
+            } else if (message.modelName && message.modelName !== message.model) {
+              // Fallback: use modelName as providerId for older messages
+              providerId = message.modelName;
+            }
           }
         }
 
@@ -235,7 +263,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     }
 
     return null;
-  }, [currentConversation]);
+  }, [currentConversation, modelOptions]);
 
   // Helper function to reset textarea to single line
   const resetTextareaHeight = useCallback(() => {
@@ -787,10 +815,44 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     }
 
     const { model, source, providerId } = lastMessageModelInfo;
+    
+    console.log('ChatInput: Auto-selection attempt:', {
+      conversation: conversationId,
+      lastModel: { model, source, providerId },
+      currentModel: { selectedModel, selectedProviderId },
+      availableModels: modelOptions.map(opt => ({ 
+        value: opt.value, 
+        source: opt.source, 
+        providerId: opt.providerId 
+      }))
+    });
 
     // Check if the model from the conversation is different from currently selected
+    // Handle URL encoding when comparing models
+    const normalizeModelId = (modelId: string) => {
+      try {
+        // If it contains %, assume it's encoded and decode it
+        return modelId.includes('%') ? decodeURIComponent(modelId) : modelId;
+      } catch (e) {
+        return modelId;
+      }
+    };
+    
+    const normalizedSelectedModel = normalizeModelId(selectedModel);
+    const normalizedMessageModel = normalizeModelId(model);
+    
     const isDifferentModel =
-      selectedModel !== model || selectedProviderId !== (providerId || "");
+      normalizedSelectedModel !== normalizedMessageModel || selectedProviderId !== (providerId || "");
+    
+    console.log('ChatInput: Model comparison:', {
+      selectedModel,
+      normalizedSelectedModel,
+      model,
+      normalizedMessageModel,
+      selectedProviderId,
+      providerId,
+      isDifferentModel
+    });
 
     // console.log('Model auto-selection check:', {
     //   conversation: conversationId,
@@ -807,30 +869,108 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
       // Check if the model exists in our available models
       const modelExists = modelOptions.some((option) => {
-        let found = true;
-        if (selectedProviderId) {
-          if (!option?.providerId) return false;
-          found =
-            found && (option.providerId || "") === (selectedProviderId || "");
+        // First check if providerId matches (if specified)
+        if (providerId && providerId !== (option.providerId || "")) {
+          return false;
         }
-
-        found = found && option.value === model;
-        return found;
+        
+        // Then check if model matches with URL encoding handling
+        // 1. Direct match
+        if (option.value === model) return true;
+        
+        // 2. Try encoding the model to match encoded option values
+        try {
+          const encodedModel = encodeURIComponent(model);
+          if (option.value === encodedModel) return true;
+        } catch (e) {}
+        
+        // 3. Try decoding option value to match decoded model
+        try {
+          const decodedOptionValue = option.value.includes('%') ? decodeURIComponent(option.value) : option.value;
+          if (decodedOptionValue === model) return true;
+        } catch (e) {}
+        
+        return false;
       });
+      
+      // If model not found and it's a custom model, try fallback without provider matching
+      const modelExistsWithoutProvider = !modelExists && source === "custom" ? 
+        modelOptions.some((option) => {
+          if (option.source !== "custom") return false;
+          
+          // Try the same encoding strategies but ignore providerId
+          if (option.value === model) return true;
+          
+          try {
+            const encodedModel = encodeURIComponent(model);
+            if (option.value === encodedModel) return true;
+          } catch (e) {}
+          
+          try {
+            const decodedOptionValue = option.value.includes('%') ? decodeURIComponent(option.value) : option.value;
+            if (decodedOptionValue === model) return true;
+          } catch (e) {}
+          
+          return false;
+        }) : false;
 
       // console.log('Model exists in options:', modelExists);
+      console.log('ChatInput: Model existence check result:', {
+        model,
+        source, 
+        providerId,
+        modelExists: modelExists || modelExistsWithoutProvider,
+        modelExistsWithProvider: modelExists,
+        modelExistsWithoutProvider,
+        selectedModel,
+        selectedProviderId
+      });
 
-      if (modelExists) {
-        // Model exists, select it
-        setSelectedModel(model);
-        setSelectedProviderId(providerId || "");
+      if (modelExists || modelExistsWithoutProvider) {
+        // Find the actual model option to get the correct value (encoded vs decoded)
+        const foundModelOption = modelOptions.find((option) => {
+          if (modelExists) {
+            // Use the same matching logic as above
+            if (providerId && providerId !== (option.providerId || "")) return false;
+          } else {
+            // For fallback matching, only check custom models
+            if (option.source !== "custom") return false;
+          }
+          
+          // Same matching logic as the existence check
+          if (option.value === model) return true;
+          try {
+            const encodedModel = encodeURIComponent(model);
+            if (option.value === encodedModel) return true;
+          } catch (e) {}
+          try {
+            const decodedOptionValue = option.value.includes('%') ? decodeURIComponent(option.value) : option.value;
+            if (decodedOptionValue === model) return true;
+          } catch (e) {}
+          return false;
+        });
 
-        // Mark that we've auto-selected for this conversation
-        hasAutoSelectedModelRef.current = true;
+        if (foundModelOption) {
+          console.log('ChatInput: Found model option for selection:', {
+            originalModel: model,
+            optionValue: foundModelOption.value,
+            optionProviderId: foundModelOption.providerId,
+            willSetTo: { selectedModel: foundModelOption.value, selectedProviderId: foundModelOption.providerId || "" }
+          });
+          
+          // Use the option's value (which might be encoded) for UI consistency
+          setSelectedModel(foundModelOption.value);
+          setSelectedProviderId(foundModelOption.providerId || "");
 
-        // Notify parent component
-        if (onModelSelect) {
-          onModelSelect(model, source, providerId);
+          // Mark that we've auto-selected for this conversation
+          hasAutoSelectedModelRef.current = true;
+
+          // Notify parent component with the original model ID from message
+          if (onModelSelect) {
+            onModelSelect(model, source, providerId);
+          }
+        } else {
+          console.log('ChatInput: Model option not found despite existence check passing');
         }
       } else {
         // Model doesn't exist, fallback to default
