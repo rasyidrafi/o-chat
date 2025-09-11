@@ -17,7 +17,7 @@ export const TABS = [
   'Customization', 
   'Models', 
   'API Keys', 
-  'Attachments', 
+  // 'Attachments', // temporary hide
   'Contact Us'
 ] as const;
 
