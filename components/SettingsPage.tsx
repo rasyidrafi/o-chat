@@ -94,6 +94,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   settings,
   updateSettings,
 }) => {
+
   const { user } = useAuth();
   const isSignedIn = user ? !user.isAnonymous : false;
   const [activeTab, setActiveTab] = useState<Tab>(
@@ -103,16 +104,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   // Mobile detection hook
   const [isMobile, setIsMobile] = useState(false);
 
+  // Set global flags for settings page open/close
   useEffect(() => {
+    // Mobile detection
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024); // lg breakpoint
     };
-    
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+
+    // Set global flags for shortcut handling
+    (window as any).__settingsPageOpen = true;
+    (window as any).__closeSettingsPage = onClose;
+
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      (window as any).__settingsPageOpen = false;
+      (window as any).__closeSettingsPage = undefined;
+    };
+  }, [onClose]);
 
   // Memoize tabs configuration to prevent unnecessary re-renders using constants
   const tabs = useMemo(() => isMobile ? MOBILE_TABS : TABS, [isMobile]);
@@ -232,6 +242,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                     </h3>
                   </div>
                   <div className="space-y-3">
+                    {/* Existing shortcuts */}
                     {KEYBOARD_SHORTCUTS.map((shortcut, index) => (
                       <div key={index} className="flex items-center justify-between">
                         <div>

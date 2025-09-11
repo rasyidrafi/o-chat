@@ -297,7 +297,7 @@ const ApiKeysTab: React.FC = () => {
         API Keys
       </h2>
       <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-        Add OpenAI compatible API providers to bring your own models. Your keys are stored securely on your device and never sent to our servers.
+        Add OpenAI compatible API providers to bring your own models.
       </p>
       
       {/* Sync status indicator */}

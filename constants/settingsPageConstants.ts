@@ -45,7 +45,12 @@ export const KEYBOARD_SHORTCUTS = [
     label: 'Toggle Sidebar',
     keys: ['⌘', 'B'],
     description: 'Show or hide the sidebar'
-  }
+  },
+  {
+    label: 'Toggle Settings',
+    keys: ['⌘',  'Shift', 'S'],
+    description: 'Open/close settings page'
+  }                
 ] as const;
 
 export const CONTENT_ANIMATION_DURATION = 0.2;

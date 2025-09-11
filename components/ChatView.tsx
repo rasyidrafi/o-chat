@@ -1,5 +1,11 @@
 // Improved ChatView with better scroll handling
-import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+} from "react";
 import { useLocation } from "react-router-dom";
 import WelcomeScreen from "./WelcomeScreen";
 import ChatInput from "./ChatInput";
@@ -60,12 +66,40 @@ const ChatView: React.FC<ChatViewProps> = ({
   const { isMobile, settings } = useSettingsContext();
   const animationsDisabled = settings.animationsDisabled;
 
-  // Keyboard shortcut handler for Ctrl/Cmd + B to toggle sidebar
+  // Keyboard shortcut handler
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Toggle sidebar: Ctrl/Cmd + B
       if ((event.metaKey || event.ctrlKey) && event.key === "b") {
         event.preventDefault();
         toggleSidebar();
+      }
+      // Toggle Settings: Ctrl/Cmd + Shift + S
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        (event.key === "S" || event.key === "s")
+      ) {
+        event.preventDefault();
+        // ignore type script error
+        
+        if (typeof window !== "undefined" && window.__settingsPageOpen) {
+          if (window.__closeSettingsPage) {
+            window.__closeSettingsPage();
+          }
+        } else {
+          onOpenSettings();
+        }
+      }
+      // Close Settings: Esc
+      if (event.key === "Escape") {
+        // Try to close settings if open
+        if (typeof window !== "undefined" && window.__settingsPageOpen) {
+          event.preventDefault();
+          if (window.__closeSettingsPage) {
+            window.__closeSettingsPage();
+          }
+        }
       }
     };
 
@@ -74,7 +108,7 @@ const ChatView: React.FC<ChatViewProps> = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [toggleSidebar]);
+  }, [toggleSidebar, onOpenSettings]);
 
   // MessageList ref and scroll state
   const messageListRef = useRef<{ scrollToBottom: (smooth?: boolean) => void }>(
