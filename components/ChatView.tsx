@@ -40,6 +40,13 @@ interface ChatViewProps {
   chat: ReturnType<typeof useChat>;
 }
 
+declare global {
+  interface Window {
+    __closeSettingsPage?: () => void;
+    __settingsPageOpen?: boolean;
+  }
+}
+
 const ChatView: React.FC<ChatViewProps> = ({
   onMenuClick,
   toggleSidebar,
@@ -82,7 +89,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       ) {
         event.preventDefault();
         // ignore type script error
-        
+
         if (typeof window !== "undefined" && window.__settingsPageOpen) {
           if (window.__closeSettingsPage) {
             window.__closeSettingsPage();
