@@ -13,6 +13,7 @@ interface ModelCardProps {
   isExpanded?: boolean;
   onToggleExpansion?: () => void;
   layout?: "card" | "row";
+  actionButtons?: React.ReactNode;
 }
 
 const ModelCard: React.FC<ModelCardProps> = ({
@@ -27,6 +28,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
   isExpanded = false,
   onToggleExpansion,
   layout = "card",
+  actionButtons,
 }) => {
   const getFeatureColor = (feature: string) => {
     switch (feature.toLowerCase()) {
@@ -83,7 +85,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
             </div>
           </div>
           
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex self-start gap-2 flex-shrink-0">
             {layout === "row" && onToggleExpansion && description && description.trim() && (
               <button
                 onClick={onToggleExpansion}
@@ -148,18 +150,25 @@ const ModelCard: React.FC<ModelCardProps> = ({
           </div>
         )}
 
-        {/* Features - always at bottom */}
-        <div className="flex flex-wrap gap-2 flex-shrink-0 mt-2">
-          {features.map((feature) => (
-            <span
-              key={feature}
-              className={`text-xs font-medium px-2 py-1 rounded-full ${getFeatureColor(
-                feature
-              )}`}
-            >
-              {feature}
-            </span>
-          ))}
+        {/* Features and Action Buttons - always at bottom */}
+        <div className="flex items-center justify-between gap-2 flex-shrink-0 mt-2">
+          <div className="flex flex-wrap gap-2 flex-1">
+            {features.map((feature) => (
+              <span
+                key={feature}
+                className={`text-xs font-medium px-2 py-1 rounded-full ${getFeatureColor(
+                  feature
+                )}`}
+              >
+                {feature}
+              </span>
+            ))}
+          </div>
+          {actionButtons && (
+            <div className="flex-shrink-0">
+              {actionButtons}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -11,11 +11,12 @@ import { usePagination, useSearchAndFilter } from "../../../hooks/usePagination"
 import { useCloudStorage } from "../../../contexts/CloudStorageContext";
 import { useSettingsContext } from "../../../contexts/SettingsContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw } from "../../Icons";
+import { RefreshCw, Plus, X, Edit } from "../../Icons";
 import { FILTER_ID_MAPPING, REVERSE_FILTER_ID_MAPPING, MODEL_FILTER_CATEGORIES } from "../../../constants/modelFilters";
 import { DEFAULT_MODEL_ID } from "../../../constants/models";
 import CloudConflictModal from "../../ui/CloudConflictModal";
 import { ConflictData } from "../../../services/cloudStorageService";
+import CustomModelForm from "../CustomModelForm";
 
 interface ModelsTabProps {
   settings: AppSettings;
@@ -30,22 +31,44 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
   // Get cloud storage context
   const {
-    customProviders,
-    selectedServerModels: cloudSelectedServerModels,
-    selectedProviderModels: cloudSelectedProviderModels,
+    custom_providers: customProviders,
+    selected_server_models: cloudSelectedServerModels,
+    selected_provider_models: cloudSelectedProviderModels,
     saveSelectedServerModels: cloudSaveSelectedServerModels,
     saveSelectedModelsForProvider: cloudSaveSelectedModelsForProvider,
+    loadCustomModelsForProvider: cloudLoadCustomModelsForProvider,
+    addServerModel: cloudAddServerModel,
+    removeServerModel: cloudRemoveServerModel,
+    addProviderModel: cloudAddProviderModel,
+    removeProviderModel: cloudRemoveProviderModel,
+    addCustomModel: cloudAddCustomModel,
+    removeCustomModel: cloudRemoveCustomModel,
+    cleanupDuplicateCustomModels: cloudCleanupDuplicateCustomModels,
     setConflictResolver
   } = useCloudStorage();
 
   // State management
   const [activeMainTab, setActiveMainTab] = useState<"system" | "byok">("system");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
-  const [activeByokTab, setActiveByokTab] = useState<"selected" | "available">("available");
+  const [activeByokTab, setActiveByokTab] = useState<"selected" | "available" | "custom">("available");
   const [availableProviders, setAvailableProviders] = useState<Array<Provider>>([]);
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set());
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
+  const [showCustomModelForm, setShowCustomModelForm] = useState(false);
+  const [editingCustomModel, setEditingCustomModel] = useState<any | null>(null);
+  
+  // Provider-specific custom models state
+  const [providerCustomModels, setProviderCustomModels] = useState<Record<string, any[]>>({});
+  
+  // Loading states for different save operations
+  const [isSavingServerModels, setIsSavingServerModels] = useState(false);
+  const [isSavingProviderModels, setIsSavingProviderModels] = useState(false);
+  const [isSavingCustomModels, setIsSavingCustomModels] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Per-model loading states for more granular feedback
+  const [savingModelIds, setSavingModelIds] = useState<Set<string>>(new Set());
 
   // Custom hooks
   const modelsManager = useModelsManager();
@@ -53,6 +76,10 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // Pagination and filtering for BYOK models
   const byokPagination = usePagination<any>({ itemsPerPage: ITEMS_PER_PAGE });
   const byokFilter = useSearchAndFilter();
+
+  // Pagination and filtering for custom models
+  const customPagination = usePagination<any>({ itemsPerPage: ITEMS_PER_PAGE });
+  const customFilter = useSearchAndFilter();
 
   // Pagination and filtering for server models
   const serverPagination = usePagination<any>({ itemsPerPage: ITEMS_PER_PAGE });
@@ -125,7 +152,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       }));
 
       // Load custom providers from cloud storage
-      providers = [...providers, ...customProviders];
+      providers = [...providers, ...(customProviders || [])];
 
       setAvailableProviders(providers);
     };
@@ -141,13 +168,42 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         modelsManager.fetchProviderModels(provider);
       }
       modelsManager.loadSelectedModelsForProvider(selectedProvider);
+      
+      // Load custom models for this provider
+      cloudLoadCustomModelsForProvider(selectedProvider).then(async (customModels) => {
+        setProviderCustomModels(prev => ({
+          ...prev,
+          [selectedProvider]: customModels
+        }));
+        
+        // Clean up duplicates if any exist (run in background)
+        if (customModels.length > 0) {
+          try {
+            await cloudCleanupDuplicateCustomModels(selectedProvider);
+            // Reload custom models after cleanup to get the cleaned up list
+            const cleanedModels = await cloudLoadCustomModelsForProvider(selectedProvider);
+            setProviderCustomModels(prev => ({
+              ...prev,
+              [selectedProvider]: cleanedModels
+            }));
+          } catch (error) {
+            console.warn('Could not cleanup duplicates:', error);
+          }
+        }
+      }).catch(error => {
+        console.error('Error loading custom models for provider:', error);
+      });
     }
-  }, [selectedProvider, availableProviders, modelsManager.fetchProviderModels, modelsManager.loadSelectedModelsForProvider]);
+  }, [selectedProvider, availableProviders, modelsManager.fetchProviderModels, modelsManager.loadSelectedModelsForProvider, cloudLoadCustomModelsForProvider]);
 
   // Reset pagination when search or filters change
   useEffect(() => {
     byokPagination.goToPage(1);
   }, [byokFilter.searchQuery, byokFilter.selectedFeatures, activeByokTab, selectedProvider]);
+
+  useEffect(() => {
+    customPagination.goToPage(1);
+  }, [customFilter.searchQuery, customFilter.selectedFeatures, activeByokTab]);
 
   useEffect(() => {
     serverPagination.goToPage(1);
@@ -207,9 +263,10 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         }));
       }
     } else {
-      // Show selected models
-      if (modelsManager.selectedModels && modelsManager.selectedModels.length > 0) {
-        models = modelsManager.selectedModels.map(model => {
+      // Show selected models from cloud storage state (more reliable than modelsManager)
+      const selectedModelsForProvider = cloudSelectedProviderModels[selectedProvider] || [];
+      if (selectedModelsForProvider.length > 0) {
+        models = selectedModelsForProvider.map(model => {
           const fullModel = modelsManager.fetchedModels.find(m => m.id === model.id) || 
                            modelsManager.availableModels.find(m => m.id === model.id);
           return {
@@ -231,7 +288,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     selectedProvider,
     activeByokTab,
     modelsManager.fetchedModels,
-    modelsManager.selectedModels,
+    cloudSelectedProviderModels,
     modelsManager.availableModels,
     byokFilter.searchQuery,
     byokFilter.selectedFeatures
@@ -251,87 +308,243 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
     };
   }, [filteredByokModels, byokPagination.currentPage]);
 
+  // Memoized filtered and paginated custom models
+  const filteredCustomModels = useMemo(() => {
+    if (!selectedProvider) return [];
+    
+    const models = (providerCustomModels[selectedProvider] || []).map(model => ({
+      name: model.name,
+      description: model.description || "",
+      features: ["Text Generation", ...(model.hasVision ? ["Vision"] : []), ...(model.hasReasoning ? ["Reasoning"] : []), ...(model.hasFunctionCalling ? ["Function Calling"] : [])],
+      category: "custom",
+      id: model.id,
+      supported_parameters: model.supportedParameters || [],
+    }));
+
+    const filtered = customFilter.filterItems(models, ['name'], 'features');
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedProvider, providerCustomModels, customFilter.searchQuery, customFilter.selectedFeatures]);
+
+  const paginatedCustomModels = useMemo(() => {
+    const paginatedItems = customPagination.getPaginatedItems(filteredCustomModels);
+    const { totalPages } = customPagination.getPaginationInfo(filteredCustomModels.length);
+    
+    return {
+      models: paginatedItems,
+      totalItems: filteredCustomModels.length,
+      totalPages: totalPages || 1,
+      currentPage: customPagination.currentPage,
+      hasNextPage: customPagination.currentPage < (totalPages || 1),
+      hasPreviousPage: customPagination.currentPage > 1,
+    };
+  }, [filteredCustomModels, customPagination.currentPage]);
+
   // Event handlers
-  const handleModelToggle = useCallback((modelId: string, modelName: string, enabled: boolean) => {
+  const handleModelToggle = useCallback(async (modelId: string, modelName: string, enabled: boolean) => {
     if (!selectedProvider) return;
 
-    const currentSelected = [...(cloudSelectedProviderModels[selectedProvider] || [])];
+    // Set per-model loading state only
+    setSavingModelIds(prev => new Set(prev).add(modelId));
     
-    if (enabled) {
-      // Add model if not already selected
-      if (!currentSelected.find(m => m.id === modelId)) {
-        currentSelected.push({
+    try {
+      if (enabled) {
+        // Add model using optimized operation
+        const newModel = {
           id: modelId,
           name: modelName,
           supported_parameters: modelsManager.fetchedModels.find(m => m.id === modelId)?.supported_parameters || [],
           category: "byok",
-        });
+        };
+        await cloudAddProviderModel(selectedProvider, newModel);
+      } else {
+        // Remove model using optimized operation
+        await cloudRemoveProviderModel(selectedProvider, modelId);
       }
-    } else {
-      // Remove model
-      const filtered = currentSelected.filter(m => m.id !== modelId);
-      cloudSaveSelectedModelsForProvider(selectedProvider, filtered);
-      return;
+      
+      // No need to refresh modelsManager state since we're using cloudSelectedProviderModels directly
+    } catch (error) {
+      console.error('Error toggling provider model:', error);
+    } finally {
+      // Clear per-model loading state
+      setSavingModelIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(modelId);
+        return newSet;
+      });
     }
+  }, [selectedProvider, cloudAddProviderModel, cloudRemoveProviderModel, modelsManager.fetchedModels]);
 
-    cloudSaveSelectedModelsForProvider(selectedProvider, currentSelected);
-  }, [selectedProvider, cloudSelectedProviderModels, cloudSaveSelectedModelsForProvider, modelsManager.fetchedModels]);
-
-  const handleServerModelToggle = useCallback((modelId: string, modelName: string, enabled: boolean) => {
+  const handleServerModelToggle = useCallback(async (modelId: string, modelName: string, enabled: boolean) => {
     if (modelId == DEFAULT_MODEL_ID) {
       return;
     }
 
-    const currentSelected = [...cloudSelectedServerModels];
+    // Set per-model loading state only
+    setSavingModelIds(prev => new Set(prev).add(modelId));
     
-    if (enabled) {
-      if (!currentSelected.find(m => m.id === modelId)) {
+    try {
+      if (enabled) {
+        // Add model using optimized operation
         const model = modelsManager.availableModels.find(m => m.id === modelId);
-        currentSelected.push({
+        const newModel = {
           id: modelId,
           name: modelName,
           supported_parameters: model?.supported_parameters || [],
           category: model?.category || "server",
           provider_id: model?.provider_id || "",
           provider_name: model?.provider_name || "",
-        });
+        };
+        await cloudAddServerModel(newModel);
+      } else {
+        // Remove model using optimized operation
+        await cloudRemoveServerModel(modelId);
       }
-    } else {
-      const filtered = currentSelected.filter(m => m.id !== modelId);
-      cloudSaveSelectedServerModels(filtered);
-      return;
+    } catch (error) {
+      console.error('Error toggling server model:', error);
+    } finally {
+      // Clear per-model loading state
+      setSavingModelIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(modelId);
+        return newSet;
+      });
     }
+  }, [cloudAddServerModel, cloudRemoveServerModel, modelsManager.availableModels]);
 
-    cloudSaveSelectedServerModels(currentSelected);
-  }, [cloudSelectedServerModels, cloudSaveSelectedServerModels, modelsManager.availableModels]);
-
-  const handleUnselectAll = useCallback(() => {
+  const handleUnselectAll = useCallback(async () => {
     if (selectedProvider) {
-      cloudSaveSelectedModelsForProvider(selectedProvider, []);
+      setIsSavingProviderModels(true);
+      try {
+        await cloudSaveSelectedModelsForProvider(selectedProvider, []);
+      } catch (error) {
+        console.error('Error unselecting all provider models:', error);
+      } finally {
+        setIsSavingProviderModels(false);
+      }
     }
   }, [selectedProvider, cloudSaveSelectedModelsForProvider]);
 
-  const handleServerUnselectAll = useCallback(() => {
-    cloudSaveSelectedServerModels([]);
+  const handleSelectAll = useCallback(async () => {
+    if (selectedProvider) {
+      setIsSavingProviderModels(true);
+      try {
+        const allModels = modelsManager.fetchedModels.map(model => ({
+          id: model.id,
+          name: model.name,
+          supported_parameters: model.supported_parameters,
+          category: "byok",
+        }));
+        await cloudSaveSelectedModelsForProvider(selectedProvider, allModels);
+        // Refresh the selected models state in modelsManager to update UI
+        modelsManager.loadSelectedModelsForProvider(selectedProvider);
+      } catch (error) {
+        console.error('Error selecting all provider models:', error);
+      } finally {
+        setIsSavingProviderModels(false);
+      }
+    }
+  }, [selectedProvider, cloudSaveSelectedModelsForProvider, modelsManager.fetchedModels, modelsManager.loadSelectedModelsForProvider]);
+
+  const handleServerUnselectAll = useCallback(async () => {
+    setIsSavingServerModels(true);
+    try {
+      await cloudSaveSelectedServerModels([]);
+    } catch (error) {
+      console.error('Error unselecting all server models:', error);
+    } finally {
+      setIsSavingServerModels(false);
+    }
   }, [cloudSaveSelectedServerModels]);
 
-  const handleServerSelectAll = useCallback(() => {
-    const allSelectableModels = modelsManager.availableModels
-      .filter(model => model.category === "server")
-      .map(model => ({
-        id: model.id,
-        name: model.name,
-        supported_parameters: model.supported_parameters || [],
-        provider_id: model.provider_id || "",
-        provider_name: model.provider_name || "",
-      }));
-    
-    cloudSaveSelectedServerModels(allSelectableModels);
+  const handleServerSelectAll = useCallback(async () => {
+    setIsSavingServerModels(true);
+    try {
+      const allSelectableModels = modelsManager.availableModels
+        .filter(model => model.category === "server")
+        .map(model => ({
+          id: model.id,
+          name: model.name,
+          supported_parameters: model.supported_parameters || [],
+          provider_id: model.provider_id || "",
+          provider_name: model.provider_name || "",
+        }));
+      
+      await cloudSaveSelectedServerModels(allSelectableModels);
+    } catch (error) {
+      console.error('Error selecting all server models:', error);
+    } finally {
+      setIsSavingServerModels(false);
+    }
   }, [modelsManager, cloudSaveSelectedServerModels]);
 
-  const handleRefreshServerModels = useCallback(() => {
-    modelsManager.refreshSystemModels(true); // Force refresh to bypass cache
+  const handleRefreshServerModels = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await modelsManager.refreshSystemModels(true); // Force refresh to bypass cache
+    } catch (error) {
+      console.error('Error refreshing server models:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [modelsManager]);
+
+  // Custom models handlers
+  const handleCustomModelSave = useCallback(async (model: any) => {
+    if (!selectedProvider) return;
+    
+    setIsSavingCustomModels(true);
+    try {
+      await cloudAddCustomModel(selectedProvider, model);
+      
+      // Reload custom models for this provider
+      const updatedModels = await cloudLoadCustomModelsForProvider(selectedProvider);
+      setProviderCustomModels(prev => ({
+        ...prev,
+        [selectedProvider]: updatedModels
+      }));
+    } catch (error) {
+      console.error('Error saving custom model:', error);
+    } finally {
+      setIsSavingCustomModels(false);
+    }
+  }, [selectedProvider, cloudAddCustomModel, cloudLoadCustomModelsForProvider]);
+
+  const handleCustomModelDelete = useCallback(async (modelId: string) => {
+    if (!selectedProvider) return;
+    
+    setIsSavingCustomModels(true);
+    try {
+      await cloudRemoveCustomModel(selectedProvider, modelId);
+      
+      // Reload custom models for this provider
+      const updatedModels = await cloudLoadCustomModelsForProvider(selectedProvider);
+      setProviderCustomModels(prev => ({
+        ...prev,
+        [selectedProvider]: updatedModels
+      }));
+    } catch (error) {
+      console.error('Error deleting custom model:', error);
+    } finally {
+      setIsSavingCustomModels(false);
+    }
+  }, [selectedProvider, cloudRemoveCustomModel, cloudLoadCustomModelsForProvider]);
+
+  const handleCustomModelEdit = useCallback((model: any) => {
+    setEditingCustomModel(model);
+    setShowCustomModelForm(true);
+  }, []);
+
+  const handleAddCustomModel = useCallback(() => {
+    setEditingCustomModel(null);
+    setShowCustomModelForm(true);
+  }, []);
+
+  // Helper function to determine if any global loading operation is in progress
+  // Excludes per-model loading states to allow individual model interactions
+  // But includes bulk operations that affect multiple models
+  const isAnyLoading = useMemo(() => {
+    return isSavingServerModels || isSavingProviderModels || isSavingCustomModels || isRefreshing;
+  }, [isSavingServerModels, isSavingProviderModels, isSavingCustomModels, isRefreshing]);
 
   // Handle model expansion toggle
   const toggleModelExpansion = useCallback((modelId: string) => {
@@ -349,7 +562,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   // Helper functions
   const isServerModelEnabled = useCallback((modelId: string): boolean => {
     if (modelId === DEFAULT_MODEL_ID) return true;
-    return cloudSelectedServerModels.some(m => m.id === modelId);
+    return (cloudSelectedServerModels || []).some(m => m.id === modelId);
   }, [cloudSelectedServerModels, DEFAULT_MODEL_ID]);
 
   const isModelSelected = useCallback((modelId: string): boolean => {
@@ -359,9 +572,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
   }, [cloudSelectedProviderModels, selectedProvider]);
 
   // Render pagination component
-  const renderPagination = useCallback((type: 'server' | 'byok' = 'byok') => {
-    const paginationData = type === 'server' ? paginatedServerModels : paginatedByokModels;
-    const pagination = type === 'server' ? serverPagination : byokPagination;
+  const renderPagination = useCallback((type: 'server' | 'byok' | 'custom' = 'byok') => {
+    const paginationData = type === 'server' ? paginatedServerModels : type === 'custom' ? paginatedCustomModels : paginatedByokModels;
+    const pagination = type === 'server' ? serverPagination : type === 'custom' ? customPagination : byokPagination;
 
     if (paginationData.totalPages <= 1) return null;
 
@@ -379,7 +592,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
       <div className="flex justify-center items-center gap-1 sm:gap-2 mt-6 px-2">
         <button
           onClick={() => pagination.goToPage(paginationData.currentPage - 1)}
-          disabled={!paginationData.hasPreviousPage}
+          disabled={!paginationData.hasPreviousPage || isAnyLoading}
           className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           <span className="hidden sm:inline">Previous</span>
@@ -390,11 +603,12 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
           <button
             key={page}
             onClick={() => pagination.goToPage(page)}
+            disabled={isAnyLoading}
             className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border transition-colors cursor-pointer ${
               page === paginationData.currentPage
                 ? 'border-pink-500 bg-gradient-to-r from-pink-600 to-purple-600 text-white'
                 : 'border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-            }`}
+            } ${isAnyLoading ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`}
           >
             {page}
           </button>
@@ -402,7 +616,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         
         <button
           onClick={() => pagination.goToPage(paginationData.currentPage + 1)}
-          disabled={!paginationData.hasNextPage}
+          disabled={!paginationData.hasNextPage || isAnyLoading}
           className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           <span className="hidden sm:inline">Next</span>
@@ -410,7 +624,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
         </button>
       </div>
     );
-  }, [paginatedServerModels, paginatedByokModels, serverPagination, byokPagination, isMobile]);
+  }, [paginatedServerModels, paginatedByokModels, paginatedCustomModels, serverPagination, byokPagination, customPagination, isMobile]);
 
   return (
     <div>
@@ -460,25 +674,27 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 <button
                   onClick={handleRefreshServerModels}
-                  disabled={modelsManager.isLoadingSystemModels}
+                  disabled={modelsManager.isLoadingSystemModels || isRefreshing || isAnyLoading}
                   className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
                   title="Refresh server models"
                 >
-                  <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${modelsManager.isLoadingSystemModels || isRefreshing ? 'animate-spin' : ''}`} />
                   <span className="hidden xs:inline">
-                    {modelsManager.isLoadingSystemModels ? 'Loading...' : 'Refresh'}
+                    {modelsManager.isLoadingSystemModels || isRefreshing ? 'Loading...' : 'Refresh'}
                   </span>
                 </button>
                 <button
                   onClick={handleServerSelectAll}
-                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
+                  disabled={isSavingServerModels || isAnyLoading}
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <span className="sm:hidden">All</span>
                   <span className="hidden sm:inline">Select All</span>
                 </button>
                 <button
                   onClick={handleServerUnselectAll}
-                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
+                  disabled={isSavingServerModels || isAnyLoading}
+                  className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <span className="sm:hidden">None</span>
                   <span className="hidden sm:inline">Unselect All</span>
@@ -488,7 +704,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
             {/* Server Models Filters */}
             <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
-              modelsManager.isLoadingSystemModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+              modelsManager.isLoadingSystemModels || isAnyLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'
             }`}>
               <div className="flex-1">
                 <input
@@ -496,7 +712,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                   placeholder="Search system models..."
                   value={serverFilter.searchQuery}
                   onChange={(e) => serverFilter.handleSearchChange(e.target.value)}
-                  disabled={modelsManager.isLoadingSystemModels}
+                  disabled={modelsManager.isLoadingSystemModels || isAnyLoading}
                   className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -507,7 +723,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                   onFilterChange={handleServerFilterChange}
                   onClearAll={handleServerClearAllFilters}
                   placeholder="Filter by capabilities"
-                  disabled={modelsManager.isLoadingSystemModels}
+                  disabled={modelsManager.isLoadingSystemModels || isAnyLoading}
                 />
               </div>
             </div>
@@ -516,9 +732,9 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             <div className="relative min-h-[400px]">
               {/* Loading Overlay */}
               <LoadingOverlay
-                isVisible={modelsManager.isLoadingSystemModels}
-                title="Loading system models..."
-                subtitle="Please wait while we fetch the latest models from our servers"
+                isVisible={modelsManager.isLoadingSystemModels || isSavingServerModels}
+                title={isSavingServerModels ? "Saving changes..." : "Loading system models..."}
+                subtitle={isSavingServerModels ? "Please wait while we save your model selections" : "Please wait while we fetch the latest models from our servers"}
               />
 
               {/* Error State */}
@@ -543,10 +759,10 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     </div>
                     <button
                       onClick={handleRefreshServerModels}
-                      disabled={modelsManager.isLoadingSystemModels}
+                      disabled={modelsManager.isLoadingSystemModels || isRefreshing || isAnyLoading}
                       className="ml-4 px-3 py-1 text-sm bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 shrink-0 cursor-pointer"
                     >
-                      <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`w-4 h-4 ${modelsManager.isLoadingSystemModels || isRefreshing ? 'animate-spin' : ''}`} />
                       Retry
                     </button>
                   </div>
@@ -575,7 +791,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         features={model.features}
                         isEnabled={isServerModelEnabled(model.id)}
                         onToggle={(enabled) => handleServerModelToggle(model.id, model.name, enabled)}
-                        disabled={modelsManager.isLoadingSystemModels || model.id === DEFAULT_MODEL_ID}
+                        disabled={modelsManager.isLoadingSystemModels || savingModelIds.has(model.id) || model.id === DEFAULT_MODEL_ID || isAnyLoading}
                         isExpanded={expandedModels.has(model.id)}
                         onToggleExpansion={() => toggleModelExpansion(model.id)}
                         layout="row"
@@ -601,7 +817,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
 
             {/* Provider Selection */}
             <div className={`mb-6 transition-all duration-300 ${
-              modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+              modelsManager.isLoadingModels || isAnyLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'
             }`}>
               <div className="w-full sm:max-w-md">
                 <CustomDropdown
@@ -627,7 +843,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
             {/* Action buttons for mobile - shown below provider dropdown */}
             {selectedProvider && (
               <div className={`sm:hidden mb-6 transition-all duration-300 ${
-                modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+                modelsManager.isLoadingModels || isAnyLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'
               }`}>
                 <div className="flex flex-wrap gap-1.5">
                   <button
@@ -637,7 +853,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         modelsManager.fetchProviderModels(provider);
                       }
                     }}
-                    disabled={modelsManager.isLoadingModels}
+                    disabled={modelsManager.isLoadingModels || isAnyLoading}
                     className="px-2 py-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
                     title="Refresh BYOK models"
                   >
@@ -645,22 +861,16 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     Refresh
                   </button>
                   <button
-                    onClick={() => {
-                      const allModels = modelsManager.fetchedModels.map(model => ({
-                        id: model.id,
-                        name: model.name,
-                        supported_parameters: model.supported_parameters,
-                        category: "byok",
-                      }));
-                      modelsManager.saveSelectedModelsForProvider(selectedProvider, allModels);
-                    }}
-                    className="px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
+                    onClick={handleSelectAll}
+                    disabled={isSavingProviderModels || isAnyLoading}
+                    className="px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Select All
                   </button>
                   <button
                     onClick={handleUnselectAll}
-                    className="px-2 py-1 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
+                    disabled={isSavingProviderModels || isAnyLoading}
+                    className="px-2 py-1 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Unselect All
                   </button>
@@ -672,12 +882,13 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
               <>
                 {/* BYOK Tab Navigation */}
                 <div className={`flex justify-between items-center border-b border-zinc-200 dark:border-zinc-700 mb-6 transition-all duration-300 ${
-                  modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
+                  modelsManager.isLoadingModels || isAnyLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'
                 }`}>
                   <div className="flex">
                     <button
                       onClick={() => setActiveByokTab("available")}
-                      className={`cursor-pointer px-4 py-2 border-b-2 transition-colors ${
+                      disabled={isAnyLoading}
+                      className={`cursor-pointer px-4 py-2 border-b-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                         activeByokTab === "available"
                           ? "border-pink-500 text-pink-600 dark:text-pink-400"
                           : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -687,17 +898,29 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     </button>
                     <button
                       onClick={() => setActiveByokTab("selected")}
-                      className={`cursor-pointer px-4 py-2 border-b-2 transition-colors ${
+                      disabled={isAnyLoading}
+                      className={`cursor-pointer px-4 py-2 border-b-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                         activeByokTab === "selected"
                           ? "border-pink-500 text-pink-600 dark:text-pink-400"
                           : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
                       }`}
                     >
-                      Selected Models ({modelsManager.selectedModels.length})
+                      Selected Models ({selectedProvider ? (cloudSelectedProviderModels[selectedProvider] || []).length : 0})
+                    </button>
+                    <button
+                      onClick={() => setActiveByokTab("custom")}
+                      disabled={isAnyLoading}
+                      className={`cursor-pointer px-4 py-2 border-b-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        activeByokTab === "custom"
+                          ? "border-pink-500 text-pink-600 dark:text-pink-400"
+                          : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+                      }`}
+                    >
+                      Custom Models ({selectedProvider ? (providerCustomModels[selectedProvider] || []).length : 0})
                     </button>
                   </div>
                   
-                  {/* Action buttons for desktop - only show for Available Models tab */}
+                  {/* Action buttons for desktop - show different buttons based on active tab */}
                   {activeByokTab === "available" && (
                     <div className="hidden sm:flex gap-2 mb-2">
                       <button
@@ -707,7 +930,7 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                             modelsManager.fetchProviderModels(provider);
                           }
                         }}
-                        disabled={modelsManager.isLoadingModels}
+                        disabled={modelsManager.isLoadingModels || isAnyLoading}
                         className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
                         title="Refresh BYOK models"
                       >
@@ -717,70 +940,134 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                         </span>
                       </button>
                       <button
-                        onClick={() => {
-                          const allModels = modelsManager.fetchedModels.map(model => ({
-                            id: model.id,
-                            name: model.name,
-                            supported_parameters: model.supported_parameters,
-                            category: "byok",
-                          }));
-                          modelsManager.saveSelectedModelsForProvider(selectedProvider, allModels);
-                        }}
-                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
+                        onClick={handleSelectAll}
+                        disabled={isSavingProviderModels || isAnyLoading}
+                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
                         <span className="sm:hidden">All</span>
                         <span className="hidden sm:inline">Select All</span>
                       </button>
                       <button
                         onClick={handleUnselectAll}
-                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 cursor-pointer"
+                        disabled={isSavingProviderModels || isAnyLoading}
+                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
                         <span className="sm:hidden">None</span>
                         <span className="hidden sm:inline">Unselect All</span>
                       </button>
                     </div>
                   )}
+
+                  {activeByokTab === "custom" && (
+                    <div className="hidden sm:flex gap-2 mb-2">
+                      <button
+                        onClick={handleAddCustomModel}
+                        disabled={isSavingCustomModels || isAnyLoading}
+                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-900/40 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Add Model</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {/* BYOK Models Filters */}
-                <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
-                  modelsManager.isLoadingModels ? 'opacity-60 pointer-events-none' : 'opacity-100'
-                }`}>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      placeholder="Search BYOK models..."
-                      value={byokFilter.searchQuery}
-                      onChange={(e) => byokFilter.handleSearchChange(e.target.value)}
-                      disabled={modelsManager.isLoadingModels}
-                      className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
-                    <div className="flex-shrink-0 lg:w-80">
-                      <AdvancedFilter
-                        categories={MODEL_FILTER_CATEGORIES}
-                        selectedFilters={convertFeaturesToFilterIds(byokFilter.selectedFeatures)}
-                        onFilterChange={handleByokFilterChange}
-                        onClearAll={handleByokClearAllFilters}
-                        placeholder="Filter by capabilities"
-                        disabled={modelsManager.isLoadingModels}
+                {/* Models Filters - conditional based on active tab */}
+                {(activeByokTab === "available" || activeByokTab === "selected") && (
+                  <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
+                    modelsManager.isLoadingModels || isAnyLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'
+                  }`}>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Search BYOK models..."
+                        value={byokFilter.searchQuery}
+                        onChange={(e) => byokFilter.handleSearchChange(e.target.value)}
+                        disabled={modelsManager.isLoadingModels || isAnyLoading}
+                        className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
+                    <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
+                      <div className="flex-shrink-0 lg:w-80">
+                        <AdvancedFilter
+                          categories={MODEL_FILTER_CATEGORIES}
+                          selectedFilters={convertFeaturesToFilterIds(byokFilter.selectedFeatures)}
+                          onFilterChange={handleByokFilterChange}
+                          onClearAll={handleByokClearAllFilters}
+                          placeholder="Filter by capabilities"
+                          disabled={modelsManager.isLoadingModels || isAnyLoading}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* BYOK Models Content Area */}
+                {activeByokTab === "custom" && (
+                  <div className={`flex flex-col lg:flex-row gap-3 lg:gap-4 mb-6 transition-all duration-300 ${
+                    isSavingCustomModels || isAnyLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'
+                  }`}>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Search custom models..."
+                        value={customFilter.searchQuery}
+                        onChange={(e) => customFilter.handleSearchChange(e.target.value)}
+                        disabled={isSavingCustomModels || isAnyLoading}
+                        className="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2.5 px-4 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-pink-500 focus:border-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
+                      <div className="flex-shrink-0 lg:w-80">
+                        <AdvancedFilter
+                          categories={MODEL_FILTER_CATEGORIES}
+                          selectedFilters={convertFeaturesToFilterIds(customFilter.selectedFeatures)}
+                          onFilterChange={(filterId: string) => {
+                            const featureName = REVERSE_FILTER_ID_MAPPING[filterId];
+                            if (featureName) {
+                              customFilter.handleFeatureToggle(featureName);
+                            }
+                          }}
+                          onClearAll={() => customFilter.clearFilters()}
+                          placeholder="Filter by capabilities"
+                          disabled={false}
+                        />
+                      </div>
+                    </div>
+                    <div className="sm:hidden">
+                      <button
+                        onClick={handleAddCustomModel}
+                        disabled={!selectedProvider || isSavingCustomModels || isAnyLoading}
+                        className="w-full px-3 py-2 text-sm bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-900/40 cursor-pointer flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Custom Model
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Models Content Area */}
                 <div className="relative min-h-[400px]">
-                  {/* Loading Overlay */}
-                  <LoadingOverlay
-                    isVisible={modelsManager.isLoadingModels}
-                    title="Loading models..."
-                    subtitle="Please wait while we fetch models from your selected provider"
-                  />
+                  {/* Loading Overlay - only for BYOK tabs */}
+                  {(activeByokTab === "available" || activeByokTab === "selected") && (
+                    <LoadingOverlay
+                      isVisible={modelsManager.isLoadingModels || isSavingProviderModels}
+                      title={isSavingProviderModels ? "Saving changes..." : "Loading models..."}
+                      subtitle={isSavingProviderModels ? "Please wait while we save your model selections" : "Please wait while we fetch models from your selected provider"}
+                    />
+                  )}
 
-                  {/* Error State */}
-                  {modelsManager.modelsError && (
+                  {/* Loading Overlay for Custom Models */}
+                  {activeByokTab === "custom" && (
+                    <LoadingOverlay
+                      isVisible={isSavingCustomModels}
+                      title="Saving changes..."
+                      subtitle="Please wait while we save your custom model"
+                    />
+                  )}
+
+                  {/* Error State - only for BYOK tabs */}
+                  {(activeByokTab === "available" || activeByokTab === "selected") && modelsManager.modelsError && (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
                       <p className="text-red-800 dark:text-red-200">
                         {modelsManager.modelsError}
@@ -788,59 +1075,157 @@ const ModelsTab: React.FC<ModelsTabProps> = ({ settings }) => {
                     </div>
                   )}
 
-                  {/* Empty State */}
-                  {!modelsManager.isLoadingModels && !modelsManager.modelsError && paginatedByokModels.models.length === 0 && (
-                    <div className="text-center py-12">
-                      <p className="text-zinc-500 dark:text-zinc-400">
-                        {activeByokTab === "selected" 
-                          ? "No models selected yet. Switch to 'Available Models' to select some."
-                          : "No models found."
-                        }
-                      </p>
-                    </div>
+                  {/* BYOK Models Content */}
+                  {(activeByokTab === "available" || activeByokTab === "selected") && (
+                    <>
+                      {/* Empty State */}
+                      {!modelsManager.isLoadingModels && !modelsManager.modelsError && paginatedByokModels.models.length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-zinc-500 dark:text-zinc-400">
+                            {activeByokTab === "selected" 
+                              ? "No models selected yet. Switch to 'Available Models' to select some."
+                              : "No models found."
+                            }
+                          </p>
+                        </div>
+                      )}
+
+                      {/* BYOK Models List */}
+                      {paginatedByokModels.models.length > 0 && (
+                        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch transition-all duration-300`}>
+                          <AnimatePresence mode="wait">
+                            {paginatedByokModels.models.map((model, index) => (
+                              <motion.div
+                                key={model.id}
+                                className="h-full"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ 
+                                  duration: settings.animationsDisabled ? 0 : 0.2, 
+                                  delay: settings.animationsDisabled ? 0 : index * 0.05 
+                                }}
+                              >
+                                <ModelCard
+                                  name={model.name}
+                                  description={model.description}
+                                  features={model.features}
+                                  isEnabled={isModelSelected(model.id)}
+                                  onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
+                                  disabled={modelsManager.isLoadingModels || savingModelIds.has(model.id) || isAnyLoading}
+                                  isExpanded={expandedModels.has(model.id)}
+                                  onToggleExpansion={() => toggleModelExpansion(model.id)}
+                                  layout="row"
+                                />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </div>
+                      )}
+
+                      {/* Pagination for BYOK */}
+                      {paginatedByokModels.models.length > 0 && renderPagination('byok')}
+                    </>
                   )}
 
-                  {/* BYOK Models List */}
-                  {paginatedByokModels.models.length > 0 && (
-                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch transition-all duration-300`}>
-                      <AnimatePresence mode="wait">
-                        {paginatedByokModels.models.map((model, index) => (
-                          <motion.div
-                            key={model.id}
-                            className="h-full"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ 
-                              duration: settings.animationsDisabled ? 0 : 0.2, 
-                              delay: settings.animationsDisabled ? 0 : index * 0.05 
-                            }}
+                  {/* Custom Models Content */}
+                  {activeByokTab === "custom" && (
+                    <>
+                      {/* Empty State */}
+                      {paginatedCustomModels.models.length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-zinc-500 dark:text-zinc-400 mb-4">
+                            No custom models found. Add your own models to get started.
+                          </p>
+                          <button
+                            onClick={handleAddCustomModel}
+                            disabled={!selectedProvider || isSavingCustomModels || isAnyLoading}
+                            className="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-lg font-medium hover:from-pink-700 hover:to-purple-700 transition-all flex items-center gap-2 mx-auto cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <ModelCard
-                              name={model.name}
-                              description={model.description}
-                              features={model.features}
-                              isEnabled={isModelSelected(model.id)}
-                              onToggle={(enabled) => handleModelToggle(model.id, model.name, enabled)}
-                              disabled={modelsManager.isLoadingModels}
-                              isExpanded={expandedModels.has(model.id)}
-                              onToggleExpansion={() => toggleModelExpansion(model.id)}
-                              layout="row"
-                            />
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  )}
+                            <Plus className="w-4 h-4" />
+                            Add Custom Model
+                          </button>
+                        </div>
+                      )}
 
-                  {/* Pagination */}
-                  {paginatedByokModels.models.length > 0 && renderPagination('byok')}
+                      {/* Custom Models List */}
+                      {paginatedCustomModels.models.length > 0 && (
+                        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 grid-auto-rows-fr items-stretch`}>
+                          <AnimatePresence mode="wait">
+                            {paginatedCustomModels.models.map((model, index) => (
+                              <motion.div
+                                key={model.id}
+                                className="h-full"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ 
+                                  duration: settings.animationsDisabled ? 0 : 0.2, 
+                                  delay: settings.animationsDisabled ? 0 : index * 0.05 
+                                }}
+                              >
+                                <ModelCard
+                                  name={model.name}
+                                  description={model.description}
+                                  features={model.features}
+                                  isEnabled={false}
+                                  onToggle={() => {}}
+                                  disabled={true}
+                                  isExpanded={expandedModels.has(model.id)}
+                                  onToggleExpansion={() => toggleModelExpansion(model.id)}
+                                  layout="row"
+                                  actionButtons={
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => {
+                                          // Get the original model data from providerCustomModels
+                                          const originalModel = selectedProvider ? (providerCustomModels[selectedProvider] || []).find(m => m.id === model.id) : null;
+                                          handleCustomModelEdit(originalModel);
+                                        }}
+                                        disabled={isSavingCustomModels || isAnyLoading}
+                                        className="p-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Edit model"
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleCustomModelDelete(model.id)}
+                                        disabled={isSavingCustomModels || isAnyLoading}
+                                        className="p-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Delete model"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  }
+                                />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </div>
+                      )}
+
+                      {/* Pagination for Custom Models */}
+                      {paginatedCustomModels.models.length > 0 && renderPagination('custom')}
+                    </>
+                  )}
                 </div>
               </>
             )}
           </section>
         )}
       </div>
+
+      {/* Custom Model Form */}
+      <CustomModelForm
+        isVisible={showCustomModelForm}
+        onClose={() => {
+          setShowCustomModelForm(false);
+          setEditingCustomModel(null);
+        }}
+        onSave={handleCustomModelSave}
+        editingModel={editingCustomModel}
+      />
 
       {/* Conflict Resolution Modal */}
       {showConflictModal && conflictData && (

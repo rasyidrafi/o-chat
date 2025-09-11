@@ -6,13 +6,8 @@ import { useCloudStorage } from "../../../contexts/CloudStorageContext";
 import CloudConflictModal from "../../ui/CloudConflictModal";
 import { ConflictData } from "../../../services/cloudStorageService";
 
-// Storage keys - moved to constants for better maintainability
-const STORAGE_KEYS = {
-  CUSTOM_PROVIDERS: "custom_api_providers",
-} as const;
-
 // Performance constants
-const SAVE_ANIMATION_DURATION = 500; // ms
+const SAVE_ANIMATION_DURATION = 0; // ms
 
 // Enhanced UUID generator with better randomness
 const generateUUID = (): string => {
@@ -115,7 +110,7 @@ OpenAICompatibleProviderCard.displayName = 'OpenAICompatibleProviderCard';
 const ApiKeysTab: React.FC = () => {
   // Use the cloud storage context
   const {
-    customProviders,
+    custom_providers: customProviders,
     saveCustomProviders,
     isSyncing,
     syncError,
@@ -133,11 +128,21 @@ const ApiKeysTab: React.FC = () => {
   
   // Refs for performance optimization
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializedRef = useRef(false);
 
-  // Initialize local providers from cloud storage
+  // Initialize local providers from cloud storage only when appropriate
   useEffect(() => {
-    setLocalProviders(customProviders);
-  }, [customProviders]);
+    // Only update local providers if:
+    // 1. Component is first mounting (not initialized yet), OR
+    // 2. No unsaved changes exist AND not currently saving
+    if (!isInitializedRef.current || (!hasChanges && !isSaving)) {
+      setLocalProviders(customProviders);
+      
+      if (!isInitializedRef.current) {
+        isInitializedRef.current = true;
+      }
+    }
+  }, [customProviders, hasChanges, isSaving]);
 
   // Set up conflict resolver
   useEffect(() => {
@@ -249,6 +254,8 @@ const ApiKeysTab: React.FC = () => {
 
       // Save using cloud storage
       await saveCustomProviders(localProviders);
+      
+      // Reset hasChanges after successful save
       setHasChanges(false);
 
       // Brief delay to show saving state

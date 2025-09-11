@@ -5,9 +5,10 @@ import { Provider } from '../types/providers';
 
 interface CloudStorageContextType {
   // Data state
-  customProviders: Provider[];
-  selectedServerModels: any[];
-  selectedProviderModels: Record<string, any[]>;
+  custom_providers: Provider[];
+  selected_server_models: any[];
+  selected_provider_models: Record<string, any[]>;
+  custom_models: any[]; // This will be deprecated, keeping for backward compatibility
   
   // Sync state
   isSyncing: boolean;
@@ -21,8 +22,21 @@ interface CloudStorageContextType {
   loadSelectedServerModels: () => Promise<any[]>;
   saveSelectedModelsForProvider: (providerId: string, models: any[]) => Promise<void>;
   loadSelectedModelsForProvider: (providerId: string) => Promise<any[]>;
+  saveCustomModels: (models: any[]) => Promise<void>; // Deprecated, use saveCustomModelsForProvider
+  loadCustomModels: () => Promise<any[]>; // Deprecated, use loadCustomModelsForProvider
+  saveCustomModelsForProvider: (providerId: string, models: any[]) => Promise<void>;
+  loadCustomModelsForProvider: (providerId: string) => Promise<any[]>;
   syncWithCloud: () => Promise<void>;
   clearSyncError: () => void;
+  
+  // Optimized individual model operations
+  addServerModel: (model: any) => Promise<void>;
+  removeServerModel: (modelId: string) => Promise<void>;
+  addProviderModel: (providerId: string, model: any) => Promise<void>;
+  removeProviderModel: (providerId: string, modelId: string) => Promise<void>;
+  addCustomModel: (providerId: string, model: any) => Promise<void>;
+  removeCustomModel: (providerId: string, modelId: string) => Promise<void>;
+  cleanupDuplicateCustomModels: (providerId: string) => Promise<void>;
   
   // Conflict resolution
   onDataConflict?: (conflict: ConflictData) => Promise<'local' | 'cloud' | 'merge'>;
@@ -49,9 +63,10 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
   user 
 }) => {
   // Data state
-  const [customProviders, setCustomProviders] = useState<Provider[]>([]);
-  const [selectedServerModels, setSelectedServerModels] = useState<any[]>([]);
-  const [selectedProviderModels, setSelectedProviderModels] = useState<Record<string, any[]>>({});
+  const [custom_providers, setCustomProviders] = useState<Provider[]>([]);
+  const [selected_server_models, setSelectedServerModels] = useState<any[]>([]);
+  const [selected_provider_models, setSelectedProviderModels] = useState<Record<string, any[]>>({});
+  const [custom_models, setCustomModels] = useState<any[]>([]);
   
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
@@ -100,30 +115,17 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     },
   }), []);
 
-  // Load data from appropriate source
+  // Load data from appropriate source - SIMPLE, no automatic model loading
   const loadData = useCallback(async () => {
     try {
-      const [providers, serverModels] = await Promise.all([
-        CloudStorageService.loadCustomProviders(user),
-        CloudStorageService.loadSelectedServerModels(user),
-      ]);
+      const allData = await CloudStorageService.loadAllData(user);
       
-      setCustomProviders(providers);
-      setSelectedServerModels(serverModels);
-
-      // Load provider models if we have providers
-      if (providers.length > 0) {
-        const providerModelsMap: Record<string, any[]> = {};
-        await Promise.all(
-          providers.map(async (provider) => {
-            const models = await CloudStorageService.loadSelectedModelsForProvider(user, provider.id);
-            if (models.length > 0) {
-              providerModelsMap[provider.id] = models;
-            }
-          })
-        );
-        setSelectedProviderModels(providerModelsMap);
-      }
+      setCustomProviders(allData.custom_providers || []);
+      setSelectedServerModels(allData.selected_server_models || []);
+      setCustomModels(allData.custom_models || []);
+      
+      // DON'T automatically load provider models - let the models tab handle that when needed
+      setSelectedProviderModels(allData.selected_provider_models || {});
     } catch (error) {
       console.error('Error loading data:', error);
       setSyncError('Failed to load data');
@@ -142,9 +144,10 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
       const syncedData = await CloudStorageService.syncWithCloud(user, events);
       
       // Update local state with synced data
-      setCustomProviders(syncedData.customProviders || []);
-      setSelectedServerModels(syncedData.selectedServerModels || []);
-      setSelectedProviderModels(syncedData.selectedProviderModels || {});
+      setCustomProviders(syncedData.custom_providers || []);
+      setSelectedServerModels(syncedData.selected_server_models || []);
+      setSelectedProviderModels(syncedData.selected_provider_models || {});
+      setCustomModels(syncedData.custom_models || []);
       
     } catch (error) {
       console.error('Error syncing with cloud:', error);
@@ -154,10 +157,11 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     }
   }, [user, createCloudStorageEvents, loadData]);
 
-  // Save custom providers
+  // Simple save custom providers - no bullshit listeners
   const saveCustomProviders = useCallback(async (providers: Provider[]) => {
     try {
       await CloudStorageService.saveCustomProviders(user, providers);
+      // Just update the state directly, no reloading bullshit
       setCustomProviders(providers);
     } catch (error) {
       console.error('Error saving custom providers:', error);
@@ -168,7 +172,9 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
   // Load custom providers
   const loadCustomProviders = useCallback(async (): Promise<Provider[]> => {
     try {
-      const providers = await CloudStorageService.loadCustomProviders(user);
+      // Use the efficient batch loading method
+      const allData = await CloudStorageService.loadAllData(user);
+      const providers = allData.custom_providers || [];
       setCustomProviders(providers);
       return providers;
     } catch (error) {
@@ -191,7 +197,9 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
   // Load selected server models
   const loadSelectedServerModels = useCallback(async (): Promise<any[]> => {
     try {
-      const models = await CloudStorageService.loadSelectedServerModels(user);
+      // Use the efficient batch loading method
+      const allData = await CloudStorageService.loadAllData(user);
+      const models = allData.selected_server_models || [];
       setSelectedServerModels(models);
       return models;
     } catch (error) {
@@ -217,7 +225,9 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
   // Load selected models for provider
   const loadSelectedModelsForProvider = useCallback(async (providerId: string): Promise<any[]> => {
     try {
-      const models = await CloudStorageService.loadSelectedModelsForProvider(user, providerId);
+      // Use the efficient batch loading method
+      const allData = await CloudStorageService.loadAllData(user);
+      const models = allData.selected_provider_models?.[providerId] || [];
       setSelectedProviderModels(prev => ({
         ...prev,
         [providerId]: models,
@@ -225,6 +235,150 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
       return models;
     } catch (error) {
       console.error('Error loading selected models for provider:', error);
+      throw error;
+    }
+  }, [user]);
+
+  // Save custom models
+  const saveCustomModels = useCallback(async (models: any[]) => {
+    try {
+      await CloudStorageService.saveCustomModels(user, models);
+      setCustomModels(models);
+    } catch (error) {
+      console.error('Error saving custom models:', error);
+      throw error;
+    }
+  }, [user]);
+
+  // Load custom models
+  const loadCustomModels = useCallback(async (): Promise<any[]> => {
+    try {
+      // Use the efficient batch loading method
+      const allData = await CloudStorageService.loadAllData(user);
+      const models = allData.custom_models || [];
+      setCustomModels(models);
+      return models;
+    } catch (error) {
+      console.error('Error loading custom models:', error);
+      throw error;
+    }
+  }, [user]);
+
+  // Optimized individual model operations
+  const addServerModel = useCallback(async (model: any) => {
+    try {
+      const currentModels = [...selected_server_models];
+      const existingIndex = currentModels.findIndex(m => m.id === model.id);
+      
+      if (existingIndex === -1) {
+        const updatedModels = [...currentModels, model];
+        await CloudStorageService.saveSelectedServerModels(user, updatedModels);
+        setSelectedServerModels(updatedModels);
+      }
+    } catch (error) {
+      console.error('Error adding server model:', error);
+      throw error;
+    }
+  }, [user, selected_server_models]);
+
+  const removeServerModel = useCallback(async (modelId: string) => {
+    try {
+      const currentModels = [...selected_server_models];
+      const updatedModels = currentModels.filter(m => m.id !== modelId);
+      
+      if (updatedModels.length !== currentModels.length) {
+        await CloudStorageService.saveSelectedServerModels(user, updatedModels);
+        setSelectedServerModels(updatedModels);
+      }
+    } catch (error) {
+      console.error('Error removing server model:', error);
+      throw error;
+    }
+  }, [user, selected_server_models]);
+
+  const addProviderModel = useCallback(async (providerId: string, model: any) => {
+    try {
+      const currentModels = [...(selected_provider_models[providerId] || [])];
+      const existingIndex = currentModels.findIndex(m => m.id === model.id);
+      
+      if (existingIndex === -1) {
+        const updatedModels = [...currentModels, model];
+        await CloudStorageService.saveSelectedModelsForProvider(user, providerId, updatedModels);
+        setSelectedProviderModels(prev => ({
+          ...prev,
+          [providerId]: updatedModels,
+        }));
+      }
+    } catch (error) {
+      console.error('Error adding provider model:', error);
+      throw error;
+    }
+  }, [user, selected_provider_models]);
+
+  const removeProviderModel = useCallback(async (providerId: string, modelId: string) => {
+    try {
+      const currentModels = [...(selected_provider_models[providerId] || [])];
+      const updatedModels = currentModels.filter(m => m.id !== modelId);
+      
+      if (updatedModels.length !== currentModels.length) {
+        await CloudStorageService.saveSelectedModelsForProvider(user, providerId, updatedModels);
+        setSelectedProviderModels(prev => ({
+          ...prev,
+          [providerId]: updatedModels,
+        }));
+      }
+    } catch (error) {
+      console.error('Error removing provider model:', error);
+      throw error;
+    }
+  }, [user, selected_provider_models]);
+
+  // Provider-specific custom model operations
+  const saveCustomModelsForProvider = useCallback(async (providerId: string, models: any[]) => {
+    try {
+      await CloudStorageService.saveCustomModelsForProvider(user, providerId, models);
+      // Update local state by loading the specific provider's models
+      const updatedModels = await loadCustomModelsForProvider(providerId);
+      setCustomModels(updatedModels);
+    } catch (error) {
+      console.error('Error saving custom models for provider:', error);
+      throw error;
+    }
+  }, [user]);
+
+  const loadCustomModelsForProvider = useCallback(async (providerId: string): Promise<any[]> => {
+    try {
+      const models = await CloudStorageService.loadCustomModelsForProvider(user, providerId);
+      return models;
+    } catch (error) {
+      console.error('Error loading custom models for provider:', error);
+      throw error;
+    }
+  }, [user]);
+
+  const addCustomModel = useCallback(async (providerId: string, model: any) => {
+    try {
+      await CloudStorageService.addCustomModel(user, providerId, model);
+    } catch (error) {
+      console.error('Error adding custom model:', error);
+      throw error;
+    }
+  }, [user]);
+
+  const removeCustomModel = useCallback(async (providerId: string, modelId: string) => {
+    try {
+      await CloudStorageService.removeCustomModel(user, providerId, modelId);
+    } catch (error) {
+      console.error('Error removing custom model:', error);
+      throw error;
+    }
+  }, [user]);
+
+  const cleanupDuplicateCustomModels = useCallback(async (providerId: string) => {
+    try {
+      await CloudStorageService.cleanupDuplicateCustomModels(user, providerId);
+    } catch (error) {
+      console.error('Error cleaning up duplicate custom models:', error);
       throw error;
     }
   }, [user]);
@@ -251,9 +405,10 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
         (async () => {
           try {
             const mergedData = await CloudStorageService.handleUserLogin(user);
-            setCustomProviders(mergedData.customProviders || []);
-            setSelectedServerModels(mergedData.selectedServerModels || []);
-            setSelectedProviderModels(mergedData.selectedProviderModels || {});
+            setCustomProviders(mergedData.custom_providers || []);
+            setSelectedServerModels(mergedData.selected_server_models || []);
+            setSelectedProviderModels(mergedData.selected_provider_models || {});
+            setCustomModels(mergedData.custom_models || []);
           } catch (error) {
             console.error('Error during login merge:', error);
             loadData();
@@ -269,44 +424,10 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     }
   }, [user, syncWithCloud, loadData]);
 
-  // Auto-sync periodically for authenticated users (less frequent to avoid loops)
-  useEffect(() => {
-    if (!user || user.isAnonymous) return;
+  // Removed auto-sync - we don't need constant background syncing
 
-    const syncInterval = setInterval(() => {
-      syncWithCloud().catch(error => {
-        console.error('Auto-sync failed:', error);
-      });
-    }, 15 * 60 * 1000); // Sync every 15 minutes (reduced from 5)
-
-    return () => clearInterval(syncInterval);
-  }, [user, syncWithCloud]);
-
-  // Listen for localStorage changes to update state
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent | CustomEvent) => {
-      if ('detail' in event) {
-        // Custom event from our own code
-        const { key } = event.detail;
-        if (key === 'custom_api_providers' || key === 'cloud_sync') {
-          loadData();
-        }
-      } else {
-        // Native storage event
-        if (event.key === 'custom_api_providers' || event.key === 'selectedServerModels') {
-          loadData();
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('localStorageChange', handleStorageChange as EventListener);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('localStorageChange', handleStorageChange as EventListener);
-    };
-  }, [loadData]);
+  // Removed the stupid storage listener that was causing multiple API calls
+  // We don't need real-time sync bullshit - just save and load when needed
 
   // Clear data ONLY on explicit logout (not on every user change)
   useEffect(() => {
@@ -318,6 +439,7 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
       setCustomProviders([]);
       setSelectedServerModels([]);
       setSelectedProviderModels({});
+      setCustomModels([]);
       setLastSyncTime(null);
       setSyncError(null);
       initialSyncPerformed.current = null;
@@ -326,9 +448,10 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
 
   const value: CloudStorageContextType = {
     // Data state
-    customProviders,
-    selectedServerModels,
-    selectedProviderModels,
+    custom_providers,
+    selected_server_models,
+    selected_provider_models,
+    custom_models,
     
     // Sync state
     isSyncing,
@@ -342,8 +465,21 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
     loadSelectedServerModels,
     saveSelectedModelsForProvider,
     loadSelectedModelsForProvider,
+    saveCustomModels,
+    loadCustomModels,
+    saveCustomModelsForProvider,
+    loadCustomModelsForProvider,
     syncWithCloud,
     clearSyncError,
+    
+    // Optimized individual model operations
+    addServerModel,
+    removeServerModel,
+    addProviderModel,
+    removeProviderModel,
+    addCustomModel,
+    removeCustomModel,
+    cleanupDuplicateCustomModels,
     
     // Conflict resolution
     onDataConflict: conflictResolverRef.current,

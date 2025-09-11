@@ -19,7 +19,27 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Rules for user_data collection (cloud storage for API keys, models, providers)
+    // Rules for providers collection - new structure
+    match /providers/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Rules for provider data subcollection
+      match /data/{providerId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Rules for models collection - new structure
+    match /models/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Rules for model collections (system or provider-specific)
+      match /{collectionId}/{modelId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Legacy rules for user_data collection (keeping for backward compatibility)
     match /user_data/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       

@@ -52,7 +52,7 @@ interface ModelOption {
   source: string;
   providerId?: string;
   providerName?: string;
-  supportedParameters?: string[];
+  supported_parameters?: string[];
 }
 
 interface ChatInputProps {
@@ -89,9 +89,10 @@ const ChatInput = ({
 }: ChatInputProps) => {
   const { user } = useAuth();
   const { 
-    selectedServerModels: cloudSelectedServerModels,
-    selectedProviderModels: cloudSelectedProviderModels,
-    customProviders: cloudCustomProviders
+    selected_server_models: cloudSelectedServerModels,
+    selected_provider_models: cloudSelectedProviderModels,
+    custom_providers: cloudCustomProviders,
+    custom_models: cloudCustomModels
   } = useCloudStorage();
 
   // Simple localStorage functions for last selected model (UI preference)
@@ -254,17 +255,17 @@ const ChatInput = ({
         (model.providerId || "") === selectedProviderId
     );
 
-    if (currentOption && currentOption.supportedParameters) {
-      return getModelCapabilities(currentOption.supportedParameters);
+    if (currentOption && currentOption.supported_parameters) {
+      return getModelCapabilities(currentOption.supported_parameters);
     }
     return null;
   }, [modelOptions, selectedModel, selectedProviderId]);
 
   // Get capability icons for a model (can return multiple icons)
   const getCapabilityIcons = useCallback((option: ModelOption) => {
-    if (!option.supportedParameters) return [];
+    if (!option.supported_parameters) return [];
 
-    const capabilities = getModelCapabilities(option.supportedParameters);
+    const capabilities = getModelCapabilities(option.supported_parameters);
     const icons = [];
 
     if (capabilities.hasImageEditing) {
@@ -406,9 +407,9 @@ const ChatInput = ({
             (model.providerId || "") === selectedProviderId
         );
 
-        if (currentOption && currentOption.supportedParameters) {
+        if (currentOption && currentOption.supported_parameters) {
           const capabilities = getModelCapabilities(
-            currentOption.supportedParameters
+            currentOption.supported_parameters
           );
 
           // Priority 1: If model has image editing, switch to image_generation mode
@@ -559,7 +560,7 @@ const ChatInput = ({
             selected.name === model.name ||
             selected.id === model.name
         );
-        const supportedParameters =
+        const supported_parameters =
           storedModel?.supported_parameters || model.supported_parameters || [];
 
         return {
@@ -568,7 +569,7 @@ const ChatInput = ({
           source: "system",
           providerId: model.provider_id || "",
           providerName: model.provider_name || "",
-          supportedParameters,
+          supported_parameters,
         };
       });
       options.push(...syncSystemModelOptions);
@@ -596,7 +597,7 @@ const ChatInput = ({
               source: "system",
               providerId: selectedModel.provider_id || "",
               providerName: selectedModel.provider_name || "",
-              supportedParameters: selectedModel.supported_parameters || [],
+              supported_parameters: selectedModel.supported_parameters || [],
             });
           }
         }
@@ -630,7 +631,7 @@ const ChatInput = ({
                       source: "custom",
                       providerId: provider.id,
                       providerName: provider.label,
-                      supportedParameters: model.supported_parameters || [],
+                      supported_parameters: model.supported_parameters || [],
                     });
                   }
                 );
@@ -642,6 +643,24 @@ const ChatInput = ({
         }
       } catch (error) {
         console.error("Error loading custom providers:", error);
+      }
+
+      // Load custom models from cloud storage
+      try {
+        if (cloudCustomModels && cloudCustomModels.length > 0) {
+          const customModelOptions: ModelOption[] = cloudCustomModels.map((model: any) => ({
+            label: model.name,
+            value: model.id,
+            source: "custom",
+            providerId: "custom",
+            providerName: "Custom",
+            supported_parameters: model.supported_parameters || [],
+          }));
+
+          options.push(...customModelOptions);
+        }
+      } catch (error) {
+        console.error("Error loading custom models:", error);
       }
 
       // Set final options with localStorage data only (sorted by source, provider, then by model name)
@@ -687,7 +706,7 @@ const ChatInput = ({
         source: "system",
         providerId: model.provider_id || "",
         providerName: model.provider_name || "",
-        supportedParameters: model.supported_parameters || [],
+        supported_parameters: model.supported_parameters || [],
       }));
 
       const sortedFallbackModels = fallbackSystemModels.sort((a, b) => {
@@ -722,7 +741,7 @@ const ChatInput = ({
     } finally {
       setIsLoadingSystemModels(false);
     }
-  }, [checkCurrentModelCapabilities, cloudSelectedServerModels, cloudSelectedProviderModels, cloudCustomProviders]);
+  }, [checkCurrentModelCapabilities, cloudSelectedServerModels, cloudSelectedProviderModels, cloudCustomProviders, cloudCustomModels]);
 
   // Load models on mount
   useEffect(() => {
@@ -884,9 +903,9 @@ const ChatInput = ({
             (model.providerId || "") === selectedProviderId
         );
 
-        if (selectedModelOption && selectedModelOption.supportedParameters) {
+        if (selectedModelOption && selectedModelOption.supported_parameters) {
           const capabilities = getModelCapabilities(
-            selectedModelOption.supportedParameters
+            selectedModelOption.supported_parameters
           );
 
           // Only allow image upload if model supports image input (vision or image editing)
