@@ -76,6 +76,32 @@ const CustomizationTab: React.FC<CustomizationTabProps> = ({
             <div className="space-y-6">
               <div className="space-y-2">
                 <h4 className="font-medium text-zinc-900 dark:text-white">
+                  Theme
+                </h4>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Choose your preferred theme or let the app follow your device settings.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <TabButtonGroup
+                options={[
+                  { value: "light", label: "Light" },
+                  { value: "dark", label: "Dark" },
+                  { value: "system", label: "System" },
+                ]}
+                value={settings.theme}
+                onChange={(theme: string) =>
+                  updateSettings({ theme: theme as "light" | "dark" | "system" })
+                }
+                animationsDisabled={settings.animationsDisabled}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-2">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h4 className="font-medium text-zinc-900 dark:text-white">
                   Disable Animation
                 </h4>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
