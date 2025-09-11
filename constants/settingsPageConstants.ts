@@ -2,31 +2,31 @@
 // Moving constants outside component to prevent re-creation on each render
 
 export const AVATAR_COLORS = [
-  'bg-red-500', 
-  'bg-blue-500', 
-  'bg-green-500', 
-  'bg-yellow-500', 
-  'bg-purple-500', 
-  'bg-pink-500', 
-  'bg-indigo-500', 
+  'bg-red-500',
+  'bg-blue-500',
+  'bg-green-500',
+  'bg-yellow-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-indigo-500',
   'bg-teal-500'
 ] as const;
 
 export const TABS = [
-  'Account', 
-  'Customization', 
-  'Models', 
-  'API Keys', 
+  'Account',
+  'Customization',
+  'Models',
+  'API Keys',
   // 'Attachments', // temporary hide
   'Contact Us'
 ] as const;
 
 export const MOBILE_TABS = [
-  'Account', 
-  'Customization', 
-  'Models', 
-  'API Keys', 
-  'Attachments', 
+  'Account',
+  'Customization',
+  'Models',
+  'API Keys',
+  'Attachments',
   'Contact Us'
 ] as const;
 
@@ -48,14 +48,14 @@ export const KEYBOARD_SHORTCUTS = [
   },
   {
     label: 'Toggle Settings',
-    keys: ['⌘',  'Shift', 'S'],
+    keys: ['⌘', 'Shift', 'S'],
     description: 'Open/close settings page'
   },
   {
     label: 'Focus Chat Input',
-    keys: ['⌘',  'L'],
+    keys: ['⌘', 'Shift', 'L'],
     description: 'Focus the chat input box'
-  }                
+  }
 ] as const;
 
 export const CONTENT_ANIMATION_DURATION = 0.2;
