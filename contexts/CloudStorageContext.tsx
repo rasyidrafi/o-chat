@@ -150,10 +150,15 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
       // Aggregate all custom models from provider-specific keys
       const aggregatedCustomModels: any[] = [...(allData.custom_models || [])];
       
-      // Add custom models from each provider
+      // Add custom models from each provider, preserving provider_id
       Object.keys(allData).forEach(key => {
         if (key.startsWith('custom_models_') && Array.isArray(allData[key])) {
-          aggregatedCustomModels.push(...allData[key]);
+          const providerId = key.replace('custom_models_', '');
+          const providerModels = allData[key].map((model: any) => ({
+            ...model,
+            provider_id: model.provider_id || providerId // Preserve existing provider_id or set from key
+          }));
+          aggregatedCustomModels.push(...providerModels);
         }
       });
       
@@ -187,10 +192,15 @@ export const CloudStorageProvider: React.FC<CloudStorageProviderProps> = ({
       // Aggregate all custom models from provider-specific keys
       const aggregatedCustomModels: any[] = [...(syncedData.custom_models || [])];
       
-      // Add custom models from each provider
+      // Add custom models from each provider, preserving provider_id
       Object.keys(syncedData).forEach(key => {
         if (key.startsWith('custom_models_') && Array.isArray(syncedData[key])) {
-          aggregatedCustomModels.push(...syncedData[key]);
+          const providerId = key.replace('custom_models_', '');
+          const providerModels = syncedData[key].map((model: any) => ({
+            ...model,
+            provider_id: model.provider_id || providerId // Preserve existing provider_id or set from key
+          }));
+          aggregatedCustomModels.push(...providerModels);
         }
       });
       

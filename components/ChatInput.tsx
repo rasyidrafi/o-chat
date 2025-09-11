@@ -689,12 +689,26 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       try {
         if (cloudCustomModels && cloudCustomModels.length > 0) {
           const customModelOptions: ModelOption[] = cloudCustomModels.map((model: any) => {
+            // Try to determine the actual provider ID from the model's provider_id field
+            // If not available, fall back to checking against available custom providers
+            let actualProviderId = model.provider_id || "custom";
+            let providerName = "Custom";
+
+            // If we have a provider_id, try to find the corresponding provider name
+            if (model.provider_id && cloudCustomProviders) {
+              const matchingProvider = cloudCustomProviders.find((p: any) => p.id === model.provider_id);
+              if (matchingProvider) {
+                providerName = matchingProvider.label || matchingProvider.id || "Custom";
+                actualProviderId = matchingProvider.id;
+              }
+            }
+
             const option = {
               label: model.name,
               value: model.id,
               source: "custom",
-              providerId: "custom",
-              providerName: "Custom",
+              providerId: actualProviderId,
+              providerName: providerName,
               supported_parameters: model.supported_parameters || [],
             };
             return option;
