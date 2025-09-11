@@ -69,7 +69,7 @@ const ReasoningDisplay: React.FC<ReasoningDisplayProps> = ({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className={`rounded-lg text-sm overflow-hidden px-5 py-4 mt-4 border-1 ${themes.chatview.border}`}
+            className={`rounded-2xl md:rounded-lg text-sm overflow-hidden px-5 py-4 mt-4 border-1 ${themes.chatview.border} md:mx-0 -mx-4`}
           >
             <div className="">
               <MemoizedMarkdown 

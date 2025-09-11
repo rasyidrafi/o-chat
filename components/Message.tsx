@@ -14,7 +14,7 @@ import ReasoningDisplay from "./ReasoningDisplay";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
 import { MemoizedMarkdown } from "./MemoizedMarkdown";
-import { Copy, RotateCcw, GitBranch, Edit, Check } from "./Icons";
+import { Copy, RotateCcw, GitBranch, Edit, Check, Clear } from "./Icons";
 import { themes } from "@/constants/themes";
 import "katex/dist/katex.min.css"; // Import KaTeX CSS
 
@@ -176,6 +176,7 @@ ImageContentComponent.displayName = "ImageContentComponent";
 interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
+  isLastMessage?: boolean;
 }
 
 // Mermaid diagram component with memoization
@@ -252,7 +253,7 @@ const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(
 MermaidDiagram.displayName = "MermaidDiagram";
 
 const Message: React.FC<MessageProps> = memo(
-  ({ message, isStreaming = false }) => {
+  ({ message, isStreaming = false, isLastMessage = false }) => {
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [isDark, setIsDark] = useState(false);
@@ -262,29 +263,6 @@ const Message: React.FC<MessageProps> = memo(
     // Get animationsDisabled and isMobile from settings context
     const { settings, isMobile } = useSettingsContext();
     const animationsDisabled = settings.animationsDisabled;
-
-    // Copy function for user messages
-    const copyMessageToClipboard = useCallback(async () => {
-      try {
-        let textToCopy = "";
-
-        if (typeof message.content === "string") {
-          textToCopy = message.content;
-        } else {
-          // Extract text content from complex content
-          textToCopy = message.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("");
-        }
-
-        await navigator.clipboard.writeText(textToCopy);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error("Failed to copy message: ", err);
-      }
-    }, [message.content]);
 
     // Detect dark mode
     useEffect(() => {
@@ -331,6 +309,36 @@ const Message: React.FC<MessageProps> = memo(
         cleanedContent: cleaned
       };
     }, [textContent]);
+
+    // Copy function for messages
+    const copyMessageToClipboard = useCallback(async () => {
+      try {
+        let textToCopy = "";
+
+        if (typeof message.content === "string") {
+          // For AI messages, use cleaned content (without <think> tags)
+          textToCopy = isUser ? message.content : (cleanedContent || message.content);
+        } else {
+          // Extract text content from complex content
+          textToCopy = message.content
+            .filter((item) => item.type === "text")
+            .map((item) => {
+              // For AI messages, clean <think> tags from text content
+              if (!isUser) {
+                return item.text.replace(/<think>([\s\S]*?)<\/think>/g, '').trim();
+              }
+              return item.text;
+            })
+            .join("");
+        }
+
+        await navigator.clipboard.writeText(textToCopy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy message: ", err);
+      }
+    }, [message.content, isUser, cleanedContent]);
 
     // For streaming messages, handle real-time <think> processing
     const streamingThinkData = useMemo(() => {
@@ -619,15 +627,129 @@ const Message: React.FC<MessageProps> = memo(
 
               {/* Model name and timestamp for AI image generation responses */}
               <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
-                {formatTime(message.timestamp)}
-                {(message.model || message.modelName) && isAssistant && (
-                  <>
-                    <span className="ml-2">•</span>
-                    <span className="ml-2">
-                      {message.modelName || message.model}
-                    </span>
-                  </>
-                )}
+                {/* Timestamp and model name - always visible */}
+                <div className="flex items-center mb-3">
+                  <span>{formatTime(message.timestamp)}</span>
+                  {(message.model || message.modelName) && isAssistant && (
+                    <>
+                      <span className="ml-2">•</span>
+                      <span className="ml-2">
+                        {message.modelName || message.model}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Action buttons below - show/hide on hover */}
+                <motion.div
+                  variants={
+                    !animationsDisabled
+                      ? {
+                          hidden: { opacity: 0 },
+                          visible: { opacity: 1 },
+                        }
+                      : {}
+                  }
+                  initial={
+                    !animationsDisabled ? (isMobile ? "visible" : "hidden") : {}
+                  }
+                  animate={
+                    !animationsDisabled
+                      ? isMobile || isHovered
+                        ? "visible"
+                        : "hidden"
+                      : {}
+                  }
+                  transition={
+                    !animationsDisabled
+                      ? { duration: 0.2, ease: "easeInOut" }
+                      : {}
+                  }
+                  className="flex items-center gap-2 mt-1"
+                  style={
+                    animationsDisabled
+                      ? {
+                          opacity: isMobile || isHovered ? 1 : 0,
+                          transition: "opacity 0.2s ease-in-out",
+                        }
+                      : {}
+                  }
+                >
+                  {/* Copy button */}
+                  <button
+                    onClick={copyMessageToClipboard}
+                    disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError)}
+                    className={`p-1.5 rounded transition-colors ${
+                      message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError
+                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                    }`}
+                    title={
+                      message.isError
+                        ? "Copy not available when there's an error"
+                        : message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                        ? "Copy not available for image generation"
+                        : copied ? "Copied!" : "Copy message"
+                    }
+                  >
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+
+                  {/* Branch off button */}
+                  <button
+                    onClick={() => {
+                      /* TODO: Implement branch off */
+                    }}
+                    disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError)}
+                    className={`p-1.5 rounded transition-colors ${
+                      message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError
+                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                    }`}
+                    title={
+                      message.isError
+                        ? "Branch off not available when there's an error"
+                        : message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                        ? "Branch off not available for image generation"
+                        : "Branch off"
+                    }
+                  >
+                    <GitBranch size={14} />
+                  </button>
+
+                  {/* Retry button */}
+                  <button
+                    onClick={() => {
+                      /* TODO: Implement retry */
+                    }}
+                    disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams)}
+                    className={`p-1.5 rounded transition-colors ${
+                      message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                    }`}
+                    title={
+                      message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                        ? "Retry not available for image generation"
+                        : "Retry message"
+                    }
+                  >
+                    <RotateCcw size={14} />
+                  </button>
+
+                  {/* Delete button - only show for last AI message */}
+                  {isLastMessage && isAssistant && (
+                    <button
+                      onClick={() => {
+                        /* TODO: Implement delete */
+                      }}
+                      className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-red-200 dark:hover:bg-red-800/30 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors"
+                      title="Delete message"
+                    >
+                      <Clear size={14} />
+                    </button>
+                  )}
+                </motion.div>
               </div>
             </div>
           );
@@ -848,15 +970,129 @@ const Message: React.FC<MessageProps> = memo(
                 {/* Model name and timestamp for AI responses - only show when streaming is complete */}
                 {!isUser && !isStreaming && (
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 pt-2">
-                    {formatTime(message.timestamp)}
-                    {(message.model || message.modelName) && isAssistant && (
-                      <>
-                        <span className="ml-2">•</span>
-                        <span className="ml-2">
-                          {message.modelName || message.model}
-                        </span>
-                      </>
-                    )}
+                    {/* Timestamp and model name - always visible */}
+                    <div className="flex items-center mb-3">
+                      <span>{formatTime(message.timestamp)}</span>
+                      {(message.model || message.modelName) && isAssistant && (
+                        <>
+                          <span className="ml-2">•</span>
+                          <span className="ml-2">
+                            {message.modelName || message.model}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Action buttons below - show/hide on hover */}
+                    <motion.div
+                      variants={
+                        !animationsDisabled
+                          ? {
+                              hidden: { opacity: 0 },
+                              visible: { opacity: 1 },
+                            }
+                          : {}
+                      }
+                      initial={
+                        !animationsDisabled ? (isMobile ? "visible" : "hidden") : {}
+                      }
+                      animate={
+                        !animationsDisabled
+                          ? isMobile || isHovered
+                            ? "visible"
+                            : "hidden"
+                          : {}
+                      }
+                      transition={
+                        !animationsDisabled
+                          ? { duration: 0.2, ease: "easeInOut" }
+                          : {}
+                      }
+                      className="flex items-center gap-2 mt-1"
+                      style={
+                        animationsDisabled
+                          ? {
+                              opacity: isMobile || isHovered ? 1 : 0,
+                              transition: "opacity 0.2s ease-in-out",
+                            }
+                          : {}
+                      }
+                    >
+                      {/* Copy button */}
+                      <button
+                        onClick={copyMessageToClipboard}
+                        disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError)}
+                        className={`p-1.5 rounded transition-colors ${
+                          message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError
+                            ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                        }`}
+                        title={
+                          message.isError
+                            ? "Copy not available when there's an error"
+                            : message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                            ? "Copy not available for image generation"
+                            : copied ? "Copied!" : "Copy message"
+                        }
+                      >
+                        {copied ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+
+                      {/* Branch off button */}
+                      <button
+                        onClick={() => {
+                          /* TODO: Implement branch off */
+                        }}
+                        disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError)}
+                        className={`p-1.5 rounded transition-colors ${
+                          message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError
+                            ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                        }`}
+                        title={
+                          message.isError
+                            ? "Branch off not available when there's an error"
+                            : message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                            ? "Branch off not available for image generation"
+                            : "Branch off"
+                        }
+                      >
+                        <GitBranch size={14} />
+                      </button>
+
+                      {/* Retry button */}
+                      <button
+                        onClick={() => {
+                          /* TODO: Implement retry */
+                        }}
+                        disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams)}
+                        className={`p-1.5 rounded transition-colors ${
+                          message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                            ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                        }`}
+                        title={
+                          message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                            ? "Retry not available for image generation"
+                            : "Retry message"
+                        }
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+
+                      {/* Delete button - only show for last AI message */}
+                      {isLastMessage && isAssistant && (
+                        <button
+                          onClick={() => {
+                            /* TODO: Implement delete */
+                          }}
+                          className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-red-200 dark:hover:bg-red-800/30 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors"
+                          title="Delete message"
+                        >
+                          <Clear size={14} />
+                        </button>
+                      )}
+                    </motion.div>
                   </div>
                 )}
               </div>
@@ -875,8 +1111,8 @@ const Message: React.FC<MessageProps> = memo(
           animate="animate"
           exit={animationsDisabled ? {} : "exit"}
           className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}
-          onMouseEnter={isUser ? () => setIsHovered(true) : undefined}
-          onMouseLeave={isUser ? () => setIsHovered(false) : undefined}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
           <div
             className={`flex flex-col w-full ${
