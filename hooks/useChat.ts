@@ -202,7 +202,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               now - msg.timestamp.getTime() > oneHourInMs
             ) {
               hasChanges = true;
-              console.log(`⏰ Timing out image generation message ${msg.id} in conversation ${conv.id} - ${Math.round((now - msg.timestamp.getTime()) / (60 * 1000))} minutes old`);
               
               return {
                 ...msg,
@@ -221,7 +220,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               now - msg.timestamp.getTime() > fiveMinutesInMs
             ) {
               hasChanges = true;
-              console.log(`⏰ Timing out AI response message ${msg.id} in conversation ${conv.id} - ${Math.round((now - msg.timestamp.getTime()) / (60 * 1000))} minutes old`);
               
               return {
                 ...msg,
@@ -656,7 +654,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     // Decode model ID if it's URL encoded (fix for custom provider models)
     const decodedModel = model.includes('%') ? decodeURIComponent(model) : model;
-    console.log('🔧 Model ID processing:', { originalModel: model, decodedModel });
 
     // Get model name for BYOK models
     let modelName = decodedModel;
@@ -962,7 +959,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
       // Add image generation callback for models that support it
       const onImageGeneratedCallback = async (imageUrl: string) => {
-        console.log('🖼️ Image generated in chat response:', imageUrl);
         
         try {
           // Extract prompt from the user message for filename
@@ -993,7 +989,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
             );
           });
 
-          console.log('✅ Image attachment added to message');
         } catch (error) {
           console.error('❌ Failed to process generated image:', error);
           
@@ -1643,8 +1638,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
       // Find active jobs only in the current conversation
       conversation.messages.forEach(msg => {
-        console.log(msg)
-
         // Look for messages that are image generation jobs
         if (msg.messageType === 'image_generation' && msg.imageGenerationJob) {
           const job = msg.imageGenerationJob;
@@ -2340,7 +2333,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       return;
     }
 
-    console.log(`🔍 Starting search for: "${query}"`);
     setIsSearching(true);
     try {
       // Get current search data - use smart caching strategy
@@ -2349,7 +2341,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       if (searchableConversations.length === 0) {
         // First search: Start with currently loaded conversations for immediate results
         if (conversations.length > 0) {
-          console.log(`⚡ Fast search: Using ${conversations.length} loaded conversations`);
           searchableConversations = conversations;
 
           // Cache the current conversations for immediate use
@@ -2357,10 +2348,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
           // Load all conversations in the background for future searches
           if (hasMoreConversations) {
-            console.log('🚀 Background loading: Fetching all conversations for future searches...');
             // Keep loading state true while background loading
             ChatStorageService.loadConversations(user, false).then(allConversations => {
-              console.log(`📦 Background complete: ${allConversations.length} total conversations cached`);
               setAllConversationsForSearch(allConversations);
             }).catch(error => {
               console.warn('Background conversation loading failed:', error);
@@ -2373,9 +2362,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
           }
         } else {
           // No conversations loaded yet, need to load them
-          console.log('📥 Loading conversations for title search...');
           const allConversations = await ChatStorageService.loadConversations(user, false);
-          console.log(`� Loaded ${allConversations.length} total conversations`);
           searchableConversations = allConversations;
           setAllConversationsForSearch(allConversations);
         }
@@ -2390,7 +2377,6 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         return conv.title.toLowerCase().includes(searchLower);
       });
 
-      console.log(`✅ Search complete: ${results.length} results found`);
       setFilteredConversations(results);
     } catch (error) {
       console.error('❌ Error searching conversations:', error);

@@ -171,8 +171,6 @@ export class ChatService {
       const openai = this.createOpenAIInstance(idToken, config.baseURL, config.apiKey);
       const openAIMessages = messages.map(convertToOpenAIMessage);
       
-      console.log('🚀 Attempting streaming request with header detection...');
-      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -194,7 +192,6 @@ export class ChatService {
       // Add modalities only if explicitly requested and supported
       if (hasImageGenerationChat) {
         requestBody.modalities = ["text", "image"];
-        console.log('🖼️ Including image modality for model:', model);
       }
       
       // Sanitize the base URL to avoid double slashes
@@ -222,11 +219,9 @@ export class ChatService {
       }
 
       const contentType = response.headers.get('content-type');
-      console.log('📦 Response Content-Type:', contentType);
 
       // Check if it's Server-Sent Events (streaming)
       if (contentType && contentType.includes('text/event-stream')) {
-        console.log('✅ Detected streaming response (text/event-stream)');
         
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
@@ -326,7 +321,6 @@ export class ChatService {
       
       // If response is plain text, handle it directly
       else if (contentType && contentType.includes('text/plain')) {
-        console.log('✅ Detected plain text response, handling directly');
         const textContent = await response.text();
         onChunk(textContent);
         onComplete();
@@ -335,7 +329,6 @@ export class ChatService {
       
       // If it's JSON (non-streaming), parse and handle
       else if (contentType && contentType.includes('application/json')) {
-        console.log('✅ Detected JSON response (non-streaming)');
         const jsonResponse = await response.json();
         
         // Handle standard OpenAI format
@@ -379,7 +372,6 @@ export class ChatService {
 
           // Check if it's a streaming response (has Symbol.asyncIterator)
           if (Symbol.asyncIterator in completion) {
-            console.log('✅ OpenAI SDK streaming fallback successful');
             
             for await (const chunk of completion as any) {
               // Handle reasoning chunks
@@ -407,7 +399,6 @@ export class ChatService {
             return;
           } else {
             // This is a non-streaming response that came back as a complete object
-            console.log('✅ OpenAI SDK returned complete response');
             // @ts-ignore
             const content = completion.choices?.[0]?.message?.content;
             // @ts-ignore

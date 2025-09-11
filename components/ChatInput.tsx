@@ -557,9 +557,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
       // Load selected server models from cloud storage
       const selectedServerModels = cloudSelectedServerModels;
-      console.log('ChatInput: Loading models, selected server models:', selectedServerModels);
-      console.log('ChatInput: Selected provider models:', cloudSelectedProviderModels);
-      console.log('ChatInput: Custom providers:', cloudCustomProviders);
 
       // Load cached system models synchronously (no API call)
       const syncSystemModels = getSystemModelsSync();
@@ -734,7 +731,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         return a.label.localeCompare(b.label);
       });
       setModelOptions(sortedOptions);
-      console.log('ChatInput: Final model options:', sortedOptions);
 
       // Check capabilities for loaded models
       checkCurrentModelCapabilities([...options]);
@@ -816,17 +812,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
     const { model, source, providerId } = lastMessageModelInfo;
     
-    console.log('ChatInput: Auto-selection attempt:', {
-      conversation: conversationId,
-      lastModel: { model, source, providerId },
-      currentModel: { selectedModel, selectedProviderId },
-      availableModels: modelOptions.map(opt => ({ 
-        value: opt.value, 
-        source: opt.source, 
-        providerId: opt.providerId 
-      }))
-    });
-
     // Check if the model from the conversation is different from currently selected
     // Handle URL encoding when comparing models
     const normalizeModelId = (modelId: string) => {
@@ -844,25 +829,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     const isDifferentModel =
       normalizedSelectedModel !== normalizedMessageModel || selectedProviderId !== (providerId || "");
     
-    console.log('ChatInput: Model comparison:', {
-      selectedModel,
-      normalizedSelectedModel,
-      model,
-      normalizedMessageModel,
-      selectedProviderId,
-      providerId,
-      isDifferentModel
-    });
-
-    // console.log('Model auto-selection check:', {
-    //   conversation: conversationId,
-    //   isNewConversation,
-    //   userManuallySelected: userHasManuallySelectedModelRef.current,
-    //   lastModel: { model, source, providerId },
-    //   currentModel: { selectedModel, selectedProviderId },
-    //   isDifferent: isDifferentModel
-    // });
-
     if (isDifferentModel) {
       // Set loading state
       setIsLoadingModelFromConversation(true);
@@ -914,18 +880,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           return false;
         }) : false;
 
-      // console.log('Model exists in options:', modelExists);
-      console.log('ChatInput: Model existence check result:', {
-        model,
-        source, 
-        providerId,
-        modelExists: modelExists || modelExistsWithoutProvider,
-        modelExistsWithProvider: modelExists,
-        modelExistsWithoutProvider,
-        selectedModel,
-        selectedProviderId
-      });
-
       if (modelExists || modelExistsWithoutProvider) {
         // Find the actual model option to get the correct value (encoded vs decoded)
         const foundModelOption = modelOptions.find((option) => {
@@ -951,13 +905,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         });
 
         if (foundModelOption) {
-          console.log('ChatInput: Found model option for selection:', {
-            originalModel: model,
-            optionValue: foundModelOption.value,
-            optionProviderId: foundModelOption.providerId,
-            willSetTo: { selectedModel: foundModelOption.value, selectedProviderId: foundModelOption.providerId || "" }
-          });
-          
           // Use the option's value (which might be encoded) for UI consistency
           setSelectedModel(foundModelOption.value);
           setSelectedProviderId(foundModelOption.providerId || "");
@@ -975,7 +922,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       } else {
         // Model doesn't exist, fallback to default
         const fallbackModel = DEFAULT_MODEL_ID;
-        // console.log('Model not found, falling back to:', fallbackModel);
+        console.log('Model not found, falling back to:', fallbackModel);
         setSelectedModel(fallbackModel);
         setSelectedProviderId("");
 
