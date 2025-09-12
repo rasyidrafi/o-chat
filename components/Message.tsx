@@ -736,19 +736,6 @@ const Message: React.FC<MessageProps> = memo(
                   >
                     <RotateCcw size={14} />
                   </button>
-
-                  {/* Delete button - only show for last AI message */}
-                  {isLastMessage && isAssistant && (
-                    <button
-                      onClick={() => {
-                        /* TODO: Implement delete */
-                      }}
-                      className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-red-200 dark:hover:bg-red-800/30 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors"
-                      title="Delete message"
-                    >
-                      <Clear size={14} />
-                    </button>
-                  )}
                 </motion.div>
               </div>
             </div>
@@ -1076,19 +1063,6 @@ const Message: React.FC<MessageProps> = memo(
                       >
                         <RotateCcw size={14} />
                       </button>
-
-                      {/* Delete button - only show for last AI message */}
-                      {isLastMessage && isAssistant && (
-                        <button
-                          onClick={() => {
-                            /* TODO: Implement delete */
-                          }}
-                          className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-red-200 dark:hover:bg-red-800/30 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors"
-                          title="Delete message"
-                        >
-                          <Clear size={14} />
-                        </button>
-                      )}
                     </motion.div>
                   </div>
                 )}
