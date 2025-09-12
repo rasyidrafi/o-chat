@@ -371,6 +371,28 @@ const Message: React.FC<MessageProps> = memo(
       return { streamThinkContent: thinkContent, streamCleanedContent: cleanedContent };
     }, [isStreaming, textContent, thinkContent, cleanedContent]);
 
+    // Determine if reasoning content is actively streaming
+    const isReasoningStreaming = useMemo(() => {
+      if (!isStreaming) {
+        // Not streaming at all, so no reasoning streaming
+        return false;
+      }
+
+      if (message.reasoning && message.reasoning.trim()) {
+        return true;
+      }
+      
+      // Check if we have active streaming think content (unclosed <think> block)
+      if (textContent) {
+        const hasOpenThink = textContent.includes('<think>');
+        const hasCloseThink = textContent.includes('</think>');
+        // Reasoning is streaming if we have an open <think> without a close </think>
+        return hasOpenThink && !hasCloseThink;
+      }
+      
+      return false;
+    }, [isStreaming, textContent, message.reasoning]);
+
     // Check for mermaid diagrams
     const mermaidBlocks = useMemo(() => {
       const mermaidRegex = /```mermaid\n([\s\S]*?)\n```/g;
@@ -835,7 +857,7 @@ const Message: React.FC<MessageProps> = memo(
             <ReasoningDisplay
               reasoning={message.reasoning || ""}
               thinkContent={isStreaming ? streamingThinkData.streamThinkContent : thinkContent}
-              isStreaming={isStreaming}
+              isStreaming={isReasoningStreaming}
             />
           </motion.div>
 
