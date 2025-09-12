@@ -7,20 +7,31 @@ import { MemoizedMarkdown } from "./MemoizedMarkdown";
 interface ReasoningDisplayProps {
   reasoning: string;
   thinkContent?: string;
-  isReasoningComplete: boolean;
   isStreaming: boolean;
 }
 
 const ReasoningDisplay: React.FC<ReasoningDisplayProps> = ({
   reasoning,
   thinkContent = "",
-  isReasoningComplete,
   isStreaming,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasContent = reasoning || thinkContent;
   const combinedContent = [thinkContent, reasoning].filter(Boolean).join('\n\n');
+  
+  // Show loading dots only when:
+  // 1. We're streaming AND
+  // 2. We have reasoning content from either:
+  //    - message.reasoning field, OR
+  //    - currently inside unclosed <think> tags (thinkContent during streaming)
+  // 3. For <think> content, stop showing dots when we encounter </think>
+  const isActivelyReasoning = isStreaming && (
+    // Case 1: We have reasoning content and it doesn't end with </think>
+    (reasoning && !reasoning.trim().endsWith('</think>')) ||
+    // Case 2: We have thinkContent (means we're inside <think> during streaming)
+    Boolean(thinkContent)
+  );
 
   if (!hasContent) return null;
 
@@ -36,7 +47,7 @@ const ReasoningDisplay: React.FC<ReasoningDisplayProps> = ({
         >
           Reasoning
         </span>
-        {!isReasoningComplete && isStreaming && (
+        {isActivelyReasoning && (
           <div className="w-5 flex items-center gap-1 justify-center">
             <div
               className={`w-1 h-1 rounded-full animate-pulse ${themes.special.bgLeft}`}

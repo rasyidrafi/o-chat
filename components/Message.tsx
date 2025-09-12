@@ -772,7 +772,6 @@ const Message: React.FC<MessageProps> = memo(
                   <ReasoningDisplay
                     reasoning=""
                     thinkContent={thinkContent}
-                    isReasoningComplete={true}
                     isStreaming={false}
                   />
                 </motion.div>
@@ -801,7 +800,6 @@ const Message: React.FC<MessageProps> = memo(
                 <ReasoningDisplay
                   reasoning=""
                   thinkContent={thinkContent}
-                  isReasoningComplete={true}
                   isStreaming={false}
                 />
               )}
@@ -850,7 +848,6 @@ const Message: React.FC<MessageProps> = memo(
             <ReasoningDisplay
               reasoning={message.reasoning || ""}
               thinkContent={isStreaming ? streamingThinkData.streamThinkContent : thinkContent}
-              isReasoningComplete={message.isReasoningComplete || false}
               isStreaming={isStreaming}
             />
           </motion.div>
