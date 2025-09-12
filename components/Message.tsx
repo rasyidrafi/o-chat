@@ -14,7 +14,7 @@ import ReasoningDisplay from "./ReasoningDisplay";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
 import { MemoizedMarkdown } from "./MemoizedMarkdown";
-import { Copy, RotateCcw, GitBranch, Edit, Check, Clear } from "./Icons";
+import { Copy, RotateCcw, GitBranch, Edit, Check } from "./Icons";
 import { themes } from "@/constants/themes";
 import "katex/dist/katex.min.css"; // Import KaTeX CSS
 
@@ -253,7 +253,7 @@ const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(
 MermaidDiagram.displayName = "MermaidDiagram";
 
 const Message: React.FC<MessageProps> = memo(
-  ({ message, isStreaming = false, isLastMessage = false }) => {
+  ({ message, isStreaming = false }) => {
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [isDark, setIsDark] = useState(false);

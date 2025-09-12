@@ -329,6 +329,7 @@ const ChatView: React.FC<ChatViewProps> = ({
       <motion.div
         className="fixed z-50 hidden md:block"
         style={sidebarButtonStyle}
+        initial={false}
         animate={{
           left: `${sidebarWidth + 10}px`,
         }}
@@ -420,12 +421,11 @@ const ChatView: React.FC<ChatViewProps> = ({
         <AnimatePresence>
           {showScrollButton && !isLoading && !isLoadingMessages && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{opacity: 0, ...chatInputPadding }}
+              animate={{ opacity: 1, ...chatInputPadding }}
               exit={{ opacity: 0 }}
-              transition={{ duration: animationsDisabled ? 0 : 0.2 }}
+              transition={sidebarTransition}
               className="absolute -top-12 left-0 right-0 flex justify-center pointer-events-auto"
-              style={chatInputPadding}
             >
               <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-center">
                 <button
@@ -441,9 +441,11 @@ const ChatView: React.FC<ChatViewProps> = ({
         </AnimatePresence>
 
         {/* Mobile bottom buttons - vertical layout - mobile only */}
-        <div
+        <motion.div
           className="absolute -top-24 right-0 flex justify-end pointer-events-auto md:hidden"
-          style={chatInputPadding}
+          initial={false}
+          animate={chatInputPadding}
+          transition={sidebarTransition}
         >
           <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 xl:px-16 w-full flex justify-end">
             <div className="flex flex-col gap-2">
@@ -463,11 +465,13 @@ const ChatView: React.FC<ChatViewProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div
+        <motion.div
           className="max-w-4xl mx-auto pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 pb-0 md:pb-4"
-          style={chatInputPadding}
+          initial={false}
+          animate={chatInputPadding}
+          transition={sidebarTransition}
         >
           <ChatInput
             ref={chatInputRef}
@@ -479,7 +483,7 @@ const ChatView: React.FC<ChatViewProps> = ({
             animationsDisabled={animationsDisabled}
             currentConversation={currentConversation}
           />
-        </div>
+        </motion.div>
       </div>
     </div>
   );
