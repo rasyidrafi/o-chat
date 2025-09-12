@@ -1595,7 +1595,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !isMobile) {
       e.preventDefault();
       handleSendMessage();
     }
