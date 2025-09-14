@@ -104,7 +104,7 @@ export class ChatService {
   }
 
   private static getProviderConfig(source: string, providerId?: string) {
-    if (source === 'system') {
+    if (source === 'system') {    
       return {
         baseURL: import.meta.env.VITE_FIREBASE_FUNC_BASE_API,
         apiKey: "",

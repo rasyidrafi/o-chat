@@ -2522,10 +2522,12 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     if (messageIndex === -1) return;
 
     const message = currentConversation.messages[messageIndex];
+    const originalSource = source || message.source;
+    const originalProviderId = providerId || message.providerId;
 
     if (message.role === 'user') {
       // For user messages, just resend with the new model
-      await sendMessage(message.content, model, source, providerId, message.attachments);
+      await sendMessage(message.content, model, originalSource, originalProviderId, message.attachments);
     } else if (message.role === 'assistant') {
       // For assistant messages, create a new version as a sibling of the current message
       const newAssistantMessage: ChatMessage = {
@@ -2533,11 +2535,11 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         role: 'assistant',
         content: '',
         model: model,
-        modelName: source === 'custom' ? model : undefined,
-        providerId: providerId, // Store the provider ID
+        modelName: originalSource === 'custom' ? model : undefined,
+        providerId: originalProviderId, // Store the provider ID
         isStreaming: true,
         timestamp: new Date(),
-        source: source === 'system' ? 'server' : 'byok', // Convert source properly
+        source: originalSource === 'system' ? 'server' : 'byok', // Convert source properly
         reasoning: '',
         isReasoningComplete: false,
         originalMessageId: message.originalMessageId || message.id,
@@ -2599,38 +2601,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       const messageToRetry = currentConversation.messages.find(m => m.id === messageId);
       if (!messageToRetry) return;
 
-      // Build conversation path using the same logic as MessageList to only include visible versions
+      // Build conversation path by traversing up the parent chain from the message being retried
       const buildVisibleConversationPath = (): ChatMessage[] => {
-        const versionGroups = new Map<string, ChatMessage[]>();
-        currentConversation.messages.forEach((msg) => {
-          const groupId = msg.originalMessageId || msg.id;
-          if (!versionGroups.has(groupId)) {
-            versionGroups.set(groupId, []);
-          }
-          versionGroups.get(groupId)!.push(msg);
-        });
-
-        const selectedVersionMap = new Map<string, string>();
-        versionGroups.forEach((versions, groupId) => {
-          versions.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-          const versionIndex = currentMessageVersions[groupId] ?? 0;
-          const selectedVersion = versions[Math.min(versionIndex, versions.length - 1)];
-          if (selectedVersion) {
-            selectedVersionMap.set(groupId, selectedVersion.id);
-          }
-        });
-
         const conversationPath: ChatMessage[] = [];
         let currentMessage = messageMap.get(messageToRetry.parentMessageId!);
 
         while (currentMessage) {
-          const groupId = currentMessage.originalMessageId || currentMessage.id;
-          const selectedId = selectedVersionMap.get(groupId);
-
-          if (selectedId === currentMessage.id || !selectedVersionMap.has(groupId)) {
-            conversationPath.unshift(currentMessage);
-          }
-
+          conversationPath.unshift(currentMessage);
           if (currentMessage.parentMessageId) {
             currentMessage = messageMap.get(currentMessage.parentMessageId);
           } else {
@@ -2756,7 +2733,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
           user,
           controller,
           source,
-          providerId,
+          providerId || message.providerId,
           (reasoning?: string) => {
             if (reasoning !== undefined) {
               streamingReasoningRef.current += reasoning;

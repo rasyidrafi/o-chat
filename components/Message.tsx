@@ -751,7 +751,9 @@ const Message: React.FC<MessageProps> = memo(
                         )
                       }
                       currentModel={message.model}
-                      currentSource={message.providerId ? "custom" : "system"}
+                      currentSource={
+                        message.source == "server" ? "system" : "custom"
+                      }
                       currentProviderId={message.providerId}
                     />
                   )}
@@ -1109,7 +1111,7 @@ const Message: React.FC<MessageProps> = memo(
                           }
                           currentModel={message.model}
                           currentSource={
-                            message.providerId ? "custom" : "system"
+                            message.source == "server" ? "system" : "custom"
                           }
                           currentProviderId={message.providerId}
                         />
