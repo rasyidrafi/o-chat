@@ -2544,6 +2544,9 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   ) => {
     if (!currentConversation) return;
 
+    // Decode model ID if it's URL encoded
+    const decodedModel = model.includes('%') ? decodeURIComponent(model) : model;
+
     const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
     if (messageIndex === -1) return;
 
@@ -2553,15 +2556,15 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     if (message.role === 'user') {
       // For user messages, just resend with the new model
-      await sendMessage(message.content, model, originalSource, originalProviderId, message.attachments);
+      await sendMessage(message.content, decodedModel, originalSource, originalProviderId, message.attachments);
     } else if (message.role === 'assistant') {
       // For assistant messages, create a new version as a sibling of the current message
       const newAssistantMessage: ChatMessage = {
         id: generateId(),
         role: 'assistant',
         content: '',
-        model: model,
-        modelName: originalSource === 'custom' ? model : undefined,
+        model: decodedModel,
+        modelName: originalSource === 'custom' ? decodedModel : undefined,
         providerId: originalProviderId, // Store the provider ID
         isStreaming: true,
         timestamp: new Date(),
@@ -2663,7 +2666,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       };
 
       // Get model capabilities for reasoning check
-      const modelCapabilities = getModelCapabilitiesById(model);
+      const modelCapabilities = getModelCapabilitiesById(decodedModel);
 
       try {
         // Set timeout for streaming
@@ -2674,7 +2677,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         }, STREAMING_TIMEOUT);
 
         await ChatService.sendMessage(
-          model, // Use the new model
+          decodedModel, // Use the new model
           conversationPath.map(msg => ({
             role: msg.role as 'user' | 'assistant',
             content: msg.content
