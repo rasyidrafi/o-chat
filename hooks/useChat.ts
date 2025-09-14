@@ -2548,8 +2548,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     if (messageIndex === -1) return;
 
     const message = currentConversation.messages[messageIndex];
-    const originalSource = source || message.source;
-    const originalProviderId = providerId || message.providerId;
+    const originalSource = source;
+    const originalProviderId = providerId;
 
     if (message.role === 'user') {
       // For user messages, just resend with the new model
@@ -2759,7 +2759,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
           user,
           controller,
           source,
-          providerId || message.providerId,
+          providerId,
           (reasoning?: string) => {
             if (reasoning !== undefined) {
               streamingReasoningRef.current += reasoning;

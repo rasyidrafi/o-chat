@@ -86,10 +86,10 @@ export class ChatService {
     const headers: Record<string, string> = {};
 
     // Add Authorization header - prioritize idToken for system providers, apiKey for custom providers
-    if (idToken) {
-      headers['Authorization'] = `Bearer ${idToken}`;
-    } else if (apiKey) {
+    if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
+    } else if (idToken) {
+      headers['Authorization'] = `Bearer ${idToken}`;
     }
 
     // Sanitize base URL to avoid double slashes
