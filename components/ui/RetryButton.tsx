@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import {
   RefreshCw,
   ChevronDown,
@@ -130,6 +124,7 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isModelSliderOpen, setIsModelSliderOpen] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const [isSelectingModel, setIsSelectingModel] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { isMobile } = useSettingsContext();
 
@@ -260,26 +255,7 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
     }
   }, []);
 
-  // Close dropdown when clicking outside (EXACT same as ChatInput)
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsModelDropdownOpen(false);
-        setModelSearchQuery(""); // Clear search when closing
-      }
-    };
-
-    // Only add event listener if dropdown is open
-    if (isModelDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
-    }
-  }, [isModelDropdownOpen]);
+  // Close dropdown when clicking outside (removed manual handling to avoid conflicts with Popover)
 
   // Group models exactly like ChatInput
   const groupedModelOptions = useMemo(() => {
@@ -337,10 +313,13 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
   };
 
   const handleRetryWithModel = (model: ModelOption) => {
+    setIsSelectingModel(true);
     onRetry(model.value, model.source, model.providerId);
     setIsModelDropdownOpen(false);
     setIsModelSliderOpen(false);
     setModelSearchQuery("");
+    // Reset the flag after a short delay to allow the retry to complete
+    setTimeout(() => setIsSelectingModel(false), 100);
   };
 
   const handleModelSelectorClick = () => {
@@ -359,7 +338,11 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
         positions={["top", "bottom"]}
         reposition={true}
         containerClassName="z-60"
-        onClickOutside={() => setIsModelDropdownOpen(false)}
+        onClickOutside={() => {
+          if (!isSelectingModel) {
+            setIsModelDropdownOpen(false);
+          }
+        }}
         content={
           <AnimatePresence>
             <motion.div
@@ -421,7 +404,11 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
                           key={`${option.value}-${
                             option.providerId || "system"
                           }`}
-                          onClick={() => handleRetryWithModel(option)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsSelectingModel(true);
+                            handleRetryWithModel(option);
+                          }}
                           className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${
                             themes.sidebar.fgHoverAsFg
                           } ${
@@ -547,7 +534,11 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
                     return (
                       <button
                         key={`${option.value}-${option.providerId || "system"}`}
-                        onClick={() => handleRetryWithModel(option)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsSelectingModel(true);
+                          handleRetryWithModel(option);
+                        }}
                         className={`cursor-pointer w-full text-left flex items-center justify-between px-4 py-2 transition-colors text-sm ${
                           themes.sidebar.fgHoverAsFg
                         } ${
