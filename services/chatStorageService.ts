@@ -51,11 +51,11 @@ export class ChatStorageService {
   private static getConversationsFromLocal(): ChatConversation[] {
     try {
       const stored = localStorage.getItem(this.CONVERSATIONS_KEY);
-      
+
       if (!stored) return [];
 
       const conversations = JSON.parse(stored);
-      
+
       return conversations.map((conv: any) => ({
         ...conv,
         createdAt: new Date(conv.createdAt),
@@ -139,6 +139,7 @@ export class ChatStorageService {
         // Only add fields if they have defined values
         if (message.model !== undefined) messageData.model = message.model;
         if (message.modelName !== undefined) messageData.modelName = message.modelName;
+        if (message.providerId !== undefined) messageData.providerId = message.providerId;
         if (message.isError !== undefined) messageData.isError = message.isError;
         if (message.reasoning !== undefined) messageData.reasoning = message.reasoning;
         if (message.messageType !== undefined) messageData.messageType = message.messageType;
@@ -146,6 +147,10 @@ export class ChatStorageService {
         if (message.isGeneratingImage !== undefined) messageData.isGeneratingImage = message.isGeneratingImage;
         if (message.isReasoningComplete !== undefined) messageData.isReasoningComplete = message.isReasoningComplete;
         if (message.isAsyncImageGeneration !== undefined) messageData.isAsyncImageGeneration = message.isAsyncImageGeneration;
+
+        // Add version-related fields (only the essential relationship fields)
+        if (message.originalMessageId !== undefined) messageData.originalMessageId = message.originalMessageId;
+        if (message.parentMessageId !== undefined) messageData.parentMessageId = message.parentMessageId;
 
         // Handle imageGenerationJob
         if (message.imageGenerationJob) {
@@ -217,9 +222,9 @@ export class ChatStorageService {
 
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
-        
+
         // Only load messages if explicitly requested (for search functionality)
-        const messages = includeMessages 
+        const messages = includeMessages
           ? await this.getMessagesFromFirestore(userId, data.id)
           : [];
 
@@ -260,6 +265,7 @@ export class ChatStorageService {
           timestamp: data.timestamp.toDate(),
           model: data.model,
           modelName: data.modelName,
+          providerId: data.providerId,
           isError: data.isError || false,
           source: data.source || 'server',
           reasoning: data.reasoning,
@@ -268,6 +274,18 @@ export class ChatStorageService {
           imageGenerationParams: data.imageGenerationParams,
           isGeneratingImage: data.isGeneratingImage,
           isReasoningComplete: data.isReasoningComplete,
+          isAsyncImageGeneration: data.isAsyncImageGeneration,
+          // Handle imageGenerationJob
+          imageGenerationJob: data.imageGenerationJob ? {
+            id: data.imageGenerationJob.id,
+            model: data.imageGenerationJob.model,
+            created: data.imageGenerationJob.created,
+            status: data.imageGenerationJob.status,
+            prompt: data.imageGenerationJob.prompt,
+            size: data.imageGenerationJob.size,
+            data: data.imageGenerationJob.data || [],
+            info: data.imageGenerationJob.info || undefined,
+          } : undefined,
           // Properly load attachments
           attachments: data.attachments ? data.attachments.map((att: any) => ({
             id: att.id,
@@ -280,6 +298,9 @@ export class ChatStorageService {
             isDirectUrl: att.isDirectUrl,
             isForEditing: att.isForEditing,
           })) : undefined,
+          // Add version-related fields (only the essential relationship fields)
+          originalMessageId: data.originalMessageId,
+          parentMessageId: data.parentMessageId,
         };
       });
 
@@ -376,16 +397,16 @@ export class ChatStorageService {
         const chatRef = doc(db, 'chats', user.uid);
         const conversationRef = doc(collection(chatRef, 'conversations'), conversationId);
         const conversationSnap = await getDoc(conversationRef);
-        
+
         if (!conversationSnap.exists()) {
           return null;
         }
 
         const conversationData = conversationSnap.data();
-        
+
         // Load messages
         const messages = await this.getMessagesFromFirestore(user.uid, conversationId);
-        
+
         return {
           id: conversationSnap.id,
           title: conversationData.title,
@@ -403,7 +424,7 @@ export class ChatStorageService {
       // Load from localStorage
       const conversations = this.getConversationsFromLocal();
       const conversation = conversations.find(c => c.id === conversationId);
-      
+
       if (!conversation) {
         return null;
       }
@@ -412,7 +433,7 @@ export class ChatStorageService {
       try {
         const messagesJson = localStorage.getItem(`${this.MESSAGES_KEY_PREFIX}${conversationId}`);
         const messages = messagesJson ? JSON.parse(messagesJson) : [];
-        
+
         return {
           ...conversation,
           messages: messages.map((msg: any) => ({
@@ -436,7 +457,7 @@ export class ChatStorageService {
       return await this.getConversationsFromFirestorePaginated(user.uid, limit, lastDoc);
     } else {
       const conversations = this.getConversationsFromLocal();
-      
+
       // For local storage, we'll simulate pagination
       const startIndex = lastDoc ? lastDoc.index + 1 : 0;
       const endIndex = startIndex + limit;
@@ -450,7 +471,7 @@ export class ChatStorageService {
         hasMore: endIndex < conversations.length,
         lastDoc: paginatedConversations.length > 0 ? { index: endIndex - 1 } : null
       };
-      
+
       return result;
     }
   }
@@ -557,6 +578,7 @@ export class ChatStorageService {
           timestamp: data.timestamp.toDate(),
           model: data.model,
           modelName: data.modelName,
+          providerId: data.providerId,
           isError: data.isError || false,
           source: data.source || 'server',
           reasoning: data.reasoning || null,
@@ -588,6 +610,9 @@ export class ChatStorageService {
             isDirectUrl: att.isDirectUrl,
             isForEditing: att.isForEditing,
           })) : undefined,
+          // Add version-related fields (only the essential relationship fields)
+          originalMessageId: data.originalMessageId,
+          parentMessageId: data.parentMessageId,
         };
       });
 
@@ -665,7 +690,7 @@ export class ChatStorageService {
   ): () => void {
     // Return an empty unsubscribe function - no real-time listeners
     console.log('Real-time listeners disabled - use manual refresh instead');
-    return () => {};
+    return () => { };
   }
 
   // Get conversation counts by source

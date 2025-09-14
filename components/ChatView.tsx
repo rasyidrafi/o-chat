@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DEFAULT_MODEL_ID } from "../constants/models";
 import { useChat } from "../hooks/useChat";
 import { useSettingsContext } from "../contexts/SettingsContext";
+import { useModelOptions } from "../hooks/useModelOptions";
 import LoadingState from "./ui/LoadingState";
 import { themes } from "@/constants/themes";
 
@@ -72,6 +73,9 @@ const ChatView: React.FC<ChatViewProps> = ({
   // Get isMobile and animationsDisabled from SettingsContext
   const { isMobile, settings } = useSettingsContext();
   const animationsDisabled = settings.animationsDisabled;
+
+  // Load model options for retry functionality
+  const { modelOptions } = useModelOptions();
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -411,6 +415,10 @@ const ChatView: React.FC<ChatViewProps> = ({
               hasMoreMessages={hasMoreMessages}
               onLoadMoreMessages={() => {}}
               onScrollStateChange={handleScrollStateChange}
+              onRetry={chat.retryMessage}
+              onVersionChange={chat.changeMessageVersion}
+              currentVersions={chat.currentMessageVersions}
+              modelOptions={modelOptions}
             />
           </div>
         )}
@@ -421,7 +429,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         <AnimatePresence>
           {showScrollButton && !isLoading && !isLoadingMessages && (
             <motion.div
-              initial={{opacity: 0, ...chatInputPadding }}
+              initial={{ opacity: 0, ...chatInputPadding }}
               animate={{ opacity: 1, ...chatInputPadding }}
               exit={{ opacity: 0 }}
               transition={sidebarTransition}

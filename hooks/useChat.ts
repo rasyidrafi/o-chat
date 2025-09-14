@@ -90,6 +90,76 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
   const [systemModelIds, setSystemModelIds] = useState<string[]>(DEFAULT_SYSTEM_MODELS.map(model => model.id));
   const [systemModels, setSystemModels] = useState<any[]>(DEFAULT_SYSTEM_MODELS);
 
+  // Message version state
+  const [currentMessageVersions, setCurrentMessageVersions] = useState<Record<string, number>>({});
+
+  // Helper function to initialize current versions for a conversation
+  const initializeCurrentVersions = useCallback((conversation: ChatConversation) => {
+    const versions: Record<string, number> = {};
+
+    // Group messages by their originalMessageId, parentMessageId, or id
+    const messageGroups = new Map<string, ChatMessage[]>();
+
+    conversation.messages.forEach((message) => {
+      const groupId = message.originalMessageId || message.parentMessageId || message.id;
+      if (!messageGroups.has(groupId)) {
+        messageGroups.set(groupId, []);
+      }
+      messageGroups.get(groupId)!.push(message);
+    });
+
+    // For each group with multiple messages, set current version to the latest
+    messageGroups.forEach((group, groupId) => {
+      if (group.length > 1) {
+        // Sort by timestamp and set to the latest (highest index)
+        group.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        versions[groupId] = group.length - 1; // Latest version
+      }
+    });
+
+    setCurrentMessageVersions(versions);
+  }, []);
+
+  // Helper function to get the last visible message based on current versions
+  const getLastVisibleMessage = useCallback((conversation: ChatConversation): ChatMessage | null => {
+    if (Object.keys(currentMessageVersions).length === 0) {
+      // No version selection, return the last message
+      return conversation.messages.length > 0 ? conversation.messages[conversation.messages.length - 1] : null;
+    }
+
+    // Build message map for quick lookup
+    const messageMap = new Map<string, ChatMessage>();
+    conversation.messages.forEach(message => {
+      messageMap.set(message.id, message);
+    });
+
+    // Find the selected messages
+    const selectedMessages: ChatMessage[] = [];
+
+    Object.entries(currentMessageVersions).forEach(([groupId, versionIndex]) => {
+      // Find all messages in this group
+      const groupMessages = conversation.messages.filter(msg => {
+        const msgGroupId = msg.originalMessageId || msg.parentMessageId || msg.id;
+        return msgGroupId === groupId;
+      });
+
+      // Sort by timestamp
+      groupMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+      // Get the selected message
+      const selectedMessage = groupMessages[Math.min(versionIndex, groupMessages.length - 1)];
+      if (selectedMessage) {
+        selectedMessages.push(selectedMessage);
+      }
+    });
+
+    // Find the latest selected message
+    if (selectedMessages.length === 0) return null;
+
+    selectedMessages.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return selectedMessages[0];
+  }, [currentMessageVersions]);
+
   const currentConversation = React.useMemo(() => {
     if (!currentConversationId) return null;
     return conversations.find(c => c.id === currentConversationId) ?? null;
@@ -202,7 +272,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               now - msg.timestamp.getTime() > oneHourInMs
             ) {
               hasChanges = true;
-              
+
               return {
                 ...msg,
                 isGeneratingImage: false,
@@ -220,7 +290,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               now - msg.timestamp.getTime() > fiveMinutesInMs
             ) {
               hasChanges = true;
-              
+
               return {
                 ...msg,
                 content: 'Response timeout - The AI took too long to respond (over 5 minutes)',
@@ -730,7 +800,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       content: messageContent,
       timestamp: new Date(),
       source: getModelSource(decodedModel), // Use decoded model ID
-      attachments: attachments
+      attachments: attachments,
+      parentMessageId: conversation.messages.length > 0 ? getLastVisibleMessage(conversation)?.id : undefined
     };
 
     // Create AI message
@@ -740,11 +811,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       content: '',
       model: decodedModel, // Use decoded model ID
       modelName: source === 'custom' ? modelName : undefined,
+      providerId: providerId, // Store the provider ID
       isStreaming: true,
       timestamp: new Date(Date.now() + 1),
-      source: getModelSource(decodedModel), // Use decoded model ID
+      source: source === 'system' ? 'server' : 'byok', // Convert source properly
       reasoning: '',
-      isReasoningComplete: false
+      isReasoningComplete: false,
+      parentMessageId: userMessage.id
     };
 
     // Update conversation with both messages
@@ -798,29 +871,29 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     const cancelStream = () => {
       if (timeoutId) clearTimeout(timeoutId);
       controller.abort();
-      
+
       // Update the message to stop streaming and mark as cancelled
       setConversations(prev => {
         return prev.map(conv =>
           conv.id === updatedConversation.id
             ? {
-                ...conv,
-                messages: conv.messages.map(msg =>
-                  msg.id === aiMessage.id
-                    ? {
-                        ...msg,
-                        isStreaming: false,
-                        isError: true,
-                        errorMessage: 'Message was cancelled by user.'
-                      }
-                    : msg
-                ),
-                updatedAt: new Date()
-              }
+              ...conv,
+              messages: conv.messages.map(msg =>
+                msg.id === aiMessage.id
+                  ? {
+                    ...msg,
+                    isStreaming: false,
+                    isError: true,
+                    errorMessage: 'Message was cancelled by user.'
+                  }
+                  : msg
+              ),
+              updatedAt: new Date()
+            }
             : conv
         );
       });
-      
+
       setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
       streamingMessageRef.current = '';
       streamingReasoningRef.current = '';
@@ -835,19 +908,19 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         return prev.map(conv =>
           conv.id === updatedConversation.id
             ? {
-                ...conv,
-                messages: conv.messages.map(msg =>
-                  msg.id === aiMessage.id
-                    ? {
-                        ...msg,
-                        isError: true,
-                        isStreaming: false,
-                        errorMessage: 'Message timed out after 2 minutes.'
-                      }
-                    : msg
-                ),
-                updatedAt: new Date()
-              }
+              ...conv,
+              messages: conv.messages.map(msg =>
+                msg.id === aiMessage.id
+                  ? {
+                    ...msg,
+                    isError: true,
+                    isStreaming: false,
+                    errorMessage: 'Message timed out after 2 minutes.'
+                  }
+                  : msg
+              ),
+              updatedAt: new Date()
+            }
             : conv
         );
       });
@@ -855,13 +928,36 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     }, 120000);
 
     try {
-      // Build conversation history
-      const historyMessages: ServiceChatMessage[] = [...conversation.messages, userMessage].map(msg => ({
+      // Build conversation history by traversing from the last visible message
+      const allMessages = [...conversation.messages, userMessage];
+      const messageMap = new Map<string, ChatMessage>();
+      allMessages.forEach(message => {
+        messageMap.set(message.id, message);
+      });
+
+      // Find the last visible message to determine context
+      const lastVisibleMessage = getLastVisibleMessage(conversation);
+
+      // Build conversation path by traversing up from the last visible message
+      const conversationPath: ChatMessage[] = [];
+      let currentMessage: ChatMessage | null = lastVisibleMessage;
+
+      while (currentMessage) {
+        conversationPath.unshift(currentMessage); // Add to beginning to maintain order
+        if (currentMessage.parentMessageId) {
+          currentMessage = messageMap.get(currentMessage.parentMessageId) || null;
+        } else {
+          currentMessage = null;
+        }
+      }
+
+      // Add the new user message to the path
+      const fullConversationPath = [...conversationPath, userMessage];
+
+      const historyMessages: ServiceChatMessage[] = fullConversationPath.map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content
-      }));
-
-      // Add system message with default prompt and custom instruction combined
+      }));      // Add system message with default prompt and custom instruction combined
       let messagesToSend: ServiceChatMessage[] = historyMessages;
 
       // Always add system prompt - combines default prompt with user custom instruction
@@ -893,18 +989,18 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
           const updatedConversations = prev.map(conv =>
             conv.id === updatedConversation.id
               ? {
-                  ...conv,
-                  messages: conv.messages.map(msg =>
-                    msg.id === aiMessage.id ? {
-                      ...msg,
-                      content: finalContent,
-                      reasoning: finalReasoning,
-                      isStreaming: false,
-                      isReasoningComplete: true
-                    } : msg
-                  ),
-                  updatedAt: new Date()
-                }
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id ? {
+                    ...msg,
+                    content: finalContent,
+                    reasoning: finalReasoning,
+                    isStreaming: false,
+                    isReasoningComplete: true
+                  } : msg
+                ),
+                updatedAt: new Date()
+              }
               : conv
           );
           // Get the final conversation and save immediately (bypassing debounce)
@@ -931,18 +1027,18 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
           const updatedConversations = prev.map(conv =>
             conv.id === updatedConversation.id
               ? {
-                  ...conv,
-                  messages: conv.messages.map(msg =>
-                    msg.id === aiMessage.id 
-                      ? { 
-                          ...msg, 
-                          isError: true, 
-                          isStreaming: false,
-                          errorMessage: errorMessage
-                        } 
-                      : msg
-                  )
-                }
+                ...conv,
+                messages: conv.messages.map(msg =>
+                  msg.id === aiMessage.id
+                    ? {
+                      ...msg,
+                      isError: true,
+                      isStreaming: false,
+                      errorMessage: errorMessage
+                    }
+                    : msg
+                )
+              }
               : conv
           );
           errorConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
@@ -959,11 +1055,11 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
       // Add image generation callback for models that support it
       const onImageGeneratedCallback = async (imageUrl: string) => {
-        
+
         try {
           // Extract prompt from the user message for filename
           const prompt = extractTextFromContent(userMessage.content);
-          
+
           // Download and store the image
           const attachment = await ChatImageService.downloadAndStoreImage(
             imageUrl,
@@ -991,7 +1087,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
         } catch (error) {
           console.error('❌ Failed to process generated image:', error);
-          
+
           // Fallback: add the direct URL as attachment
           const fallbackAttachment: MessageAttachment = {
             id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -1025,7 +1121,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       // Add streaming error callback to handle errors while preserving incomplete content
       const onStreamingErrorCallback = (errorMessage: string) => {
         console.warn('⚠️ Streaming error occurred:', errorMessage);
-        
+
         // Preserve current content but add error message
         setConversations(prev => {
           const updatedConversations = prev.map(conv =>
@@ -1033,13 +1129,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
               ? {
                 ...conv,
                 messages: conv.messages.map(msg =>
-                  msg.id === aiMessage.id 
-                    ? { 
-                        ...msg, 
-                        isError: true, 
-                        isStreaming: false,
-                        errorMessage: errorMessage
-                      } 
+                  msg.id === aiMessage.id
+                    ? {
+                      ...msg,
+                      isError: true,
+                      isStreaming: false,
+                      errorMessage: errorMessage
+                    }
                     : msg
                 )
               }
@@ -1084,7 +1180,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+
       let catchErrorConversation: ChatConversation | null = null;
 
       setConversations(prev => {
@@ -1093,13 +1189,13 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
             ? {
               ...conv,
               messages: conv.messages.map(msg =>
-                msg.id === aiMessage.id 
-                  ? { 
-                      ...msg, 
-                      isError: true, 
-                      isStreaming: false,
-                      errorMessage: errorMessage
-                    } 
+                msg.id === aiMessage.id
+                  ? {
+                    ...msg,
+                    isError: true,
+                    isStreaming: false,
+                    errorMessage: errorMessage
+                  }
                   : msg
               )
             }
@@ -1413,7 +1509,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         timestamp: new Date(timestamp.getTime() + 1),
         model,
         modelName: model,
-        source: getModelSource(model),
+        providerId: providerId, // Store the provider ID
+        source: source === 'system' ? 'server' : 'byok', // Convert source properly
         messageType: 'image_generation',
         isGeneratingImage: true,
         isAsyncImageGeneration: isAsyncJob,
@@ -1533,7 +1630,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                 timestamp: new Date(),
                 model,
                 modelName: model,
-                source: getModelSource(model),
+                providerId: providerId, // Store the provider ID
+                source: source === 'system' ? 'server' : 'byok', // Convert source properly
                 messageType: 'image_generation',
                 isGeneratingImage: false,
                 isAsyncImageGeneration: isAsyncJob,
@@ -1558,7 +1656,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                 timestamp: new Date(),
                 model,
                 modelName: model,
-                source: getModelSource(model),
+                providerId: providerId, // Store the provider ID
+                source: source === 'system' ? 'server' : 'byok', // Convert source properly
                 messageType: 'image_generation',
                 isGeneratingImage: false,
                 isAsyncImageGeneration: isAsyncJob,
@@ -2051,11 +2150,17 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     try {
       const result = await ChatStorageService.loadMessagesPaginated(conversationId, user, 100);
 
+      // Post-process messages to handle legacy messages without version info
+      const processedMessages = result.messages.map(message => {
+        // If message doesn't have version fields, it's a legacy message - leave as is
+        return message;
+      });
+
       let loadedConversation: ChatConversation | null = null;
       setConversations(prev => {
         const updated = prev.map(conv => {
           if (conv.id === conversationId) {
-            loadedConversation = { ...conv, messages: result.messages };
+            loadedConversation = { ...conv, messages: processedMessages };
             return loadedConversation;
           }
           return conv;
@@ -2066,13 +2171,14 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       // Add to cache after loading
       if (loadedConversation) {
         addToCache(loadedConversation);
+        initializeCurrentVersions(loadedConversation);
       }
 
       setHasMoreMessages(result.hasMore);
       setMessagesLastDoc(result.lastDoc);
 
       // Return the loaded conversation for job resumption
-      return { conversationId, messages: result.messages };
+      return { conversationId, messages: processedMessages };
     } catch (error) {
       console.error('Error loading conversation messages:', error);
       return null;
@@ -2110,6 +2216,9 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
       return;
     }
 
+    // Clear current versions when switching conversations
+    setCurrentMessageVersions({});
+
     // Before switching conversations, force save any pending changes for current conversation
     if (currentConversationId && pendingConversationRef.current && pendingConversationRef.current.id === currentConversationId) {
       // Clear the timeout and save immediately
@@ -2133,6 +2242,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
     if (!conversationId) {
       setCurrentConversationId(null);
+      setCurrentMessageVersions({}); // Clear versions when no conversation selected
       if (navigate) {
         navigate('/', { replace: true });
       }
@@ -2154,6 +2264,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     if (currentStateConversation && currentStateConversation.messages && currentStateConversation.messages.length > 0) {
       // We have the full conversation in current state, use it
       addToCache(currentStateConversation);
+      initializeCurrentVersions(currentStateConversation);
       resumeActiveJobsForConversation(currentStateConversation);
       return;
     }
@@ -2175,6 +2286,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
       // Resume any active jobs in this newly selected conversation
       resumeActiveJobsForConversation(cachedConversation);
+      initializeCurrentVersions(cachedConversation);
       return;
     }
 
@@ -2210,6 +2322,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
           });
           addToCache(result);
           resumeActiveJobsForConversation(result);
+          initializeCurrentVersions(result);
           setIsLoadingMessages(false);
           return;
         } else {
@@ -2396,6 +2509,266 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     setIsSearching(false);
   }, []);
 
+  // Retry message functionality
+  const retryMessage = useCallback(async (
+    messageId: string,
+    model: string,
+    source: string,
+    providerId?: string
+  ) => {
+    if (!currentConversation) return;
+
+    const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1) return;
+
+    const message = currentConversation.messages[messageIndex];
+
+    if (message.role === 'user') {
+      // For user messages, just resend with the new model
+      await sendMessage(message.content, model, source, providerId, message.attachments);
+    } else if (message.role === 'assistant') {
+      // For assistant messages, create a new version as a sibling of the current message
+      const newAssistantMessage: ChatMessage = {
+        id: generateId(),
+        role: 'assistant',
+        content: '',
+        model: model,
+        modelName: source === 'custom' ? model : undefined,
+        providerId: providerId, // Store the provider ID
+        isStreaming: true,
+        timestamp: new Date(),
+        source: source === 'system' ? 'server' : 'byok', // Convert source properly
+        reasoning: '',
+        isReasoningComplete: false,
+        originalMessageId: message.originalMessageId || message.id,
+        parentMessageId: message.parentMessageId, // Same parent as the original message
+      };
+
+      // Update the original message with relationship info if this is the first retry
+      let updatedOriginalMessage = message;
+
+      if (!message.originalMessageId) {
+        // First retry - mark the original message with its own ID as originalMessageId
+        updatedOriginalMessage = {
+          ...message,
+          originalMessageId: message.id,
+        };
+      }
+
+      // Add the new message after the original
+      const updatedMessages = [...currentConversation.messages];
+      updatedMessages[messageIndex] = updatedOriginalMessage;
+      updatedMessages.splice(messageIndex + 1, 0, newAssistantMessage);
+
+      const updatedConversation = {
+        ...currentConversation,
+        messages: updatedMessages,
+        updatedAt: new Date()
+      };
+
+      // Update state immediately but don't save until we have content
+      setConversations(prev => prev.map(conv =>
+        conv.id === updatedConversation.id ? updatedConversation : conv
+      ));
+
+      // Calculate the new version index (current number of versions in the group)
+      const groupId = message.originalMessageId || message.id;
+      const existingVersionsCount = currentConversation.messages.filter(m =>
+        (m.originalMessageId || m.id) === groupId
+      ).length;
+
+      // Set the current version to the new message (last index)
+      setCurrentMessageVersions(prev => ({
+        ...prev,
+        [groupId]: existingVersionsCount // This will be the index of the new version
+      }));
+
+      // Save the conversation structure immediately (with empty new message)
+      await ChatStorageService.saveConversation(updatedConversation, user);
+
+      // DON'T save again during streaming - wait until we have actual content
+
+      // Build conversation path for the retry considering current message versions
+      // but exclude the message being retried itself
+      const messageMap = new Map<string, ChatMessage>();
+      currentConversation.messages.forEach(msg => {
+        messageMap.set(msg.id, msg);
+      });
+
+      // Find the last visible message
+      const lastVisibleMessage = getLastVisibleMessage(currentConversation);
+
+      // Build conversation path by traversing up from the last visible message
+      const conversationPath: ChatMessage[] = [];
+      let currentMessage: ChatMessage | null = lastVisibleMessage;
+
+      // Don't include the message being retried in the conversation path
+      if (currentMessage && currentMessage.id === message.id) {
+        // If the last visible message is the one being retried, go to its parent
+        currentMessage = messageMap.get(currentMessage.parentMessageId || '') || null;
+      }
+
+      while (currentMessage) {
+        // Skip the message being retried
+        if (currentMessage.id !== message.id) {
+          conversationPath.unshift(currentMessage); // Add to beginning to maintain order
+        }
+        if (currentMessage.parentMessageId) {
+          currentMessage = messageMap.get(currentMessage.parentMessageId) || null;
+        } else {
+          currentMessage = null;
+        }
+      }      // Now start streaming the new response
+      let timeoutId: NodeJS.Timeout | null = null;
+      const controller = new AbortController();
+      setStreamingState({
+        isStreaming: true,
+        currentMessageId: newAssistantMessage.id,
+        controller
+      });
+      streamingMessageRef.current = '';
+      streamingReasoningRef.current = '';
+
+      const cancelStream = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        controller.abort();
+        setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
+      };
+
+      // Get model capabilities for reasoning check
+      const modelCapabilities = getModelCapabilitiesById(model);
+
+      try {
+        // Set timeout for streaming
+        const STREAMING_TIMEOUT = 300000; // 5 minutes in milliseconds
+        timeoutId = setTimeout(() => {
+          console.log('⏰ Streaming timeout reached, canceling...');
+          cancelStream();
+        }, STREAMING_TIMEOUT);
+
+        await ChatService.sendMessage(
+          model, // Use the new model
+          conversationPath.map(msg => ({
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content
+          })),
+          (chunk: string) => {
+            // Update streaming content
+            streamingMessageRef.current += chunk;
+            updateMessage(updatedConversation.id, newAssistantMessage.id, streamingMessageRef.current);
+          },
+          () => {
+            // onComplete - streaming completed successfully
+            if (timeoutId) clearTimeout(timeoutId);
+
+            // Get final content from refs before clearing them
+            const finalContent = streamingMessageRef.current;
+            const finalReasoning = streamingReasoningRef.current;
+            setConversations(prev => {
+              const updatedConversations = prev.map(conv =>
+                conv.id === updatedConversation.id
+                  ? {
+                    ...conv,
+                    messages: conv.messages.map(msg =>
+                      msg.id === newAssistantMessage.id ? {
+                        ...msg,
+                        content: finalContent,
+                        reasoning: finalReasoning,
+                        isStreaming: false,
+                        isReasoningComplete: true
+                      } : msg
+                    ),
+                    updatedAt: new Date()
+                  }
+                  : conv
+              );
+              // Get the final conversation and save immediately (bypassing debounce)
+              const finalConversation = updatedConversations.find(conv => conv.id === updatedConversation.id);
+              if (finalConversation) {
+                lastSaveTimeRef.current = Date.now();
+                ChatStorageService.saveConversation(finalConversation, user).catch(error => {
+                  console.error('Error saving final streamed conversation:', error);
+                });
+              }
+              return updatedConversations;
+            });
+            setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
+            streamingMessageRef.current = '';
+            streamingReasoningRef.current = '';
+          },
+          (error: Error) => {
+            // onError - Handle non-streaming errors - preserve any existing content
+            const errorMessage = error.message || 'An error occurred';
+            let errorConversation: ChatConversation | null = null;
+            setConversations(prev => {
+              const updatedConversations = prev.map(conv =>
+                conv.id === updatedConversation.id
+                  ? {
+                    ...conv,
+                    messages: conv.messages.map(msg =>
+                      msg.id === newAssistantMessage.id
+                        ? {
+                          ...msg,
+                          isError: true,
+                          isStreaming: false,
+                          errorMessage: errorMessage
+                        }
+                        : msg
+                    )
+                  }
+                  : conv
+              );
+              errorConversation = updatedConversations.find(conv => conv.id === updatedConversation.id) || null;
+              return updatedConversations;
+            });
+            // Force immediate save of error conversation (bypassing debounce)
+            if (errorConversation) {
+              debouncedSaveConversation(errorConversation, true);
+            }
+            setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
+            streamingMessageRef.current = '';
+            streamingReasoningRef.current = '';
+          },
+          user,
+          controller,
+          source,
+          providerId,
+          (reasoning?: string) => {
+            if (reasoning !== undefined) {
+              streamingReasoningRef.current += reasoning;
+              updateMessageReasoning(updatedConversation.id, newAssistantMessage.id, streamingReasoningRef.current);
+            }
+          },
+          undefined, // onImageGenerated - not used for retry
+          modelCapabilities.hasImageGenerationChat,
+          (errorMessage: string) => {
+            console.error('Streaming error during retry:', errorMessage);
+          }
+        );
+
+      } catch (error: any) {
+        if (timeoutId) clearTimeout(timeoutId);
+
+        if (error.name === 'AbortError') {
+          console.log('🛑 Streaming was cancelled by user');
+        } else {
+          console.error('❌ Error during retry streaming:', error);
+          // Error should already be handled by onError callback, but just in case
+        }
+      } finally {
+        setStreamingState({ isStreaming: false, currentMessageId: null, controller: null });
+      }
+    }
+  }, [currentConversation, sendMessage, getModelSource, generateId, user, settings, getModelCapabilitiesById, conversations, debouncedSaveConversation]);
+
+  // Change message version
+  const changeMessageVersion = useCallback((messageId: string, versionIndex: number) => {
+    setCurrentMessageVersions(prev => ({
+      ...prev,
+      [messageId]: versionIndex
+    }));
+  }, []);
+
   return {
     conversations,
     currentConversation,
@@ -2424,5 +2797,8 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
     clearSearch,
     conversationCache: Object.keys(conversationCache).length,
     clearCache,
+    retryMessage,
+    changeMessageVersion,
+    currentMessageVersions,
   };
 };

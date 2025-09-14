@@ -14,7 +14,8 @@ import ReasoningDisplay from "./ReasoningDisplay";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
 import { MemoizedMarkdown } from "./MemoizedMarkdown";
-import { Copy, RotateCcw, GitBranch, Edit, Check } from "./Icons";
+import { Copy, GitBranch, Edit, Check } from "./Icons";
+import { RetryButton, VersionNavigation } from "./ui/RetryButton";
 import { themes } from "@/constants/themes";
 import "katex/dist/katex.min.css"; // Import KaTeX CSS
 
@@ -177,6 +178,21 @@ interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
   isLastMessage?: boolean;
+  onRetry?: (
+    messageId: string,
+    model: string,
+    source: string,
+    providerId?: string
+  ) => void;
+  onVersionChange?: (messageId: string, versionIndex: number) => void;
+  modelOptions?: Array<{
+    label: string;
+    value: string;
+    source: string;
+    providerId?: string;
+    providerName?: string;
+    supported_parameters?: string[];
+  }>;
 }
 
 // Mermaid diagram component with memoization
@@ -253,12 +269,18 @@ const MermaidDiagram: React.FC<{ code: string; isDark: boolean }> = memo(
 MermaidDiagram.displayName = "MermaidDiagram";
 
 const Message: React.FC<MessageProps> = memo(
-  ({ message, isStreaming = false }) => {
+  ({
+    message,
+    isStreaming = false,
+    onRetry,
+    onVersionChange,
+    modelOptions = [],
+  }) => {
     const isUser = message.role === "user";
     const isAssistant = message.role === "assistant";
     const [isDark, setIsDark] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
     const [copied, setCopied] = useState(false);
+    // Removed hover state - buttons always visible now
 
     // Get animationsDisabled and isMobile from settings context
     const { settings, isMobile } = useSettingsContext();
@@ -295,18 +317,18 @@ const Message: React.FC<MessageProps> = memo(
       const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
       let thinkMatches: string[] = [];
       let match;
-      
+
       // Extract all <think> content
       while ((match = thinkRegex.exec(textContent)) !== null) {
         thinkMatches.push(match[1].trim());
       }
-      
+
       // Remove <think> tags from content
-      const cleaned = textContent.replace(thinkRegex, '').trim();
-      
+      const cleaned = textContent.replace(thinkRegex, "").trim();
+
       return {
-        thinkContent: thinkMatches.join('\n\n'),
-        cleanedContent: cleaned
+        thinkContent: thinkMatches.join("\n\n"),
+        cleanedContent: cleaned,
       };
     }, [textContent]);
 
@@ -317,7 +339,9 @@ const Message: React.FC<MessageProps> = memo(
 
         if (typeof message.content === "string") {
           // For AI messages, use cleaned content (without <think> tags)
-          textToCopy = isUser ? message.content : (cleanedContent || message.content);
+          textToCopy = isUser
+            ? message.content
+            : cleanedContent || message.content;
         } else {
           // Extract text content from complex content
           textToCopy = message.content
@@ -325,7 +349,9 @@ const Message: React.FC<MessageProps> = memo(
             .map((item) => {
               // For AI messages, clean <think> tags from text content
               if (!isUser) {
-                return item.text.replace(/<think>([\s\S]*?)<\/think>/g, '').trim();
+                return item.text
+                  .replace(/<think>([\s\S]*?)<\/think>/g, "")
+                  .trim();
               }
               return item.text;
             })
@@ -343,32 +369,35 @@ const Message: React.FC<MessageProps> = memo(
     // For streaming messages, handle real-time <think> processing
     const streamingThinkData = useMemo(() => {
       if (!isStreaming || !textContent) {
-        return { streamThinkContent: '', streamCleanedContent: textContent };
+        return { streamThinkContent: "", streamCleanedContent: textContent };
       }
 
       // Check if we're currently inside a <think> block during streaming
-      const hasOpenThink = textContent.includes('<think>');
-      const hasCloseThink = textContent.includes('</think>');
-      
+      const hasOpenThink = textContent.includes("<think>");
+      const hasCloseThink = textContent.includes("</think>");
+
       if (!hasOpenThink) {
         // No <think> tags at all, show everything as normal content
-        return { streamThinkContent: '', streamCleanedContent: textContent };
+        return { streamThinkContent: "", streamCleanedContent: textContent };
       }
 
       if (hasOpenThink && !hasCloseThink) {
         // We're inside an unclosed <think> block during streaming
-        const thinkStartIndex = textContent.lastIndexOf('<think>');
+        const thinkStartIndex = textContent.lastIndexOf("<think>");
         const beforeThink = textContent.substring(0, thinkStartIndex);
         const insideThink = textContent.substring(thinkStartIndex + 7); // 7 = '<think>'.length
-        
+
         return {
           streamThinkContent: insideThink,
-          streamCleanedContent: beforeThink
+          streamCleanedContent: beforeThink,
         };
       }
 
       // Has both opening and closing tags, use normal processing
-      return { streamThinkContent: thinkContent, streamCleanedContent: cleanedContent };
+      return {
+        streamThinkContent: thinkContent,
+        streamCleanedContent: cleanedContent,
+      };
     }, [isStreaming, textContent, thinkContent, cleanedContent]);
 
     // Determine if reasoning content is actively streaming
@@ -381,15 +410,15 @@ const Message: React.FC<MessageProps> = memo(
       if (message.reasoning && message.reasoning.trim()) {
         return true;
       }
-      
+
       // Check if we have active streaming think content (unclosed <think> block)
       if (textContent) {
-        const hasOpenThink = textContent.includes('<think>');
-        const hasCloseThink = textContent.includes('</think>');
+        const hasOpenThink = textContent.includes("<think>");
+        const hasCloseThink = textContent.includes("</think>");
         // Reasoning is streaming if we have an open <think> without a close </think>
         return hasOpenThink && !hasCloseThink;
       }
-      
+
       return false;
     }, [isStreaming, textContent, message.reasoning]);
 
@@ -675,13 +704,7 @@ const Message: React.FC<MessageProps> = memo(
                   initial={
                     !animationsDisabled ? (isMobile ? "visible" : "hidden") : {}
                   }
-                  animate={
-                    !animationsDisabled
-                      ? isMobile || isHovered
-                        ? "visible"
-                        : "hidden"
-                      : {}
-                  }
+                  animate={!animationsDisabled ? "visible" : {}}
                   transition={
                     !animationsDisabled
                       ? { duration: 0.2, ease: "easeInOut" }
@@ -691,27 +714,81 @@ const Message: React.FC<MessageProps> = memo(
                   style={
                     animationsDisabled
                       ? {
-                          opacity: isMobile || isHovered ? 1 : 0,
+                          opacity: 1,
                           transition: "opacity 0.2s ease-in-out",
                         }
                       : {}
                   }
                 >
+                  {/* Version Navigation */}
+                  {message.totalVersions && message.totalVersions > 1 && (
+                    <VersionNavigation
+                      currentVersion={message.currentVersionIndex || 0}
+                      totalVersions={message.totalVersions}
+                      onVersionChange={(version: number) =>
+                        onVersionChange?.(
+                          message.originalMessageId ||
+                            message.parentMessageId ||
+                            message.id,
+                          version
+                        )
+                      }
+                      disabled={isStreaming}
+                    />
+                  )}
+
+                  {/* Retry button */}
+                  {onRetry && modelOptions.length > 0 && (
+                    <RetryButton
+                      onRetry={(
+                        model: string,
+                        source: string,
+                        providerId?: string
+                      ) => onRetry(message.id, model, source, providerId)}
+                      modelOptions={modelOptions}
+                      disabled={
+                        isStreaming ||
+                        !!(
+                          message.isGeneratingImage ||
+                          message.generatedImageUrl ||
+                          message.imageGenerationParams
+                        )
+                      }
+                      currentModel={message.model}
+                      currentSource={message.providerId ? "custom" : "system"}
+                      currentProviderId={message.providerId}
+                    />
+                  )}
+
                   {/* Copy button */}
                   <button
                     onClick={copyMessageToClipboard}
-                    disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError)}
+                    disabled={
+                      !!(
+                        message.isGeneratingImage ||
+                        message.generatedImageUrl ||
+                        message.imageGenerationParams ||
+                        message.isError
+                      )
+                    }
                     className={`p-1.5 rounded transition-colors ${
-                      message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError
+                      message.isGeneratingImage ||
+                      message.generatedImageUrl ||
+                      message.imageGenerationParams ||
+                      message.isError
                         ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
                         : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
                     }`}
                     title={
                       message.isError
                         ? "Copy not available when there's an error"
-                        : message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                        : message.isGeneratingImage ||
+                          message.generatedImageUrl ||
+                          message.imageGenerationParams
                         ? "Copy not available for image generation"
-                        : copied ? "Copied!" : "Copy message"
+                        : copied
+                        ? "Copied!"
+                        : "Copy message"
                     }
                   >
                     {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -722,41 +799,33 @@ const Message: React.FC<MessageProps> = memo(
                     onClick={() => {
                       /* TODO: Implement branch off */
                     }}
-                    disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError)}
+                    disabled={
+                      !!(
+                        message.isGeneratingImage ||
+                        message.generatedImageUrl ||
+                        message.imageGenerationParams ||
+                        message.isError
+                      )
+                    }
                     className={`p-1.5 rounded transition-colors ${
-                      message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError
+                      message.isGeneratingImage ||
+                      message.generatedImageUrl ||
+                      message.imageGenerationParams ||
+                      message.isError
                         ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
                         : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
                     }`}
                     title={
                       message.isError
                         ? "Branch off not available when there's an error"
-                        : message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                        : message.isGeneratingImage ||
+                          message.generatedImageUrl ||
+                          message.imageGenerationParams
                         ? "Branch off not available for image generation"
                         : "Branch off"
                     }
                   >
                     <GitBranch size={14} />
-                  </button>
-
-                  {/* Retry button */}
-                  <button
-                    onClick={() => {
-                      /* TODO: Implement retry */
-                    }}
-                    disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams)}
-                    className={`p-1.5 rounded transition-colors ${
-                      message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
-                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                    }`}
-                    title={
-                      message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
-                        ? "Retry not available for image generation"
-                        : "Retry message"
-                    }
-                  >
-                    <RotateCcw size={14} />
                   </button>
                 </motion.div>
               </div>
@@ -815,7 +884,9 @@ const Message: React.FC<MessageProps> = memo(
               {message.content.map((item, index) => {
                 if (item.type === "text") {
                   // Clean <think> tags from text content for user messages too
-                  const userCleanedText = item.text.replace(/<think>([\s\S]*?)<\/think>/g, '').trim();
+                  const userCleanedText = item.text
+                    .replace(/<think>([\s\S]*?)<\/think>/g, "")
+                    .trim();
                   return (
                     <div
                       key={index}
@@ -856,7 +927,11 @@ const Message: React.FC<MessageProps> = memo(
           >
             <ReasoningDisplay
               reasoning={message.reasoning || ""}
-              thinkContent={isStreaming ? streamingThinkData.streamThinkContent : thinkContent}
+              thinkContent={
+                isStreaming
+                  ? streamingThinkData.streamThinkContent
+                  : thinkContent
+              }
               isStreaming={isReasoningStreaming}
             />
           </motion.div>
@@ -913,7 +988,11 @@ const Message: React.FC<MessageProps> = memo(
                 {/* Assistant messages: full markdown rendering */}
                 <div className="prose prose-zinc dark:prose-invert max-w-none">
                   <MemoizedMarkdown
-                    content={isStreaming ? streamingThinkData.streamCleanedContent : cleanedContent}
+                    content={
+                      isStreaming
+                        ? streamingThinkData.streamCleanedContent
+                        : cleanedContent
+                    }
                     id={message.id}
                     isDark={isDark}
                   />
@@ -929,7 +1008,8 @@ const Message: React.FC<MessageProps> = memo(
                 ))}
 
                 {/* Show typing indicator at the end when streaming with content */}
-                {isStreaming && !isUser && (
+                {isStreaming &&
+                  !isUser &&
                   (() => {
                     // Check if streaming AI response message has timed out (more than 5 minutes)
                     const messageAge = Date.now() - message.timestamp.getTime();
@@ -941,7 +1021,8 @@ const Message: React.FC<MessageProps> = memo(
                       return (
                         <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                           <div className="text-sm text-red-800 dark:text-red-200">
-                            Response timeout - The AI took too long to respond (over 5 minutes)
+                            Response timeout - The AI took too long to respond
+                            (over 5 minutes)
                           </div>
                         </div>
                       );
@@ -953,21 +1034,32 @@ const Message: React.FC<MessageProps> = memo(
                         <TypingIndicator />
                       </div>
                     );
-                  })()
-                )}
+                  })()}
 
                 {/* Show error message below incomplete content */}
                 {message.isError && message.errorMessage && (
                   <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                     <div className="flex items-start space-x-2">
                       <div className="flex-shrink-0 text-red-500 mt-0.5">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                       <div className="text-sm text-red-800 dark:text-red-200">
-                        <div className="font-medium">Error occurred during streaming</div>
-                        <div className="mt-1 text-red-700 dark:text-red-300">{message.errorMessage}</div>
+                        <div className="font-medium">
+                          Error occurred during streaming
+                        </div>
+                        <div className="mt-1 text-red-700 dark:text-red-300">
+                          {message.errorMessage}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1000,15 +1092,13 @@ const Message: React.FC<MessageProps> = memo(
                           : {}
                       }
                       initial={
-                        !animationsDisabled ? (isMobile ? "visible" : "hidden") : {}
-                      }
-                      animate={
                         !animationsDisabled
-                          ? isMobile || isHovered
+                          ? isMobile
                             ? "visible"
                             : "hidden"
                           : {}
                       }
+                      animate={!animationsDisabled ? "visible" : {}}
                       transition={
                         !animationsDisabled
                           ? { duration: 0.2, ease: "easeInOut" }
@@ -1018,27 +1108,83 @@ const Message: React.FC<MessageProps> = memo(
                       style={
                         animationsDisabled
                           ? {
-                              opacity: isMobile || isHovered ? 1 : 0,
+                              opacity: 1,
                               transition: "opacity 0.2s ease-in-out",
                             }
                           : {}
                       }
                     >
+                      {/* Version Navigation */}
+                      {message.totalVersions && message.totalVersions > 1 && (
+                        <VersionNavigation
+                          currentVersion={message.currentVersionIndex || 0}
+                          totalVersions={message.totalVersions}
+                          onVersionChange={(version: number) =>
+                            onVersionChange?.(
+                              message.originalMessageId ||
+                                message.parentMessageId ||
+                                message.id,
+                              version
+                            )
+                          }
+                          disabled={isStreaming}
+                        />
+                      )}
+
+                      {/* Retry button */}
+                      {onRetry && modelOptions.length > 0 && (
+                        <RetryButton
+                          onRetry={(
+                            model: string,
+                            source: string,
+                            providerId?: string
+                          ) => onRetry(message.id, model, source, providerId)}
+                          modelOptions={modelOptions}
+                          disabled={
+                            isStreaming ||
+                            !!(
+                              message.isGeneratingImage ||
+                              message.generatedImageUrl ||
+                              message.imageGenerationParams
+                            )
+                          }
+                          currentModel={message.model}
+                          currentSource={
+                            message.providerId ? "custom" : "system"
+                          }
+                          currentProviderId={message.providerId}
+                        />
+                      )}
+
                       {/* Copy button */}
                       <button
                         onClick={copyMessageToClipboard}
-                        disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError)}
+                        disabled={
+                          !!(
+                            message.isGeneratingImage ||
+                            message.generatedImageUrl ||
+                            message.imageGenerationParams ||
+                            message.isError
+                          )
+                        }
                         className={`p-1.5 rounded transition-colors ${
-                          message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError
+                          message.isGeneratingImage ||
+                          message.generatedImageUrl ||
+                          message.imageGenerationParams ||
+                          message.isError
                             ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
                             : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
                         }`}
                         title={
                           message.isError
                             ? "Copy not available when there's an error"
-                            : message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                            : message.isGeneratingImage ||
+                              message.generatedImageUrl ||
+                              message.imageGenerationParams
                             ? "Copy not available for image generation"
-                            : copied ? "Copied!" : "Copy message"
+                            : copied
+                            ? "Copied!"
+                            : "Copy message"
                         }
                       >
                         {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -1049,41 +1195,33 @@ const Message: React.FC<MessageProps> = memo(
                         onClick={() => {
                           /* TODO: Implement branch off */
                         }}
-                        disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError)}
+                        disabled={
+                          !!(
+                            message.isGeneratingImage ||
+                            message.generatedImageUrl ||
+                            message.imageGenerationParams ||
+                            message.isError
+                          )
+                        }
                         className={`p-1.5 rounded transition-colors ${
-                          message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams || message.isError
+                          message.isGeneratingImage ||
+                          message.generatedImageUrl ||
+                          message.imageGenerationParams ||
+                          message.isError
                             ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
                             : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
                         }`}
                         title={
                           message.isError
                             ? "Branch off not available when there's an error"
-                            : message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
+                            : message.isGeneratingImage ||
+                              message.generatedImageUrl ||
+                              message.imageGenerationParams
                             ? "Branch off not available for image generation"
                             : "Branch off"
                         }
                       >
                         <GitBranch size={14} />
-                      </button>
-
-                      {/* Retry button */}
-                      <button
-                        onClick={() => {
-                          /* TODO: Implement retry */
-                        }}
-                        disabled={!!(message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams)}
-                        className={`p-1.5 rounded transition-colors ${
-                          message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
-                            ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                        }`}
-                        title={
-                          message.isGeneratingImage || message.generatedImageUrl || message.imageGenerationParams
-                            ? "Retry not available for image generation"
-                            : "Retry message"
-                        }
-                      >
-                        <RotateCcw size={14} />
                       </button>
                     </motion.div>
                   </div>
@@ -1104,8 +1242,6 @@ const Message: React.FC<MessageProps> = memo(
           animate="animate"
           exit={animationsDisabled ? {} : "exit"}
           className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         >
           <div
             className={`flex flex-col w-full ${
@@ -1130,13 +1266,7 @@ const Message: React.FC<MessageProps> = memo(
                 initial={
                   !animationsDisabled ? (isMobile ? "visible" : "hidden") : {}
                 }
-                animate={
-                  !animationsDisabled
-                    ? isMobile || isHovered
-                      ? "visible"
-                      : "hidden"
-                    : {}
-                }
+                animate={!animationsDisabled ? "visible" : {}}
                 transition={
                   !animationsDisabled
                     ? { duration: 0.2, ease: "easeInOut" }
@@ -1146,8 +1276,8 @@ const Message: React.FC<MessageProps> = memo(
                 style={
                   animationsDisabled
                     ? {
-                        opacity: isMobile || isHovered ? 1 : 0,
-                        pointerEvents: isMobile || isHovered ? "auto" : "none",
+                        opacity: 1,
+                        pointerEvents: "auto",
                         transition: "opacity 0.2s ease-in-out",
                       }
                     : {}
@@ -1166,13 +1296,7 @@ const Message: React.FC<MessageProps> = memo(
                   initial={
                     !animationsDisabled ? (isMobile ? "visible" : "hidden") : {}
                   }
-                  animate={
-                    !animationsDisabled
-                      ? isMobile || isHovered
-                        ? "visible"
-                        : "hidden"
-                      : {}
-                  }
+                  animate={!animationsDisabled ? "visible" : {}}
                   transition={
                     !animationsDisabled
                       ? { duration: 0.2, ease: "easeInOut" }
@@ -1182,31 +1306,47 @@ const Message: React.FC<MessageProps> = memo(
                   style={
                     animationsDisabled
                       ? {
-                          opacity: isMobile || isHovered ? 1 : 0,
+                          opacity: 1,
                           transition: "opacity 0.2s ease-in-out",
                         }
                       : {}
                   }
                 >
+                  {/* Version Navigation */}
+                  {message.totalVersions && message.totalVersions > 1 && (
+                    <VersionNavigation
+                      currentVersion={message.currentVersionIndex || 0}
+                      totalVersions={message.totalVersions}
+                      onVersionChange={(version: number) =>
+                        onVersionChange?.(
+                          message.originalMessageId ||
+                            message.parentMessageId ||
+                            message.id,
+                          version
+                        )
+                      }
+                      disabled={isStreaming}
+                    />
+                  )}
+
                   {/* Retry button */}
-                  <button
-                    onClick={() => {
-                      /* TODO: Implement retry */
-                    }}
-                    disabled={message.messageType === "image_generation"}
-                    className={`p-1.5 rounded transition-colors ${
-                      message.messageType === "image_generation"
-                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                    }`}
-                    title={
-                      message.messageType === "image_generation"
-                        ? "Retry not available for image generation"
-                        : "Retry message"
-                    }
-                  >
-                    <RotateCcw size={14} />
-                  </button>
+                  {onRetry && modelOptions.length > 0 && (
+                    <RetryButton
+                      onRetry={(
+                        model: string,
+                        source: string,
+                        providerId?: string
+                      ) => onRetry(message.id, model, source, providerId)}
+                      modelOptions={modelOptions}
+                      disabled={
+                        isStreaming ||
+                        message.messageType === "image_generation"
+                      }
+                      currentModel={message.model}
+                      currentSource={message.providerId ? "custom" : "system"}
+                      currentProviderId={message.providerId}
+                    />
+                  )}
 
                   {/* Branch off button */}
                   <button

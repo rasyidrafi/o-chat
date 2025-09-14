@@ -22,6 +22,7 @@ export interface ChatMessage {
   content: MessageContent;
   model?: string;
   modelName?: string;
+  providerId?: string; // Store provider ID for custom models
   isStreaming?: boolean;
   isError?: boolean;
   errorMessage?: string; // Stores error details while preserving incomplete content
@@ -45,6 +46,14 @@ export interface ChatMessage {
   };
   imageGenerationJob?: ImageGenerationJob;
   isAsyncImageGeneration?: boolean;
+
+  // Message versioning for retry functionality
+  originalMessageId?: string; // Links all versions to the same original message
+  versionIndex?: number; // 0 = original, 1+ = retry versions
+  currentVersionIndex?: number; // Current visible version index
+  totalVersions?: number; // Total number of versions available
+  versions?: ChatMessage[]; // All versions of this message (stored in memory, not persisted)
+  parentMessageId?: string; // For assistant messages, references the user message that triggered it
 }
 
 export interface MessageAttachment {

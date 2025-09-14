@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import { ChatMessage } from "../types/chat";
 import Message from "./Message";
 import { AnimatePresence } from "framer-motion";
@@ -11,6 +17,22 @@ interface MessageListProps {
   hasMoreMessages: boolean;
   onLoadMoreMessages: () => void;
   onScrollStateChange?: (showScrollButton: boolean) => void;
+  onRetry?: (
+    messageId: string,
+    model: string,
+    source: string,
+    providerId?: string
+  ) => void;
+  onVersionChange?: (messageId: string, versionIndex: number) => void;
+  currentVersions?: Record<string, number>;
+  modelOptions?: Array<{
+    label: string;
+    value: string;
+    source: string;
+    providerId?: string;
+    providerName?: string;
+    supported_parameters?: string[];
+  }>;
 }
 
 interface MessageListRef {
@@ -31,6 +53,10 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       messages,
       streamingMessageId,
       onScrollStateChange,
+      onRetry,
+      onVersionChange,
+      currentVersions = {},
+      modelOptions = [],
       // isLoadingMoreMessages,
       // hasMoreMessages,
       // onLoadMoreMessages,
@@ -42,7 +68,106 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
     const [isTransitioning, setIsTransitioning] = useState(false);
     const { isMobile } = useSettingsContext();
 
-    // Optimized scroll tracking
+    // Build conversation tree and show messages leading to current selection
+    const visibleMessages = useMemo(() => {
+      // Build message map for quick lookup
+      const messageMap = new Map<string, ChatMessage>();
+      messages.forEach((message) => {
+        messageMap.set(message.id, message);
+      });
+
+      // If no current versions specified, show all messages in chronological order
+      if (Object.keys(currentVersions).length === 0) {
+        return messages.sort(
+          (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+        );
+      }
+
+      // Find the currently selected message for each branch
+      const selectedMessages = new Set<string>();
+
+      Object.entries(currentVersions).forEach(([groupId, versionIndex]) => {
+        // Find all messages in this group
+        // Use the same grouping logic as initializeCurrentVersions: originalMessageId || parentMessageId || id
+        const groupMessages = messages.filter(
+          (msg) => (msg.originalMessageId || msg.id) === groupId
+        );
+
+        // Sort by timestamp
+        groupMessages.sort(
+          (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+        );
+
+        // Get the selected message
+        const selectedMessage =
+          groupMessages[Math.min(versionIndex, groupMessages.length - 1)];
+        if (selectedMessage) {
+          selectedMessages.add(selectedMessage.id);
+        }
+      });
+
+      // Build conversation paths for each selected message
+      const conversationPaths = new Set<string>();
+
+      selectedMessages.forEach((selectedMessageId) => {
+        let currentMessage = messageMap.get(selectedMessageId);
+        while (currentMessage) {
+          conversationPaths.add(currentMessage.id);
+          // Traverse up the tree using parentMessageId
+          if (currentMessage.parentMessageId) {
+            currentMessage = messageMap.get(currentMessage.parentMessageId);
+          } else {
+            break;
+          }
+        }
+        // Also traverse down to find messages that have this message as parent
+        const traverseDown = (parentId: string) => {
+          messages.forEach((msg) => {
+            if (msg.parentMessageId === parentId) {
+              conversationPaths.add(msg.id);
+              traverseDown(msg.id);
+            }
+          });
+        };
+        traverseDown(selectedMessageId);
+      });
+
+      // Return messages in chronological order that are part of the conversation paths
+      // Enrich messages with version information for UI
+      const baseMessages = messages
+        .filter((message) => conversationPaths.has(message.id))
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+      // Add version information to messages that have multiple versions
+      return baseMessages.map((message) => {
+        const groupId = message.originalMessageId || message.id;
+        if (!groupId) return message;
+
+        const groupMessages = messages.filter(
+          (msg) => (msg.originalMessageId || msg.id) === groupId
+        );
+
+        if (groupMessages.length > 1) {
+          // Sort group messages by timestamp
+          groupMessages.sort(
+            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+          );
+
+          // Find current version index
+          const messageIndex = groupMessages.findIndex(
+            (msg) => msg.id === message.id
+          );
+
+          return {
+            ...message,
+            totalVersions: groupMessages.length,
+            currentVersionIndex: messageIndex,
+          };
+        }
+
+        return message;
+      });
+    }, [messages, currentVersions]); // Optimized scroll tracking
     const scrollState = useRef<{
       scrollTop: number;
       scrollHeight: number;
@@ -216,12 +341,15 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       >
         <div className="px-4 md:px-6 lg:px-8 xl:px-16 max-w-4xl mx-auto overflow-x-hidden">
           <AnimatePresence mode="popLayout">
-            {messages.map((message, index) => (
+            {visibleMessages.map((message, index) => (
               <Message
                 key={message.id}
                 message={message}
                 isStreaming={streamingMessageId === message.id}
-                isLastMessage={index === messages.length - 1}
+                isLastMessage={index === visibleMessages.length - 1}
+                onRetry={onRetry}
+                onVersionChange={onVersionChange}
+                modelOptions={modelOptions}
               />
             ))}
           </AnimatePresence>

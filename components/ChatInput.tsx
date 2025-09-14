@@ -28,6 +28,7 @@ import {
   Qwen,
   Venice,
   CancelSquare,
+  Google,
 } from "./Icons";
 import { motion, AnimatePresence } from "framer-motion";
 // import HorizontalRuleDefault from "./ui/HorizontalRuleDefault";
@@ -377,7 +378,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       lowerProviderName.includes("google") ||
       lowerProviderName.includes("gemini")
     ) {
-      return <Gemini size={18} className="text-current" />;
+      return <Google size={18} className="text-current" />;
     }
     if (lowerProviderName.includes("anthropic")) {
       return <Anthropic size={18} className="text-current" />;
