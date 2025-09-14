@@ -86,7 +86,7 @@ export const VersionNavigation: React.FC<VersionNavigationProps> = ({
       <button
         onClick={() => canGoPrevious && onVersionChange(currentVersion - 1)}
         disabled={disabled || !canGoPrevious}
-        className={`p-1 rounded transition-all duration-200 ${
+        className={`cursor-pointer p-1 rounded transition-all duration-200 ${
           disabled || !canGoPrevious
             ? "opacity-30 cursor-not-allowed"
             : "hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
@@ -103,7 +103,7 @@ export const VersionNavigation: React.FC<VersionNavigationProps> = ({
       <button
         onClick={() => canGoNext && onVersionChange(currentVersion + 1)}
         disabled={disabled || !canGoNext}
-        className={`p-1 rounded transition-all duration-200 ${
+        className={`cursor-pointer p-1 rounded transition-all duration-200 ${
           disabled || !canGoNext
             ? "opacity-30 cursor-not-allowed"
             : "hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
@@ -378,7 +378,7 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
         <button
           onClick={handleRetryWithSameModel}
           disabled={disabled}
-          className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-md transition-all duration-200 ${
+          className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 text-xs rounded-md transition-all duration-200 ${
             disabled
               ? "opacity-50 cursor-not-allowed"
               : "hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
@@ -395,7 +395,7 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
         <button
           onClick={handleModelSelectorClick}
           disabled={disabled}
-          className={`p-1 rounded-md transition-all duration-200 ${
+          className={`cursor-pointer p-1 rounded-md transition-all duration-200 ${
             disabled
               ? "opacity-50 cursor-not-allowed"
               : "hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"

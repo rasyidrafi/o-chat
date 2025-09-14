@@ -793,40 +793,6 @@ const Message: React.FC<MessageProps> = memo(
                   >
                     {copied ? <Check size={14} /> : <Copy size={14} />}
                   </button>
-
-                  {/* Branch off button */}
-                  <button
-                    onClick={() => {
-                      /* TODO: Implement branch off */
-                    }}
-                    disabled={
-                      !!(
-                        message.isGeneratingImage ||
-                        message.generatedImageUrl ||
-                        message.imageGenerationParams ||
-                        message.isError
-                      )
-                    }
-                    className={`p-1.5 rounded transition-colors ${
-                      message.isGeneratingImage ||
-                      message.generatedImageUrl ||
-                      message.imageGenerationParams ||
-                      message.isError
-                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                    }`}
-                    title={
-                      message.isError
-                        ? "Branch off not available when there's an error"
-                        : message.isGeneratingImage ||
-                          message.generatedImageUrl ||
-                          message.imageGenerationParams
-                        ? "Branch off not available for image generation"
-                        : "Branch off"
-                    }
-                  >
-                    <GitBranch size={14} />
-                  </button>
                 </motion.div>
               </div>
             </div>
@@ -1189,40 +1155,6 @@ const Message: React.FC<MessageProps> = memo(
                       >
                         {copied ? <Check size={14} /> : <Copy size={14} />}
                       </button>
-
-                      {/* Branch off button */}
-                      <button
-                        onClick={() => {
-                          /* TODO: Implement branch off */
-                        }}
-                        disabled={
-                          !!(
-                            message.isGeneratingImage ||
-                            message.generatedImageUrl ||
-                            message.imageGenerationParams ||
-                            message.isError
-                          )
-                        }
-                        className={`p-1.5 rounded transition-colors ${
-                          message.isGeneratingImage ||
-                          message.generatedImageUrl ||
-                          message.imageGenerationParams ||
-                          message.isError
-                            ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                        }`}
-                        title={
-                          message.isError
-                            ? "Branch off not available when there's an error"
-                            : message.isGeneratingImage ||
-                              message.generatedImageUrl ||
-                              message.imageGenerationParams
-                            ? "Branch off not available for image generation"
-                            : "Branch off"
-                        }
-                      >
-                        <GitBranch size={14} />
-                      </button>
                     </motion.div>
                   </div>
                 )}
@@ -1328,45 +1260,6 @@ const Message: React.FC<MessageProps> = memo(
                       disabled={isStreaming}
                     />
                   )}
-
-                  {/* Retry button */}
-                  {onRetry && modelOptions.length > 0 && (
-                    <RetryButton
-                      onRetry={(
-                        model: string,
-                        source: string,
-                        providerId?: string
-                      ) => onRetry(message.id, model, source, providerId)}
-                      modelOptions={modelOptions}
-                      disabled={
-                        isStreaming ||
-                        message.messageType === "image_generation"
-                      }
-                      currentModel={message.model}
-                      currentSource={message.providerId ? "custom" : "system"}
-                      currentProviderId={message.providerId}
-                    />
-                  )}
-
-                  {/* Branch off button */}
-                  <button
-                    onClick={() => {
-                      /* TODO: Implement branch off */
-                    }}
-                    disabled={message.messageType === "image_generation"}
-                    className={`p-1.5 rounded transition-colors ${
-                      message.messageType === "image_generation"
-                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                    }`}
-                    title={
-                      message.messageType === "image_generation"
-                        ? "Branch off not available for image generation"
-                        : "Branch off"
-                    }
-                  >
-                    <GitBranch size={14} />
-                  </button>
 
                   {/* Edit button */}
                   <button
