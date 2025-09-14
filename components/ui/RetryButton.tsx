@@ -14,6 +14,7 @@ import {
   X,
 } from "../Icons";
 import { motion, AnimatePresence } from "framer-motion";
+import { Popover } from "react-tiny-popover";
 import { useSettingsContext } from "../../contexts/SettingsContext";
 import {
   Eye,
@@ -129,9 +130,7 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isModelSliderOpen, setIsModelSliderOpen] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
-  const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('top');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLDivElement>(null);
   const { isMobile } = useSettingsContext();
 
   // Get capability icons for a model (EXACT same as ChatInput)
@@ -261,21 +260,6 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
     }
   }, []);
 
-  // Position detection function
-  const updateDropdownPosition = useCallback(() => {
-    if (!buttonRef.current) return;
-    
-    const buttonRect = buttonRef.current.getBoundingClientRect();
-    const dropdownHeight = 400; // Approximate dropdown height
-    
-    // If there's not enough space above, position below
-    if (buttonRect.top < dropdownHeight) {
-      setDropdownPosition('bottom');
-    } else {
-      setDropdownPosition('top');
-    }
-  }, []);
-
   // Close dropdown when clicking outside (EXACT same as ChatInput)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -297,19 +281,15 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
     }
   }, [isModelDropdownOpen]);
 
-  // Update position when dropdown opens
-  useEffect(() => {
-    if (isModelDropdownOpen) {
-      updateDropdownPosition();
-    }
-  }, [isModelDropdownOpen, updateDropdownPosition]);
-
   // Group models exactly like ChatInput
   const groupedModelOptions = useMemo(() => {
-    const filteredOptions = modelOptions.filter((option) =>
-      option.label.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
-      option.value.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
-      option.providerName?.toLowerCase().includes(modelSearchQuery.toLowerCase())
+    const filteredOptions = modelOptions.filter(
+      (option) =>
+        option.label.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
+        option.value.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
+        option.providerName
+          ?.toLowerCase()
+          .includes(modelSearchQuery.toLowerCase())
     );
 
     // Group models by provider and source
@@ -373,61 +353,21 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
 
   return (
     <div className={`relative inline-block ${className}`} ref={dropdownRef}>
-      <div className="flex items-stretch gap-0" ref={buttonRef}>
-        {/* Retry same button */}
-        <button
-          onClick={handleRetryWithSameModel}
-          disabled={disabled}
-          className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 text-xs rounded-md transition-all duration-200 ${
-            disabled
-              ? "opacity-50 cursor-not-allowed"
-              : "hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-          }`}
-          title="Retry with same model"
-        >
-          <RefreshCw
-            size={12}
-          />
-          <span>Retry</span>
-        </button>
-
-        {/* Dropdown toggle */}
-        <button
-          onClick={handleModelSelectorClick}
-          disabled={disabled}
-          className={`cursor-pointer p-1 rounded-md transition-all duration-200 ${
-            disabled
-              ? "opacity-50 cursor-not-allowed"
-              : "hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-          }`}
-          title="Choose different model"
-        >
-          <ChevronDown
-            size={12}
-            className={`transition-transform duration-200 ${
-              isModelDropdownOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-      </div>
-
-      {/* Desktop Dropdown - EXACT same as ChatInput */}
-      {!isMobile && (
-        <AnimatePresence>
-          {isModelDropdownOpen && (
+      {/* Model Selector */}
+      <Popover
+        isOpen={isModelDropdownOpen && !isMobile}
+        positions={["top", "bottom"]}
+        reposition={true}
+        containerClassName="z-60"
+        onClickOutside={() => setIsModelDropdownOpen(false)}
+        content={
+          <AnimatePresence>
             <motion.div
-              initial={{ opacity: 0, y: dropdownPosition === 'top' ? 10 : -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: dropdownPosition === 'top' ? 10 : -10 }}
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className={`absolute ${
-                dropdownPosition === 'top' 
-                  ? 'bottom-full mb-2' 
-                  : 'top-full mt-2'
-              } left-0 w-[calc(100vw-2rem)] sm:w-80 max-w-80 rounded-lg shadow-sm border overflow-hidden z-50 ${themes.chatview.inputBg} ${themes.chatview.border}`}
-              style={{
-                maxHeight: "40vh",
-              }}
+              className={`w-[calc(100vw-2rem)] sm:w-80 max-w-80 rounded-lg shadow-sm border overflow-hidden ${themes.chatview.inputBg} ${themes.chatview.border}`}
             >
               {/* Search bar */}
               <div className={`p-3 ${themes.sidebar.fg}`}>
@@ -461,22 +401,26 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
                 {groupedModelOptions.map((group) => (
                   <div key={group.name} className="mb-2 last:mb-0 first:mt-2">
                     {/* Provider header */}
-                    <div className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}>
-                      {group.name !== "Other" && 
-                       group.name !== "Custom Models" && 
-                       getProviderIcon(group.name)}
+                    <div
+                      className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}
+                    >
+                      {group.name !== "Other" &&
+                        group.name !== "Custom Models" &&
+                        getProviderIcon(group.name)}
                       <span>{group.name}</span>
                     </div>
 
                     {/* Models in this provider */}
                     {group.models.map((option) => {
-                      const isSelected = 
+                      const isSelected =
                         option.value === currentModel &&
                         option.source === currentSource &&
                         (option.providerId || "") === (currentProviderId || "");
                       return (
                         <button
-                          key={`${option.value}-${option.providerId || "system"}`}
+                          key={`${option.value}-${
+                            option.providerId || "system"
+                          }`}
                           onClick={() => handleRetryWithModel(option)}
                           className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${
                             themes.sidebar.fgHoverAsFg
@@ -498,9 +442,9 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
                             <span className="truncate flex-1">
                               {option.label}
                             </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getCapabilityIcons(option)}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {getCapabilityIcons(option)}
+                            </div>
                           </div>
                         </button>
                       );
@@ -509,9 +453,45 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
                 ))}
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      )}
+          </AnimatePresence>
+        }
+      >
+        <div className="flex items-stretch gap-0">
+          {/* Retry same button */}
+          <button
+            onClick={handleRetryWithSameModel}
+            disabled={disabled}
+            className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 text-xs rounded-md transition-all duration-200 ${
+              disabled
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            }`}
+            title="Retry with same model"
+          >
+            <RefreshCw size={12} />
+            <span>Retry</span>
+          </button>
+
+          {/* Dropdown toggle */}
+          <button
+            onClick={handleModelSelectorClick}
+            disabled={disabled}
+            className={`cursor-pointer p-1 rounded-md transition-all duration-200 ${
+              disabled
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-black/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+            }`}
+            title="Choose different model"
+          >
+            <ChevronDown
+              size={12}
+              className={`transition-transform duration-200 ${
+                isModelDropdownOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+        </div>
+      </Popover>
 
       {/* Mobile Slider - EXACT same as ChatInput */}
       {isMobile && isModelSliderOpen && (
@@ -551,14 +531,16 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
             <div className="overflow-y-auto">
               {groupedModelOptions.map((group) => (
                 <div key={group.name} className="mb-2 last:mb-0 first:mt-2">
-                  <div className={`px-4 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}>
-                    {group.name !== "Other" && 
-                     group.name !== "Custom Models" && 
-                     getProviderIcon(group.name)}
+                  <div
+                    className={`px-4 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}
+                  >
+                    {group.name !== "Other" &&
+                      group.name !== "Custom Models" &&
+                      getProviderIcon(group.name)}
                     <span>{group.name}</span>
                   </div>
                   {group.models.map((option) => {
-                    const isSelected = 
+                    const isSelected =
                       option.value === currentModel &&
                       option.source === currentSource &&
                       (option.providerId || "") === (currentProviderId || "");

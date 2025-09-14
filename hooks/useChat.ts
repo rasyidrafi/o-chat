@@ -122,42 +122,68 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
 
   // Helper function to get the last visible message based on current versions
   const getLastVisibleMessage = useCallback((conversation: ChatConversation): ChatMessage | null => {
+    const { messages } = conversation;
+
     if (Object.keys(currentMessageVersions).length === 0) {
-      // No version selection, return the last message
-      return conversation.messages.length > 0 ? conversation.messages[conversation.messages.length - 1] : null;
+      return messages.length > 0 ? messages[messages.length - 1] : null;
     }
 
-    // Build message map for quick lookup
     const messageMap = new Map<string, ChatMessage>();
-    conversation.messages.forEach(message => {
-      messageMap.set(message.id, message);
+    messages.forEach((msg) => messageMap.set(msg.id, msg));
+
+    const versionGroups = new Map<string, ChatMessage[]>();
+    messages.forEach((msg) => {
+      const groupId = msg.originalMessageId || msg.id;
+      if (!versionGroups.has(groupId)) {
+        versionGroups.set(groupId, []);
+      }
+      versionGroups.get(groupId)!.push(msg);
     });
 
-    // Find the selected messages
-    const selectedMessages: ChatMessage[] = [];
-
-    Object.entries(currentMessageVersions).forEach(([groupId, versionIndex]) => {
-      // Find all messages in this group
-      const groupMessages = conversation.messages.filter(msg => {
-        const msgGroupId = msg.originalMessageId || msg.parentMessageId || msg.id;
-        return msgGroupId === groupId;
-      });
-
-      // Sort by timestamp
-      groupMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-      // Get the selected message
-      const selectedMessage = groupMessages[Math.min(versionIndex, groupMessages.length - 1)];
-      if (selectedMessage) {
-        selectedMessages.push(selectedMessage);
+    const selectedVersionMap = new Map<string, string>();
+    versionGroups.forEach((versions, groupId) => {
+      versions.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      const versionIndex = currentMessageVersions[groupId] ?? versions.length - 1;
+      const selectedVersion = versions[Math.min(versionIndex, versions.length - 1)];
+      if (selectedVersion) {
+        selectedVersionMap.set(groupId, selectedVersion.id);
       }
     });
 
-    // Find the latest selected message
-    if (selectedMessages.length === 0) return null;
+    const validMessageIds = new Set<string>();
+    const isValidMessageBranch = (msg: ChatMessage): boolean => {
+      if (validMessageIds.has(msg.id)) return true;
 
-    selectedMessages.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    return selectedMessages[0];
+      const groupId = msg.originalMessageId || msg.id;
+      if (versionGroups.has(groupId)) {
+        const selectedVersionId = selectedVersionMap.get(groupId);
+        if (selectedVersionId && selectedVersionId !== msg.id) {
+          return false;
+        }
+      }
+
+      if (!msg.parentMessageId) {
+        validMessageIds.add(msg.id);
+        return true;
+      }
+
+      const parentMsg = messageMap.get(msg.parentMessageId);
+      if (!parentMsg) {
+        return false;
+      }
+
+      if (!isValidMessageBranch(parentMsg)) {
+        return false;
+      }
+
+      validMessageIds.add(msg.id);
+      return true;
+    };
+
+    const visibleMessages = messages.filter(msg => isValidMessageBranch(msg));
+    visibleMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+    return visibleMessages.length > 0 ? visibleMessages[visibleMessages.length - 1] : null;
   }, [currentMessageVersions]);
 
   const currentConversation = React.useMemo(() => {
