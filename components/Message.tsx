@@ -723,16 +723,12 @@ const Message: React.FC<MessageProps> = memo(
                   {/* Version Navigation */}
                   {message.totalVersions && message.totalVersions > 1 && (
                     <VersionNavigation
-                      currentVersion={message.currentVersionIndex || 0}
+                      currentVersion={message.currentVersionIndex ?? 0}
                       totalVersions={message.totalVersions}
-                      onVersionChange={(version: number) =>
-                        onVersionChange?.(
-                          message.originalMessageId ||
-                            message.parentMessageId ||
-                            message.id,
-                          version
-                        )
-                      }
+                      onVersionChange={(version: number) => {
+                        const groupId = message.originalMessageId || message.id;
+                        onVersionChange?.(groupId, version);
+                      }}
                       disabled={isStreaming}
                     />
                   )}
@@ -1083,16 +1079,13 @@ const Message: React.FC<MessageProps> = memo(
                       {/* Version Navigation */}
                       {message.totalVersions && message.totalVersions > 1 && (
                         <VersionNavigation
-                          currentVersion={message.currentVersionIndex || 0}
+                          currentVersion={message.currentVersionIndex ?? 0}
                           totalVersions={message.totalVersions}
-                          onVersionChange={(version: number) =>
-                            onVersionChange?.(
-                              message.originalMessageId ||
-                                message.parentMessageId ||
-                                message.id,
-                              version
-                            )
-                          }
+                          onVersionChange={(version: number) => {
+                            const groupId =
+                              message.originalMessageId || message.id;
+                            onVersionChange?.(groupId, version);
+                          }}
                           disabled={isStreaming}
                         />
                       )}
@@ -1247,16 +1240,12 @@ const Message: React.FC<MessageProps> = memo(
                   {/* Version Navigation */}
                   {message.totalVersions && message.totalVersions > 1 && (
                     <VersionNavigation
-                      currentVersion={message.currentVersionIndex || 0}
+                      currentVersion={message.currentVersionIndex ?? 0}
                       totalVersions={message.totalVersions}
-                      onVersionChange={(version: number) =>
-                        onVersionChange?.(
-                          message.originalMessageId ||
-                            message.parentMessageId ||
-                            message.id,
-                          version
-                        )
-                      }
+                      onVersionChange={(version: number) => {
+                        const groupId = message.originalMessageId || message.id;
+                        onVersionChange?.(groupId, version);
+                      }}
                       disabled={isStreaming}
                     />
                   )}

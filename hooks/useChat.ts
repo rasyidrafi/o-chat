@@ -1840,7 +1840,7 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
                           updatedAt: new Date(),
                         };
 
-                        // Save updated conversation with completed job
+                        // Save updated conversation
                         ChatStorageService.saveConversation(updatedConv, user).catch(error => {
                           console.error('Error saving resumed job completion:', error);
                         });
@@ -2595,30 +2595,54 @@ export const useChat = (settings?: AppSettings | undefined, navigate?: NavigateF
         messageMap.set(msg.id, msg);
       });
 
-      // Find the last visible message
-      const lastVisibleMessage = getLastVisibleMessage(currentConversation);
+      // Get the message being retried
+      const messageToRetry = currentConversation.messages.find(m => m.id === messageId);
+      if (!messageToRetry) return;
 
-      // Build conversation path by traversing up from the last visible message
-      const conversationPath: ChatMessage[] = [];
-      let currentMessage: ChatMessage | null = lastVisibleMessage;
+      // Build conversation path using the same logic as MessageList to only include visible versions
+      const buildVisibleConversationPath = (): ChatMessage[] => {
+        const versionGroups = new Map<string, ChatMessage[]>();
+        currentConversation.messages.forEach((msg) => {
+          const groupId = msg.originalMessageId || msg.id;
+          if (!versionGroups.has(groupId)) {
+            versionGroups.set(groupId, []);
+          }
+          versionGroups.get(groupId)!.push(msg);
+        });
 
-      // Don't include the message being retried in the conversation path
-      if (currentMessage && currentMessage.id === message.id) {
-        // If the last visible message is the one being retried, go to its parent
-        currentMessage = messageMap.get(currentMessage.parentMessageId || '') || null;
-      }
+        const selectedVersionMap = new Map<string, string>();
+        versionGroups.forEach((versions, groupId) => {
+          versions.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+          const versionIndex = currentMessageVersions[groupId] ?? 0;
+          const selectedVersion = versions[Math.min(versionIndex, versions.length - 1)];
+          if (selectedVersion) {
+            selectedVersionMap.set(groupId, selectedVersion.id);
+          }
+        });
 
-      while (currentMessage) {
-        // Skip the message being retried
-        if (currentMessage.id !== message.id) {
-          conversationPath.unshift(currentMessage); // Add to beginning to maintain order
+        const conversationPath: ChatMessage[] = [];
+        let currentMessage = messageMap.get(messageToRetry.parentMessageId!);
+
+        while (currentMessage) {
+          const groupId = currentMessage.originalMessageId || currentMessage.id;
+          const selectedId = selectedVersionMap.get(groupId);
+
+          if (selectedId === currentMessage.id || !selectedVersionMap.has(groupId)) {
+            conversationPath.unshift(currentMessage);
+          }
+
+          if (currentMessage.parentMessageId) {
+            currentMessage = messageMap.get(currentMessage.parentMessageId);
+          } else {
+            currentMessage = undefined;
+          }
         }
-        if (currentMessage.parentMessageId) {
-          currentMessage = messageMap.get(currentMessage.parentMessageId) || null;
-        } else {
-          currentMessage = null;
-        }
-      }      // Now start streaming the new response
+        return conversationPath;
+      };
+
+      const conversationPath = buildVisibleConversationPath();
+
+      // Now start streaming the new response
       let timeoutId: NodeJS.Timeout | null = null;
       const controller = new AbortController();
       setStreamingState({

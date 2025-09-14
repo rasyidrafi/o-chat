@@ -68,106 +68,136 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
     const [isTransitioning, setIsTransitioning] = useState(false);
     const { isMobile } = useSettingsContext();
 
-    // Build conversation tree and show messages leading to current selection
+    // COMPLETELY REDESIGNED message filtering logic
     const visibleMessages = useMemo(() => {
-      // Build message map for quick lookup
-      const messageMap = new Map<string, ChatMessage>();
-      messages.forEach((message) => {
-        messageMap.set(message.id, message);
-      });
-
-      // If no current versions specified, show all messages in chronological order
+      // If no versions specified, return all messages
       if (Object.keys(currentVersions).length === 0) {
-        return messages.sort(
-          (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-        );
+        return messages;
       }
 
-      // Find the currently selected message for each branch
-      const selectedMessages = new Set<string>();
+      // STEP 1: Build a message map for quick lookups
+      const messageMap = new Map<string, ChatMessage>();
+      messages.forEach((msg) => messageMap.set(msg.id, msg));
 
-      Object.entries(currentVersions).forEach(([groupId, versionIndex]) => {
-        // Find all messages in this group
-        // Use the same grouping logic as initializeCurrentVersions: originalMessageId || parentMessageId || id
-        const groupMessages = messages.filter(
-          (msg) => (msg.originalMessageId || msg.id) === groupId
-        );
+      // STEP 2: Build version groups
+      const versionGroups = new Map<string, ChatMessage[]>();
+      messages.forEach((msg) => {
+        const groupId = msg.originalMessageId || msg.id;
+        if (!versionGroups.has(groupId)) {
+          versionGroups.set(groupId, []);
+        }
+        versionGroups.get(groupId)!.push(msg);
+      });
 
-        // Sort by timestamp
-        groupMessages.sort(
-          (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-        );
+      // STEP 3: Sort version groups by timestamp and build selected version map
+      const selectedVersionMap = new Map<string, string>();
+      versionGroups.forEach((versions, groupId) => {
+        // Sort versions by timestamp
+        versions.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-        // Get the selected message
-        const selectedMessage =
-          groupMessages[Math.min(versionIndex, groupMessages.length - 1)];
-        if (selectedMessage) {
-          selectedMessages.add(selectedMessage.id);
+        // Get the selected version index
+        const versionIndex = currentVersions[groupId] ?? 0;
+        // Get the selected version and store its ACTUAL ID for lookup
+        const selectedVersion =
+          versions[Math.min(versionIndex, versions.length - 1)];
+
+        if (selectedVersion) {
+          selectedVersionMap.set(groupId, selectedVersion.id);
         }
       });
 
-      // Build conversation paths for each selected message
-      const conversationPaths = new Set<string>();
+      // STEP 4: Build valid message branches using a tree-based approach
+      const validMessageIds = new Set<string>();
 
-      selectedMessages.forEach((selectedMessageId) => {
-        let currentMessage = messageMap.get(selectedMessageId);
-        while (currentMessage) {
-          conversationPaths.add(currentMessage.id);
-          // Traverse up the tree using parentMessageId
-          if (currentMessage.parentMessageId) {
-            currentMessage = messageMap.get(currentMessage.parentMessageId);
-          } else {
-            break;
+      // For each message, check if its entire ancestry consists of selected versions
+      const isValidMessageBranch = (msg: ChatMessage): boolean => {
+        // If already processed and found valid, return true
+        if (validMessageIds.has(msg.id)) return true;
+
+        // If the message is itself a version of something, check if it's the selected version
+        if (msg.originalMessageId) {
+          const selectedVersionId = selectedVersionMap.get(
+            msg.originalMessageId
+          );
+          if (selectedVersionId !== msg.id) {
+            return false; // This is not the selected version
           }
         }
-        // Also traverse down to find messages that have this message as parent
-        const traverseDown = (parentId: string) => {
-          messages.forEach((msg) => {
-            if (msg.parentMessageId === parentId) {
-              conversationPaths.add(msg.id);
-              traverseDown(msg.id);
-            }
-          });
-        };
-        traverseDown(selectedMessageId);
-      });
 
-      // Return messages in chronological order that are part of the conversation paths
-      // Enrich messages with version information for UI
-      const baseMessages = messages
-        .filter((message) => conversationPaths.has(message.id))
-        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        // If no parent, it's valid
+        if (!msg.parentMessageId) {
+          validMessageIds.add(msg.id);
+          return true;
+        }
 
-      // Add version information to messages that have multiple versions
-      return baseMessages.map((message) => {
+        // Get the parent message
+        const parentMsg = messageMap.get(msg.parentMessageId);
+        if (!parentMsg) {
+          // No parent found (shouldn't happen), consider valid
+          validMessageIds.add(msg.id);
+          return true;
+        }
+
+        // Check if the parent is the selected version in its group
+        const parentGroupId = parentMsg.originalMessageId || parentMsg.id;
+        if (versionGroups.has(parentGroupId)) {
+          const selectedParentId = selectedVersionMap.get(parentGroupId);
+          if (selectedParentId !== parentMsg.id) {
+            // Parent is not the selected version, this branch is invalid
+            return false;
+          }
+        }
+
+        // Recursively check if parent is valid
+        if (!isValidMessageBranch(parentMsg)) {
+          return false;
+        }
+
+        // If we get here, the message is valid
+        validMessageIds.add(msg.id);
+        return true;
+      };
+
+      // Check each message if it's part of a valid branch
+      const result: ChatMessage[] = [];
+
+      for (const msg of messages) {
+        // Skip version checking for messages that are not selected versions
+        const groupId = msg.originalMessageId || msg.id;
+        const selectedId = selectedVersionMap.get(groupId);
+
+        // If this message is a version but not the selected one, skip it entirely
+        if (msg.originalMessageId && selectedId !== msg.id) {
+          continue;
+        }
+
+        // For the selected version and regular messages, check entire parent chain
+        if (isValidMessageBranch(msg)) {
+          result.push(msg);
+        }
+      }
+
+      // Sort by timestamp to maintain chronological order
+      result.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+      // STEP 5: Add version information for UI
+      return result.map((message) => {
         const groupId = message.originalMessageId || message.id;
-        if (!groupId) return message;
+        const versions = versionGroups.get(groupId) || [];
 
-        const groupMessages = messages.filter(
-          (msg) => (msg.originalMessageId || msg.id) === groupId
-        );
-
-        if (groupMessages.length > 1) {
-          // Sort group messages by timestamp
-          groupMessages.sort(
-            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-          );
-
-          // Find current version index
-          const messageIndex = groupMessages.findIndex(
-            (msg) => msg.id === message.id
-          );
-
+        if (versions.length > 1) {
+          const versionIndex = versions.findIndex((v) => v.id === message.id);
           return {
             ...message,
-            totalVersions: groupMessages.length,
-            currentVersionIndex: messageIndex,
+            totalVersions: versions.length,
+            currentVersionIndex: versionIndex >= 0 ? versionIndex : 0,
           };
         }
 
         return message;
       });
-    }, [messages, currentVersions]); // Optimized scroll tracking
+    }, [messages, currentVersions]);
+
     const scrollState = useRef<{
       scrollTop: number;
       scrollHeight: number;
@@ -355,11 +385,6 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
           </AnimatePresence>
           {/* Bottom padding + sentinel for scroll tracking */}
           <div ref={sentinelRef} className="h-40 md:h-45"></div>
-
-          {/* Load more messages indicator (if needed) */}
-          {/* {isLoadingMoreMessages && (
-            <div className="text-center p-4"> Loading more...</div>
-          )} */}
         </div>
       </div>
     );
