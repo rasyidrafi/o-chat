@@ -55,6 +55,7 @@ import { useSettingsContext } from "@/contexts/SettingsContext";
 import { useCloudStorage } from "../contexts/CloudStorageContext";
 import { themes } from "@/constants/themes";
 import LoadingState from "./ui/LoadingState";
+import { useSettings } from "@/hooks/useSettings";
 
 interface ModelOption {
   label: string;
@@ -112,6 +113,8 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       custom_providers: cloudCustomProviders,
       custom_models: cloudCustomModels,
     } = useCloudStorage();
+    const { settings } = useSettingsContext();
+    const isDark = settings.theme == "dark" || (settings.theme == "system" && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     // Simple localStorage functions for last selected model (UI preference)
     const saveLastSelectedModel = useCallback(
@@ -1640,7 +1643,9 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     return (
       <div className="flex flex-row w-full gap-2">
         {isMobile && (
-          <div className={`self-end rounded-full min-h-8 mb-1 ml-3 ${themes.chatview.inputBg} `}>
+          <div
+            className={`self-end ${isDark ? "" : `${themes.chatview.border} border-1`} rounded-full min-h-10 mb-0.5 ml-3 ${themes.chatview.inputBg} `}
+          >
             <Popover
               isOpen={isModelDropdownOpen && !isMobile}
               positions={["top"]}
@@ -1831,13 +1836,13 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
             >
               <button
                 onClick={handleModelSelectorClick}
-                className={`flex items-center gap-2 p-2 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
+                className={`flex items-center gap-2 p-3 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
               >
                 {isLoadingSystemModels || isLoadingModelFromConversation ? (
                   <LoadingState size="xs" message="" />
                 ) : (
                   <ChevronDown
-                    className={`w-4 h-4 ${
+                    className={`w-5 h-5 ${
                       themes.sidebar.fgHoverAsFg
                     } ${transitionClass} flex-shrink-0 ${
                       isModelDropdownOpen ? "rotate-180" : ""
@@ -1849,7 +1854,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
           </div>
         )}
         <div
-          className={`${
+          className={`${isDark ? "" : `${themes.chatview.border} border-1`} ${
             isMobile
               ? `${themes.chatview.inputBg} rounded-3xl flex-1 mr-3`
               : `${themes.chatview.inputBgTransparent} w-full border-1 border-b-0 backdrop-blur-md rounded-t-3xl rounded-b-none shadow-sm p-3 pb-2`
@@ -1909,14 +1914,20 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 onKeyPress={handleKeyPress}
                 onPaste={handleUnifiedPaste}
                 placeholder={"Type message..."}
-                className={`w-full bg-transparent resize-none focus:outline-none px-2 py-1 text-sm max-h-32 overflow-y-auto thin-scrollbar ${isMobile ? "no-scrollbar pl-3" : "min-h-12"} ${
-                  themes.sidebar.fgHoverAsFg
-                } ${themes.sidebar.fgRaw("placeholder:")}`}
+                className={`w-full bg-transparent resize-none focus:outline-none px-2 py-2 text-sm max-h-32 overflow-y-auto thin-scrollbar ${
+                  isMobile ? "no-scrollbar pl-3 min-h-10" : "min-h-12"
+                } ${themes.sidebar.fgHoverAsFg} ${themes.sidebar.fgRaw(
+                  "placeholder:"
+                )}`}
                 rows={1}
               />
             </div>
             {/* Controls Section */}
-            <div className={`flex ${isMobile ? "self-end" : "items-stretch mt-2"} justify-between flex-wrap gap-2`}>
+            <div
+              className={`flex ${
+                isMobile ? "self-end" : "items-stretch mt-2"
+              } justify-between flex-wrap gap-2`}
+            >
               {!isMobile && (
                 <div className="flex items-stretch flex-wrap gap-2">
                   {/* Model Selector */}
@@ -2137,7 +2148,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                         <LoadingState size="xs" message="" />
                       ) : (
                         <ChevronDown
-                          className={`w-4 h-4 ${
+                          className={`w-5 h-5 ${
                             themes.sidebar.fgHoverAsFg
                           } ${transitionClass} flex-shrink-0 ${
                             isModelDropdownOpen ? "rotate-180" : ""
@@ -2149,7 +2160,11 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 </div>
               )}
 
-              <div className={`flex ${isMobile ? "pr-1 min-h-8" : "items-stretch"} gap-1`}>
+              <div
+                className={`flex ${
+                  isMobile ? "pr-1 min-h-10" : "items-stretch"
+                } gap-1`}
+              >
                 {/* Upload button - show for image editing in generation mode or vision in chat mode */}
                 {(() => {
                   const capabilities = getCurrentModelCapabilities();
@@ -2186,7 +2201,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                       {isUploadingImage ? (
                         <LoadingState size="xs" message="" />
                       ) : (
-                        <Paperclip className="w-4 h-4" />
+                        <Paperclip className="w-5 h-5" />
                       )}
                     </button>
                   </div>
@@ -2258,13 +2273,13 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                       title={selectedImageSize}
                     >
                       <FullScreen
-                        className={`w-4 h-4 sm:hidden flex-shrink-0`}
+                        className={`w-5 h-5 sm:hidden flex-shrink-0`}
                       />
                       <span className="truncate flex-1 text-left hidden sm:block">
                         {selectedImageSize}
                       </span>
                       <ChevronDown
-                        className={`w-4 h-4 ${transitionClass} flex-shrink-0 ${
+                        className={`w-5 h-5 ${transitionClass} flex-shrink-0 ${
                           isSizeDropdownOpen ? "rotate-180" : ""
                         }`}
                       />
@@ -2287,12 +2302,16 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                           if ((window as any).cancelStream)
                             (window as any).cancelStream();
                         }}
-                        className={`${isMobile ? "rounded-3xl px-2" : "rounded-lg py-1.5 px-2.5"} flex items-center transition-colors cursor-pointer bg-red-500 hover:bg-red-600`}
+                        className={`${
+                          isMobile
+                            ? "rounded-3xl px-2.5"
+                            : "rounded-lg py-1.5 px-2.5"
+                        } flex items-center transition-colors cursor-pointer bg-red-500 hover:bg-red-600`}
                         aria-label="Cancel message"
                         style={{ position: "relative" }}
                       >
                         <span className="flex items-center justify-center">
-                          <CancelSquare className="w-4 h-4" />
+                          <CancelSquare className="w-5 h-5" />
                         </span>
                       </button>
                     );
@@ -2301,7 +2320,11 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                   return (
                     <button
                       onClick={handleSendMessage}
-                      className={` ${isMobile ? "rounded-3xl px-2" : "py-1.5 px-2.5 rounded-lg"} flex items-center transition-colors disabled:cursor-not-allowed cursor-pointer ${
+                      className={` ${
+                        isMobile
+                          ? "rounded-3xl px-2.5"
+                          : "py-1.5 px-2.5 rounded-lg"
+                      } flex items-center transition-colors disabled:cursor-not-allowed cursor-pointer ${
                         (() => {
                           if (inputMode === "image_generation") {
                             if (capabilities?.hasImageEditing) {
@@ -2371,7 +2394,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                           : "Send message"
                       }
                     >
-                      <ArrowUp className="w-4 h-4" />
+                      <ArrowUp className="w-5 h-5" />
                     </button>
                   );
                 })()}

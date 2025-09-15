@@ -384,7 +384,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
             ))}
           </AnimatePresence>
           {/* Bottom padding + sentinel for scroll tracking */}
-          <div ref={sentinelRef} className={isMobile ? "h-20" : "h-40 md:h-45"}></div>
+          <div ref={sentinelRef} className={isMobile ? "h-24" : "h-40 md:h-45"}></div>
         </div>
       </div>
     );
