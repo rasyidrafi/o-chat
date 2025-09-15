@@ -71,14 +71,12 @@ const ChatView: React.FC<ChatViewProps> = ({
   } = chat;
 
   // Get isMobile and animationsDisabled from SettingsContext
-  const { isMobile, settings, } = useSettingsContext();
+  const { isMobile, settings, isDark } = useSettingsContext();
   const animationsDisabled = settings.animationsDisabled;
 
   // Load model options for retry functionality
 
   const { modelOptions } = useModelOptions();
-
-  const isDark = settings.theme === "dark" || (settings.theme === "system" && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -409,7 +407,7 @@ const ChatView: React.FC<ChatViewProps> = ({
           </div>
         ) : (
           <div className="flex-1 relative overflow-hidden">
-            <div className={`fade-overlay block md:hidden ${isDark ? "" : "hidden"}`}></div>
+            <div className={`${isDark ? "dark-fade-overlay" : "fade-overlay"} block md:hidden`}></div>
             <MessageList
               ref={messageListRef}
               messages={currentConversation?.messages || []}
@@ -480,7 +478,11 @@ const ChatView: React.FC<ChatViewProps> = ({
         </motion.div>
 
         <motion.div
-          className={`mx-auto max-w-4xl pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 py-2 md:py-0 ${isMobile ? `${themes.chatview.backdrop} shadow-sm pb-4 ${isDark ? "" : `border-t-1 ${themes.sidebar.border}`}` : ""}`}
+          className={`mx-auto max-w-4xl pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 py-2 md:py-0 ${
+            isMobile
+              ? `${themes.chatview.backdrop} pb-4`
+              : ""
+          }`}
           initial={false}
           animate={chatInputPadding}
           transition={sidebarTransition}

@@ -382,7 +382,7 @@ h6 {
   -ms-overflow-style: none;
 }
 
-.fade-overlay {
+.dark-fade-overlay {
   position: absolute;
   left: 0;
   right: 0;
@@ -390,6 +390,18 @@ h6 {
   bottom: 72px; /* Height of the input + some margin */
   height: 60px; /* Fade height: adjust as needed (10–20% of input height) */
   background: linear-gradient(to bottom, transparent 0%, #1c1c1c 100%);
+  pointer-events: none;
+  z-index: 29;
+}
+
+.fade-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Change to only cover the bottom */
+  bottom: 72px; /* Height of the input + some margin */
+  height: 60px; /* Fade height: adjust as needed (10–20% of input height) */
+  background: linear-gradient(to bottom, transparent 0%, #f9f9f9 100%);
   pointer-events: none;
   z-index: 29;
 }

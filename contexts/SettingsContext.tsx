@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
 import { User } from "firebase/auth";
 import { useSettings, AppSettings } from "../hooks/useSettings";
 
@@ -8,9 +14,12 @@ interface SettingsContextType {
   updateSettings: (newSettings: Partial<AppSettings>) => Promise<void>;
   toggleTheme: () => void;
   isMobile: boolean;
+  isDark: boolean;
 }
 
-const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+const SettingsContext = createContext<SettingsContextType | undefined>(
+  undefined
+);
 
 interface SettingsProviderProps {
   children: React.ReactNode;
@@ -63,6 +72,15 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
     onConfirmationDialog
   );
 
+  const isDark = useMemo(() => {
+    return (
+      settings.theme === "dark" ||
+      (settings.theme === "system" &&
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches)
+    );
+  }, [settings.theme]);
+
   const contextValue = useMemo(
     () => ({
       settings,
@@ -70,8 +88,9 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
       updateSettings,
       toggleTheme,
       isMobile,
+      isDark,
     }),
-    [settings, settingsLoaded, updateSettings, toggleTheme, isMobile]
+    [settings, settingsLoaded, updateSettings, toggleTheme, isMobile, isDark]
   );
 
   return (
@@ -84,7 +103,9 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({
 export const useSettingsContext = () => {
   const context = useContext(SettingsContext);
   if (context === undefined) {
-    throw new Error("useSettingsContext must be used within a SettingsProvider");
+    throw new Error(
+      "useSettingsContext must be used within a SettingsProvider"
+    );
   }
   return context;
 };

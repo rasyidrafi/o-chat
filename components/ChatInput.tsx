@@ -113,8 +113,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       custom_providers: cloudCustomProviders,
       custom_models: cloudCustomModels,
     } = useCloudStorage();
-    const { settings } = useSettingsContext();
-    const isDark = settings.theme == "dark" || (settings.theme == "system" && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const { isDark } = useSettingsContext();
 
     // Simple localStorage functions for last selected model (UI preference)
     const saveLastSelectedModel = useCallback(
@@ -1644,7 +1643,9 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       <div className="flex flex-row w-full gap-2">
         {isMobile && (
           <div
-            className={`self-end ${isDark ? "" : `${themes.chatview.border} border-1`} rounded-full min-h-10 mb-0.5 ml-3 ${themes.chatview.inputBg} `}
+            className={`self-end ${
+              isDark ? "" : `${themes.chatview.border} border-1`
+            } rounded-full min-h-10 mb-0.5 ml-3 ${themes.chatview.inputBg} `}
           >
             <Popover
               isOpen={isModelDropdownOpen && !isMobile}

@@ -87,7 +87,7 @@ const AppContent: React.FC<{
   // Custom hooks
   const { user, signOut, authLoaded, isLoading: authIsLoading } = useAuth();
 
-  const { settings, settingsLoaded, updateSettings, toggleTheme } =
+  const { settings, settingsLoaded, updateSettings, toggleTheme, isDark } =
     useSettingsContext();
 
   const chat = useChat(settingsLoaded ? settings : undefined, navigate);
@@ -110,14 +110,9 @@ const AppContent: React.FC<{
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const isDark =
-      settings.theme === "dark" ||
-      (settings.theme === "system" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
-
     root.classList.remove(isDark ? "light" : "dark");
     root.classList.add(isDark ? "dark" : "light");
-  }, [settings.theme]);
+  }, [settings.theme, isDark]);
 
   useEffect(() => {
     document.documentElement.style.setProperty(
