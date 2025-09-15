@@ -193,66 +193,71 @@ export const RetryButton: React.FC<RetryButtonProps> = ({
   const getProviderIcon = useCallback((providerName: string) => {
     const lowerProviderName = providerName.toLowerCase();
 
+    if (lowerProviderName.includes("ai21")) {
+      return <AI21 size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("openai")) {
+      return <OpenAI size={18} className="text-current" />;
+    }
     if (
-      lowerProviderName.includes("openai") ||
-      lowerProviderName.includes("gpt")
-    ) {
-      return <OpenAI className="w-4 h-4" />;
-    } else if (
-      lowerProviderName.includes("anthropic") ||
-      lowerProviderName.includes("claude")
-    ) {
-      return <Anthropic className="w-4 h-4" />;
-    } else if (
       lowerProviderName.includes("google") ||
       lowerProviderName.includes("gemini")
     ) {
-      return <Google className="w-4 h-4" />;
-    } else if (
-      lowerProviderName.includes("meta") ||
-      lowerProviderName.includes("llama")
+      return <Google size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("anthropic")) {
+      return <Anthropic size={18} className="text-current" />;
+    }
+    if (
+      lowerProviderName.includes("stability") ||
+      lowerProviderName.includes("stabilityai")
     ) {
-      return <Meta className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("deepseek")) {
-      return <DeepSeek className="w-4 h-4" />;
-    } else if (
-      lowerProviderName.includes("grok") ||
-      lowerProviderName.includes("x.ai")
-    ) {
-      return <XAI className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("qwen")) {
-      return <Qwen className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("moonshot")) {
-      return <MoonshotAI className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("z.ai")) {
-      return <Zai className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("cohere")) {
-      return <Cohere className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("mistral")) {
-      return <Mistral className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("stability")) {
-      return <StabilityAI className="w-4 h-4" />;
-    } else if (
-      lowerProviderName.includes("blackforestlabs") ||
+      return <StabilityAI size={18} className="text-current" />;
+    }
+    if (
+      lowerProviderName.includes("black forest") ||
       lowerProviderName.includes("flux")
     ) {
-      return <BlackForestLabs className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("bytedance")) {
-      return <ByteDance className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("microsoft")) {
-      return <Microsoft className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("ai21")) {
-      return <AI21 className="w-4 h-4" />;
-    } else if (lowerProviderName.includes("venice")) {
-      return <Venice className="w-4 h-4" />;
-    } else {
-      // Default icon for unknown providers
-      return (
-        <div className="w-4 h-4 bg-gray-500 rounded-sm flex items-center justify-center">
-          <span className="text-white text-[10px] font-bold">?</span>
-        </div>
-      );
+      return <BlackForestLabs size={18} className="text-current" />;
     }
+    if (lowerProviderName.includes("bytedance")) {
+      return <ByteDance size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("meta")) {
+      return <Meta size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("microsoft")) {
+      return <Microsoft size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("cohere")) {
+      return <Cohere size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("xai")) {
+      return <XAI size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("deepseek")) {
+      return <DeepSeek size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("mistral")) {
+      return <Mistral size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("moonshot")) {
+      return <MoonshotAI size={18} className="text-current" />;
+    }
+    if (
+      lowerProviderName.includes("zai") ||
+      lowerProviderName.includes("z.ai")
+    ) {
+      return <Zai size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("qwen")) {
+      return <Qwen size={18} className="text-current" />;
+    }
+    if (lowerProviderName.includes("venice")) {
+      return <Venice size={18} className="text-current" />;
+    }
+
+    return null; // No icon for unknown providers
   }, []);
 
   // Close dropdown when clicking outside (removed manual handling to avoid conflicts with Popover)
