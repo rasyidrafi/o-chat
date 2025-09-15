@@ -476,7 +476,7 @@ const ChatView: React.FC<ChatViewProps> = ({
         </motion.div>
 
         <motion.div
-          className={`mx-auto max-w-4xl pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 py-2 md:py-0 ${isMobile ? `${themes.chatview.backdrop} rounded-t-3xl border-t-1 ${themes.chatview.border} shadow-sm` : ""}`}
+          className={`mx-auto max-w-4xl pointer-events-auto px-4 md:px-6 lg:px-8 xl:px-16 py-2 md:py-0 ${isMobile ? `${themes.chatview.backdrop}  border-t-1 ${themes.sidebar.border} shadow-sm` : ""}`}
           initial={false}
           animate={chatInputPadding}
           transition={sidebarTransition}
