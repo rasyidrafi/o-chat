@@ -1639,7 +1639,13 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
 
     return (
       <div
-        className={`${themes.chatview.inputBg} ${themes.chatview.border} border-1 p-3 rounded-3xl w-full md:rounded-3xl rounded-t-3xl rounded-b-none shadow-sm`}
+        className={`${
+          isMobile
+            ? themes.chatview.inputBg
+            : themes.chatview.inputBgTransparent
+        } ${themes.chatview.border} border-1 border-b-0 p-3 pb-2 ${
+          isMobile ? "" : "backdrop-blur-md"
+        } w-full rounded-t-3xl rounded-b-none shadow-sm`}
       >
         {/* Image Preview Section */}
         {inputMode === "image_generation" && uploadedImageForEditing && (
@@ -1713,7 +1719,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               isOpen={isModelDropdownOpen && !isMobile}
               positions={["top"]}
               reposition={true}
-              containerClassName="z-30"
+              containerClassName={`z-30`}
               onClickOutside={() => setIsModelDropdownOpen(false)}
               content={
                 <AnimatePresence>
@@ -1722,7 +1728,15 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                    className={`w-[calc(100vw-2rem)] sm:w-80 max-w-80 rounded-lg shadow-sm border overflow-hidden ${themes.chatview.inputBg} ${themes.chatview.border}`}
+                    className={`w-[calc(100vw-2rem)] ${
+                      isMobile
+                        ? themes.chatview.inputBg
+                        : themes.chatview.inputBgTransparent
+                    } ${
+                      isMobile ? "" : "backdrop-blur-md"
+                    } sm:w-80 max-w-80 rounded-lg shadow-sm border overflow-hidden ${
+                      themes.chatview.inputBg
+                    } ${themes.chatview.border}`}
                   >
                     {/* Search Input */}
                     <div className={`p-3 ${themes.sidebar.fg}`}>
@@ -1971,7 +1985,17 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className={`w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 sm:w-40 sm:max-w-none ${themes.chatview.inputBg} rounded-lg shadow-sm border ${themes.chatview.border} overflow-hidden z-10`}
+                      className={`w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 ${
+                        isMobile
+                          ? themes.chatview.inputBg
+                          : themes.chatview.inputBgTransparent
+                      } ${
+                        isMobile ? "" : "backdrop-blur-md"
+                      } sm:w-40 sm:max-w-none ${
+                        themes.chatview.inputBg
+                      } rounded-lg shadow-sm border ${
+                        themes.chatview.border
+                      } overflow-hidden z-10`}
                     >
                       <div className="h-auto overflow-y-auto thin-scrollbar">
                         {ImageGenerationService.getImageSizeOptions().map(
@@ -1990,7 +2014,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                                 } ${themes.sidebar.bgHover} ${
                                   isSelected
                                     ? `${themes.sidebar.bgHoverAsBg}`
-                                    : `${themes.chatview.inputBg}`
+                                    : ``
                                 } $`}
                               >
                                 {option.label}
