@@ -1638,83 +1638,9 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     };
 
     return (
-      <div
-        className={`${
-          isMobile
-            ? themes.chatview.inputBg
-            : themes.chatview.inputBgTransparent
-        } ${themes.chatview.border} border-1 border-b-0 p-3 pb-2 ${
-          isMobile ? "" : "backdrop-blur-md"
-        } w-full rounded-t-3xl rounded-b-none shadow-sm`}
-      >
-        {/* Image Preview Section */}
-        {inputMode === "image_generation" && uploadedImageForEditing && (
-          <div className="mb-2 flex overflow-x-auto gap-2 thin-scrollbar">
-            <div
-              className={`relative group inline-block rounded-lg max-w-24 ${themes.message.backdrop}`}
-            >
-              <img
-                src={uploadedImageForEditing}
-                alt="Image for editing"
-                className="w-20 h-20 object-cover rounded-lg"
-              />
-              <button
-                onClick={clearAllImages}
-                className="cursor-pointer absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {inputMode === "chat" && attachments.length > 0 && (
-          <div className="mb-2 flex overflow-x-auto gap-2 thin-scrollbar">
-            {attachments.map((attachment) => (
-              <div
-                key={attachment.id}
-                className={`relative group inline-block rounded-lg max-w-24 ${themes.message.backdrop}`}
-              >
-                <img
-                  src={attachment.url}
-                  alt={attachment.filename}
-                  className="w-20 h-20 object-cover rounded-lg"
-                />
-                <button
-                  onClick={() => removeAttachment(attachment.id)}
-                  className="cursor-pointer absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Text Input */}
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={prompt}
-            onChange={handleTextareaChange}
-            onKeyPress={handleKeyPress}
-            onPaste={handleUnifiedPaste}
-            placeholder={
-              inputMode === "image_generation"
-                ? "Describe the image you want to generate..."
-                : "Type your message here..."
-            }
-            className={`w-full bg-transparent resize-none focus:outline-none px-2 py-1 text-sm max-h-32 overflow-y-auto thin-scrollbar min-h-12 ${
-              themes.sidebar.fgHoverAsFg
-            } ${themes.sidebar.fgRaw("placeholder:")}`}
-            rows={1}
-          />
-        </div>
-
-        {/* Controls Section */}
-        <div className="flex items-stretch justify-between flex-wrap gap-2 mt-2">
-          <div className="flex items-stretch flex-wrap gap-2">
-            {/* Model Selector */}
+      <div className="flex flex-row w-full gap-2">
+        {isMobile && (
+          <div className={`self-end rounded-full min-h-8 mb-1 ml-3 ${themes.chatview.inputBg} `}>
             <Popover
               isOpen={isModelDropdownOpen && !isMobile}
               positions={["top"]}
@@ -1907,11 +1833,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 onClick={handleModelSelectorClick}
                 className={`flex items-center gap-2 p-2 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
               >
-                <span
-                  className={`${themes.sidebar.fgHoverAsFg} truncate flex-1 text-left`}
-                >
-                  {selectedModelLabel}
-                </span>
                 {isLoadingSystemModels || isLoadingModelFromConversation ? (
                   <LoadingState size="xs" message="" />
                 ) : (
@@ -1926,426 +1847,737 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               </button>
             </Popover>
           </div>
-
-          <div className="flex items-stretch gap-1">
-            {/* Upload button - show for image editing in generation mode or vision in chat mode */}
-            {(() => {
-              const capabilities = getCurrentModelCapabilities();
-              return (
-                capabilities &&
-                ((inputMode === "image_generation" &&
-                  capabilities.hasImageEditing) ||
-                  (inputMode === "chat" &&
-                    capabilities.hasVision &&
-                    !capabilities.hasImageEditing))
-              );
-            })() && (
+        )}
+        <div
+          className={`${
+            isMobile
+              ? `${themes.chatview.inputBg} rounded-3xl flex-1 mr-3`
+              : `${themes.chatview.inputBgTransparent} w-full border-1 border-b-0 backdrop-blur-md rounded-t-3xl rounded-b-none shadow-sm p-3 pb-2`
+          } ${themes.chatview.border} `}
+        >
+          {/* Image Preview Section */}
+          {inputMode === "image_generation" && uploadedImageForEditing && (
+            <div className="mb-2 flex overflow-x-auto gap-2 thin-scrollbar">
               <div
-                className={`cursor-pointer relative bg-transparent transition-colors rounded-lg flex items-center p-2 rounded-lg ${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHover}`}
+                className={`relative group inline-block rounded-lg max-w-24 ${themes.message.backdrop}`}
               >
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handleImageUpload(file);
-                      e.target.value = "";
-                    }
-                  }}
-                  className="absolute inset-0 w-full h-full opacity-0 z-10"
-                  disabled={isUploadingImage}
+                <img
+                  src={uploadedImageForEditing}
+                  alt="Image for editing"
+                  className="w-20 h-20 object-cover rounded-lg"
                 />
                 <button
-                  className={`transition-colors relative flex items-center`}
-                  aria-label="Upload image"
-                  disabled={isUploadingImage}
+                  onClick={clearAllImages}
+                  className="cursor-pointer absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  {isUploadingImage ? (
-                    <LoadingState size="xs" message="" />
-                  ) : (
-                    <Paperclip className="w-4 h-4" />
-                  )}
+                  <X className="w-3 h-3" />
                 </button>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Size Selector - only show in image generation mode */}
-            {inputMode === "image_generation" && (
-              <Popover
-                isOpen={isSizeDropdownOpen}
-                positions={["top"]}
-                reposition={true}
-                containerClassName="z-30"
-                onClickOutside={() => setIsSizeDropdownOpen(false)}
-                content={
-                  <AnimatePresence>
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                      className={`w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 ${
-                        isMobile
-                          ? themes.chatview.inputBg
-                          : themes.chatview.inputBgTransparent
-                      } ${
-                        isMobile ? "" : "backdrop-blur-md"
-                      } sm:w-40 sm:max-w-none ${
-                        themes.chatview.inputBg
-                      } rounded-lg shadow-sm border ${
-                        themes.chatview.border
-                      } overflow-hidden z-10`}
-                    >
-                      <div className="h-auto overflow-y-auto thin-scrollbar">
-                        {ImageGenerationService.getImageSizeOptions().map(
-                          (option) => {
-                            const isSelected =
-                              selectedImageSize === option.value;
-                            return (
-                              <button
-                                key={option.value}
-                                onClick={() => {
-                                  setSelectedImageSize(option.value);
-                                  setIsSizeDropdownOpen(false);
-                                }}
-                                className={`cursor-pointer w-full text-left px-2.5 py-2 text-sm transition-colors ${
+          {inputMode === "chat" && attachments.length > 0 && (
+            <div className="mb-2 flex overflow-x-auto gap-2 thin-scrollbar">
+              {attachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className={`relative group inline-block rounded-lg max-w-24 ${themes.message.backdrop}`}
+                >
+                  <img
+                    src={attachment.url}
+                    alt={attachment.filename}
+                    className="w-20 h-20 object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => removeAttachment(attachment.id)}
+                    className="cursor-pointer absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className={`${isMobile ? "flex flex-row py-1" : ""}`}>
+            {/* Text Input */}
+            <div className="relative flex items-center flex-1">
+              <textarea
+                ref={textareaRef}
+                value={prompt}
+                onChange={handleTextareaChange}
+                onKeyPress={handleKeyPress}
+                onPaste={handleUnifiedPaste}
+                placeholder={"Type message..."}
+                className={`w-full bg-transparent resize-none focus:outline-none px-2 py-1 text-sm max-h-32 overflow-y-auto thin-scrollbar ${isMobile ? "no-scrollbar pl-3" : "min-h-12"} ${
+                  themes.sidebar.fgHoverAsFg
+                } ${themes.sidebar.fgRaw("placeholder:")}`}
+                rows={1}
+              />
+            </div>
+            {/* Controls Section */}
+            <div className={`flex ${isMobile ? "self-end" : "items-stretch mt-2"} justify-between flex-wrap gap-2`}>
+              {!isMobile && (
+                <div className="flex items-stretch flex-wrap gap-2">
+                  {/* Model Selector */}
+                  <Popover
+                    isOpen={isModelDropdownOpen && !isMobile}
+                    positions={["top"]}
+                    reposition={true}
+                    containerClassName={`z-30`}
+                    onClickOutside={() => setIsModelDropdownOpen(false)}
+                    content={
+                      <AnimatePresence>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{
+                            duration: animationsDisabled ? 0 : 0.15,
+                          }}
+                          className={`w-[calc(100vw-2rem)] ${
+                            isMobile
+                              ? themes.chatview.inputBg
+                              : themes.chatview.inputBgTransparent
+                          } ${
+                            isMobile ? "" : "backdrop-blur-md"
+                          } sm:w-80 max-w-80 rounded-lg shadow-sm border overflow-hidden ${
+                            themes.chatview.inputBg
+                          } ${themes.chatview.border}`}
+                        >
+                          {/* Search Input */}
+                          <div className={`p-3 ${themes.sidebar.fg}`}>
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
+                              <input
+                                type="text"
+                                placeholder="Search models..."
+                                value={modelSearchQuery}
+                                onChange={(e) =>
+                                  setModelSearchQuery(e.target.value)
+                                }
+                                className={`w-full ${
+                                  themes.chatview.inputBg
+                                } border ${
+                                  themes.chatview.border
+                                } ${themes.sidebar.fgRaw("placeholder:")} ${
                                   themes.sidebar.fgHoverAsFg
-                                } ${themes.sidebar.bgHover} ${
-                                  isSelected
-                                    ? `${themes.sidebar.bgHoverAsBg}`
-                                    : ``
-                                } $`}
-                              >
-                                {option.label}
-                              </button>
+                                } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
+                                autoFocus={!isMobile}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Model Options */}
+                          <div className="h-76 overflow-y-auto thin-scrollbar scroll-fade">
+                            {isLoadingSystemModels &&
+                              modelOptions.filter(
+                                (opt) => opt.source === "system"
+                              ).length === 0 && (
+                                <div
+                                  className={`px-3 py-2 ${themes.sidebar.fg} flex items-center gap-2 text-sm`}
+                                >
+                                  <LoadingState />
+                                </div>
+                              )}
+                            {(() => {
+                              const filteredOptions = modelOptions.filter(
+                                (option) =>
+                                  option.label
+                                    .toLowerCase()
+                                    .includes(modelSearchQuery.toLowerCase())
+                              );
+
+                              // Group models by provider and source
+                              const groupedModels = filteredOptions.reduce(
+                                (
+                                  groups: { [key: string]: ModelOption[] },
+                                  option
+                                ) => {
+                                  let groupName: string;
+
+                                  if (option.source === "custom") {
+                                    groupName = "Custom Models";
+                                  } else {
+                                    groupName =
+                                      option.providerId &&
+                                      option.providerId.trim()
+                                        ? option.providerName || "Other"
+                                        : "Other";
+                                  }
+
+                                  if (!groups[groupName]) {
+                                    groups[groupName] = [];
+                                  }
+                                  groups[groupName].push(option);
+                                  return groups;
+                                },
+                                {}
+                              );
+
+                              // Sort providers alphabetically, but put "Other" and "Custom Models" at the end
+                              return Object.keys(groupedModels)
+                                .sort((a, b) => {
+                                  if (
+                                    a === "Custom Models" &&
+                                    b !== "Custom Models"
+                                  )
+                                    return 1;
+                                  if (
+                                    a !== "Custom Models" &&
+                                    b === "Custom Models"
+                                  )
+                                    return -1;
+                                  if (
+                                    a === "Other" &&
+                                    b !== "Other" &&
+                                    b !== "Custom Models"
+                                  )
+                                    return 1;
+                                  if (
+                                    a !== "Other" &&
+                                    a !== "Custom Models" &&
+                                    b === "Other"
+                                  )
+                                    return -1;
+                                  return a.localeCompare(b);
+                                })
+                                .map((providerName) => {
+                                  const models = groupedModels[providerName];
+
+                                  return (
+                                    <div
+                                      key={providerName}
+                                      className="mb-2 last:mb-0 first:mt-2"
+                                    >
+                                      {/* Provider header */}
+                                      <div
+                                        className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}
+                                      >
+                                        {providerName !== "Other" &&
+                                          providerName !== "Custom Models" &&
+                                          getProviderIcon(providerName)}
+                                        <span>{providerName}</span>
+                                      </div>
+
+                                      {/* Models in this provider */}
+                                      {models.map((option) => {
+                                        const isSelected =
+                                          selectedModel === option.value &&
+                                          selectedProviderId ===
+                                            (option.providerId || "");
+                                        return (
+                                          <button
+                                            key={`${option.value}-${
+                                              option.providerId || "system"
+                                            }`}
+                                            onClick={() =>
+                                              handleModelSelect(option)
+                                            }
+                                            className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${
+                                              themes.sidebar.fgHoverAsFg
+                                            } ${
+                                              isSelected
+                                                ? `${themes.sidebar.bgHoverAsBg}`
+                                                : `${themes.sidebar.bgHover}`
+                                            }`}
+                                            title={option.label}
+                                          >
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                              {option.source === "custom" && (
+                                                <span
+                                                  className={`px-1.5 py-0.5 rounded text-xs font-medium ${themes.special.bgGradient} ${themes.special.fg} flex-shrink-0`}
+                                                >
+                                                  Custom
+                                                </span>
+                                              )}
+                                              <span className="truncate flex-1">
+                                                {option.label}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {getCapabilityIcons(option)}
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                });
+                            })()}
+                            {modelOptions.filter((option) =>
+                              option.label
+                                .toLowerCase()
+                                .includes(modelSearchQuery.toLowerCase())
+                            ).length === 0 &&
+                              modelSearchQuery && (
+                                <div
+                                  className={`px-3 flex justify-center items-center text-sm text-center ${themes.sidebar.fg}`}
+                                  style={{ height: "inherit" }}
+                                >
+                                  No results found
+                                </div>
+                              )}
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
+                    }
+                  >
+                    <button
+                      onClick={handleModelSelectorClick}
+                      className={`flex items-center gap-2 p-2 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
+                    >
+                      <span
+                        className={`${themes.sidebar.fgHoverAsFg} truncate flex-1 text-left`}
+                      >
+                        {selectedModelLabel}
+                      </span>
+                      {isLoadingSystemModels ||
+                      isLoadingModelFromConversation ? (
+                        <LoadingState size="xs" message="" />
+                      ) : (
+                        <ChevronDown
+                          className={`w-4 h-4 ${
+                            themes.sidebar.fgHoverAsFg
+                          } ${transitionClass} flex-shrink-0 ${
+                            isModelDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      )}
+                    </button>
+                  </Popover>
+                </div>
+              )}
+
+              <div className={`flex ${isMobile ? "pr-1 min-h-8" : "items-stretch"} gap-1`}>
+                {/* Upload button - show for image editing in generation mode or vision in chat mode */}
+                {(() => {
+                  const capabilities = getCurrentModelCapabilities();
+                  return (
+                    capabilities &&
+                    ((inputMode === "image_generation" &&
+                      capabilities.hasImageEditing) ||
+                      (inputMode === "chat" &&
+                        capabilities.hasVision &&
+                        !capabilities.hasImageEditing))
+                  );
+                })() && (
+                  <div
+                    className={`cursor-pointer relative bg-transparent transition-colors rounded-lg flex items-center p-2 rounded-lg ${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHover}`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleImageUpload(file);
+                          e.target.value = "";
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 z-10"
+                      disabled={isUploadingImage}
+                    />
+                    <button
+                      className={`transition-colors relative flex items-center`}
+                      aria-label="Upload image"
+                      disabled={isUploadingImage}
+                    >
+                      {isUploadingImage ? (
+                        <LoadingState size="xs" message="" />
+                      ) : (
+                        <Paperclip className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Size Selector - only show in image generation mode */}
+                {inputMode === "image_generation" && (
+                  <Popover
+                    isOpen={isSizeDropdownOpen}
+                    positions={["top"]}
+                    reposition={true}
+                    containerClassName="z-30"
+                    onClickOutside={() => setIsSizeDropdownOpen(false)}
+                    content={
+                      <AnimatePresence>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{
+                            duration: animationsDisabled ? 0 : 0.15,
+                          }}
+                          className={`w-[calc(100vw-2rem)] max-w-[160px] sm:left-0 ${
+                            isMobile
+                              ? themes.chatview.inputBg
+                              : themes.chatview.inputBgTransparent
+                          } ${
+                            isMobile ? "" : "backdrop-blur-md"
+                          } sm:w-40 sm:max-w-none ${
+                            themes.chatview.inputBg
+                          } rounded-lg shadow-sm border ${
+                            themes.chatview.border
+                          } overflow-hidden z-10`}
+                        >
+                          <div className="h-auto overflow-y-auto thin-scrollbar">
+                            {ImageGenerationService.getImageSizeOptions().map(
+                              (option) => {
+                                const isSelected =
+                                  selectedImageSize === option.value;
+                                return (
+                                  <button
+                                    key={option.value}
+                                    onClick={() => {
+                                      setSelectedImageSize(option.value);
+                                      setIsSizeDropdownOpen(false);
+                                    }}
+                                    className={`cursor-pointer w-full text-left px-2.5 py-2 text-sm transition-colors ${
+                                      themes.sidebar.fgHoverAsFg
+                                    } ${themes.sidebar.bgHover} ${
+                                      isSelected
+                                        ? `${themes.sidebar.bgHoverAsBg}`
+                                        : ``
+                                    } $`}
+                                  >
+                                    {option.label}
+                                  </button>
+                                );
+                              }
+                            )}
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
+                    }
+                  >
+                    <button
+                      onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
+                      className={`flex items-center gap-2 p-2 rounded-lg transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer text-sm ${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHover} bg-transparent`}
+                      disabled={disabled || isImageGenerating}
+                      title={selectedImageSize}
+                    >
+                      <FullScreen
+                        className={`w-4 h-4 sm:hidden flex-shrink-0`}
+                      />
+                      <span className="truncate flex-1 text-left hidden sm:block">
+                        {selectedImageSize}
+                      </span>
+                      <ChevronDown
+                        className={`w-4 h-4 ${transitionClass} flex-shrink-0 ${
+                          isSizeDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                  </Popover>
+                )}
+
+                {/* Send/Cancel Button for text generation */}
+                {(() => {
+                  const capabilities = getCurrentModelCapabilities();
+                  const isTextGen =
+                    inputMode === "chat" &&
+                    !capabilities?.hasVision &&
+                    !capabilities?.hasImageEditing;
+                  if (isTextGen && disabled && isStreaming) {
+                    // Show cancel button when streaming
+                    return (
+                      <button
+                        onClick={() => {
+                          if ((window as any).cancelStream)
+                            (window as any).cancelStream();
+                        }}
+                        className={`${isMobile ? "rounded-3xl px-2" : "rounded-lg py-1.5 px-2.5"} flex items-center transition-colors cursor-pointer bg-red-500 hover:bg-red-600`}
+                        aria-label="Cancel message"
+                        style={{ position: "relative" }}
+                      >
+                        <span className="flex items-center justify-center">
+                          <CancelSquare className="w-4 h-4" />
+                        </span>
+                      </button>
+                    );
+                  }
+                  // Default: show send button
+                  return (
+                    <button
+                      onClick={handleSendMessage}
+                      className={` ${isMobile ? "rounded-3xl px-2" : "py-1.5 px-2.5 rounded-lg"} flex items-center transition-colors disabled:cursor-not-allowed cursor-pointer ${
+                        (() => {
+                          if (inputMode === "image_generation") {
+                            if (capabilities?.hasImageEditing) {
+                              return (
+                                prompt.trim() &&
+                                uploadedImageForEditing &&
+                                !disabled &&
+                                !isImageGenerating
+                              );
+                            } else {
+                              return (
+                                prompt.trim() && !disabled && !isImageGenerating
+                              );
+                            }
+                          } else {
+                            if (capabilities?.hasVision) {
+                              return (
+                                (prompt.trim() || attachments.length > 0) &&
+                                !disabled &&
+                                !isUploadingImage
+                              );
+                            } else {
+                              return (
+                                prompt.trim() && !disabled && !isUploadingImage
+                              );
+                            }
+                          }
+                        })()
+                          ? `${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover}`
+                          : `${themes.disabled.bg} ${themes.sidebar.fg} cursor-not-allowed`
+                      }`}
+                      disabled={(() => {
+                        if (inputMode === "image_generation") {
+                          if (capabilities?.hasImageEditing) {
+                            return (
+                              !prompt.trim() ||
+                              !uploadedImageForEditing ||
+                              disabled ||
+                              isImageGenerating
+                            );
+                          } else {
+                            return (
+                              !prompt.trim() || disabled || isImageGenerating
                             );
                           }
-                        )}
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
-                }
-              >
-                <button
-                  onClick={() => setIsSizeDropdownOpen(!isSizeDropdownOpen)}
-                  className={`flex items-center gap-2 p-2 rounded-lg transition-colors min-w-[44px] sm:min-w-[120px] cursor-pointer text-sm ${themes.sidebar.fgHoverAsFg} ${themes.sidebar.bgHover} bg-transparent`}
-                  disabled={disabled || isImageGenerating}
-                  title={selectedImageSize}
-                >
-                  <FullScreen className={`w-4 h-4 sm:hidden flex-shrink-0`} />
-                  <span className="truncate flex-1 text-left hidden sm:block">
-                    {selectedImageSize}
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 ${transitionClass} flex-shrink-0 ${
-                      isSizeDropdownOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-              </Popover>
-            )}
-
-            {/* Send/Cancel Button for text generation */}
-            {(() => {
-              const capabilities = getCurrentModelCapabilities();
-              const isTextGen =
-                inputMode === "chat" &&
-                !capabilities?.hasVision &&
-                !capabilities?.hasImageEditing;
-              if (isTextGen && disabled && isStreaming) {
-                // Show cancel button when streaming
-                return (
-                  <button
-                    onClick={() => {
-                      if ((window as any).cancelStream)
-                        (window as any).cancelStream();
-                    }}
-                    className="py-1.5 px-2.5 rounded-lg flex items-center transition-colors cursor-pointer bg-red-500 hover:bg-red-600"
-                    aria-label="Cancel message"
-                    style={{ position: "relative" }}
-                  >
-                    <span className="flex items-center justify-center">
-                      <CancelSquare className="w-4 h-4" />
-                    </span>
-                  </button>
-                );
-              }
-              // Default: show send button
-              return (
-                <button
-                  onClick={handleSendMessage}
-                  className={`py-1.5 px-2.5 rounded-lg flex items-center transition-colors disabled:cursor-not-allowed cursor-pointer ${
-                    (() => {
-                      if (inputMode === "image_generation") {
-                        if (capabilities?.hasImageEditing) {
-                          return (
-                            prompt.trim() &&
-                            uploadedImageForEditing &&
-                            !disabled &&
-                            !isImageGenerating
-                          );
                         } else {
-                          return (
-                            prompt.trim() && !disabled && !isImageGenerating
-                          );
+                          if (capabilities?.hasVision) {
+                            return (
+                              (!prompt.trim() && attachments.length === 0) ||
+                              disabled ||
+                              isUploadingImage
+                            );
+                          } else {
+                            return (
+                              !prompt.trim() || disabled || isUploadingImage
+                            );
+                          }
                         }
-                      } else {
-                        if (capabilities?.hasVision) {
-                          return (
-                            (prompt.trim() || attachments.length > 0) &&
-                            !disabled &&
-                            !isUploadingImage
-                          );
-                        } else {
-                          return (
-                            prompt.trim() && !disabled && !isUploadingImage
-                          );
-                        }
+                      })()}
+                      aria-label={
+                        inputMode === "image_generation"
+                          ? isImageGenerating
+                            ? "Generating..."
+                            : "Generate image"
+                          : disabled
+                          ? "Sending..."
+                          : "Send message"
                       }
-                    })()
-                      ? `${themes.special.bgGradient} ${themes.special.fg} ${themes.special.bgHover}`
-                      : `${themes.disabled.bg} ${themes.sidebar.fg} cursor-not-allowed`
-                  }`}
-                  disabled={(() => {
-                    if (inputMode === "image_generation") {
-                      if (capabilities?.hasImageEditing) {
-                        return (
-                          !prompt.trim() ||
-                          !uploadedImageForEditing ||
-                          disabled ||
-                          isImageGenerating
-                        );
-                      } else {
-                        return !prompt.trim() || disabled || isImageGenerating;
-                      }
-                    } else {
-                      if (capabilities?.hasVision) {
-                        return (
-                          (!prompt.trim() && attachments.length === 0) ||
-                          disabled ||
-                          isUploadingImage
-                        );
-                      } else {
-                        return !prompt.trim() || disabled || isUploadingImage;
-                      }
-                    }
-                  })()}
-                  aria-label={
-                    inputMode === "image_generation"
-                      ? isImageGenerating
-                        ? "Generating..."
-                        : "Generate image"
-                      : disabled
-                      ? "Sending..."
-                      : "Send message"
-                  }
-                >
-                  <ArrowUp className="w-4 h-4" />
-                </button>
-              );
-            })()}
+                    >
+                      <ArrowUp className="w-4 h-4" />
+                    </button>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Mobile Model Slider */}
-        <AnimatePresence>
-          {isModelSliderOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: animationsDisabled ? 0 : 0.2 }}
-              onClick={() => setIsModelSliderOpen(false)}
-              className={`fixed inset-0 z-[80] flex items-end justify-center bg-black/50`}
-            >
+          {/* Mobile Model Slider */}
+          <AnimatePresence>
+            {isModelSliderOpen && (
               <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{
-                  duration: animationsDisabled ? 0 : 0.3,
-                  ease: "easeOut",
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className={`w-full max-h-[80vh] rounded-t-2xl shadow-md border-t overflow-hidden ${themes.chatview.inputBg} ${themes.chatview.border}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: animationsDisabled ? 0 : 0.2 }}
+                onClick={() => setIsModelSliderOpen(false)}
+                className={`fixed inset-0 z-[80] flex items-end justify-center bg-black/50`}
               >
-                {/* Header */}
-                <div
-                  className={`pt-4 pb-0 px-4 flex items-center justify-between`}
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{
+                    duration: animationsDisabled ? 0 : 0.3,
+                    ease: "easeOut",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className={`w-full max-h-[80vh] rounded-t-2xl shadow-md border-t overflow-hidden ${themes.chatview.inputBg} ${themes.chatview.border}`}
                 >
-                  <h3
-                    className={`text-lg font-semibold ${themes.sidebar.fgHoverAsFg}`}
+                  {/* Header */}
+                  <div
+                    className={`pt-4 pb-0 px-4 flex items-center justify-between`}
                   >
-                    Select Model
-                  </h3>
-                  <button
-                    onClick={() => setIsModelSliderOpen(false)}
-                    className={`p-2 rounded-lg transition-colors ${themes.sidebar.fg} ${themes.sidebar.fgHover}`}
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Search Input */}
-                <div className={`p-3 ${themes.sidebar.fg}`}>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Search models..."
-                      value={modelSearchQuery}
-                      onChange={(e) => setModelSearchQuery(e.target.value)}
-                      className={`w-full ${themes.chatview.inputBg} border ${
-                        themes.chatview.border
-                      } ${themes.sidebar.fgRaw("placeholder:")} ${
-                        themes.sidebar.fgHoverAsFg
-                      } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
-                    />
+                    <h3
+                      className={`text-lg font-semibold ${themes.sidebar.fgHoverAsFg}`}
+                    >
+                      Select Model
+                    </h3>
+                    <button
+                      onClick={() => setIsModelSliderOpen(false)}
+                      className={`p-2 rounded-lg transition-colors ${themes.sidebar.fg} ${themes.sidebar.fgHover}`}
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
-                </div>
 
-                {/* Model Options */}
-                <div className="h-76 overflow-y-auto thin-scrollbar scroll-fade">
-                  {isLoadingSystemModels &&
-                    modelOptions.filter((opt) => opt.source === "system")
-                      .length === 0 && (
-                      <div
-                        className={`px-3 py-2 ${themes.sidebar.fg} flex items-center gap-2 text-sm`}
-                      >
-                        <LoadingState />
-                      </div>
-                    )}
-                  {(() => {
-                    const filteredOptions = modelOptions.filter((option) =>
+                  {/* Search Input */}
+                  <div className={`p-3 ${themes.sidebar.fg}`}>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search models..."
+                        value={modelSearchQuery}
+                        onChange={(e) => setModelSearchQuery(e.target.value)}
+                        className={`w-full ${themes.chatview.inputBg} border ${
+                          themes.chatview.border
+                        } ${themes.sidebar.fgRaw("placeholder:")} ${
+                          themes.sidebar.fgHoverAsFg
+                        } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Model Options */}
+                  <div className="h-76 overflow-y-auto thin-scrollbar scroll-fade">
+                    {isLoadingSystemModels &&
+                      modelOptions.filter((opt) => opt.source === "system")
+                        .length === 0 && (
+                        <div
+                          className={`px-3 py-2 ${themes.sidebar.fg} flex items-center gap-2 text-sm`}
+                        >
+                          <LoadingState />
+                        </div>
+                      )}
+                    {(() => {
+                      const filteredOptions = modelOptions.filter((option) =>
+                        option.label
+                          .toLowerCase()
+                          .includes(modelSearchQuery.toLowerCase())
+                      );
+
+                      // Group models by provider and source
+                      const groupedModels = filteredOptions.reduce(
+                        (groups: { [key: string]: ModelOption[] }, option) => {
+                          let groupName: string;
+
+                          if (option.source === "custom") {
+                            groupName = "Custom Models";
+                          } else {
+                            groupName =
+                              option.providerId && option.providerId.trim()
+                                ? option.providerName || "Other"
+                                : "Other";
+                          }
+
+                          if (!groups[groupName]) {
+                            groups[groupName] = [];
+                          }
+                          groups[groupName].push(option);
+                          return groups;
+                        },
+                        {}
+                      );
+
+                      // Sort providers alphabetically, but put "Other" and "Custom Models" at the end
+                      return Object.keys(groupedModels)
+                        .sort((a, b) => {
+                          if (a === "Custom Models" && b !== "Custom Models")
+                            return 1;
+                          if (a !== "Custom Models" && b === "Custom Models")
+                            return -1;
+                          if (
+                            a === "Other" &&
+                            b !== "Other" &&
+                            b !== "Custom Models"
+                          )
+                            return 1;
+                          if (
+                            a !== "Other" &&
+                            a !== "Custom Models" &&
+                            b === "Other"
+                          )
+                            return -1;
+                          return a.localeCompare(b);
+                        })
+                        .map((providerName) => {
+                          const models = groupedModels[providerName];
+
+                          return (
+                            <div
+                              key={providerName}
+                              className="mb-2 last:mb-0 first:mt-2"
+                            >
+                              {/* Provider header */}
+                              <div
+                                className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}
+                              >
+                                {providerName !== "Other" &&
+                                  providerName !== "Custom Models" &&
+                                  getProviderIcon(providerName)}
+                                <span>{providerName}</span>
+                              </div>
+
+                              {/* Models in this provider */}
+                              {models.map((option) => {
+                                const isSelected =
+                                  selectedModel === option.value &&
+                                  selectedProviderId ===
+                                    (option.providerId || "");
+                                return (
+                                  <button
+                                    key={`${option.value}-${
+                                      option.providerId || "system"
+                                    }`}
+                                    onClick={() => handleModelSelect(option)}
+                                    className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${
+                                      themes.sidebar.fgHoverAsFg
+                                    } ${
+                                      isSelected
+                                        ? `${themes.sidebar.bgHoverAsBg}`
+                                        : `${themes.sidebar.bgHover}`
+                                    }`}
+                                    title={option.label}
+                                  >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      {option.source === "custom" && (
+                                        <span
+                                          className={`px-2 py-1 rounded text-xs font-medium ${themes.special.bgGradient} ${themes.special.fg} flex-shrink-0`}
+                                        >
+                                          Custom
+                                        </span>
+                                      )}
+                                      <span className="truncate flex-1">
+                                        {option.label}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {getCapabilityIcons(option)}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        });
+                    })()}
+                    {modelOptions.filter((option) =>
                       option.label
                         .toLowerCase()
                         .includes(modelSearchQuery.toLowerCase())
-                    );
-
-                    // Group models by provider and source
-                    const groupedModels = filteredOptions.reduce(
-                      (groups: { [key: string]: ModelOption[] }, option) => {
-                        let groupName: string;
-
-                        if (option.source === "custom") {
-                          groupName = "Custom Models";
-                        } else {
-                          groupName =
-                            option.providerId && option.providerId.trim()
-                              ? option.providerName || "Other"
-                              : "Other";
-                        }
-
-                        if (!groups[groupName]) {
-                          groups[groupName] = [];
-                        }
-                        groups[groupName].push(option);
-                        return groups;
-                      },
-                      {}
-                    );
-
-                    // Sort providers alphabetically, but put "Other" and "Custom Models" at the end
-                    return Object.keys(groupedModels)
-                      .sort((a, b) => {
-                        if (a === "Custom Models" && b !== "Custom Models")
-                          return 1;
-                        if (a !== "Custom Models" && b === "Custom Models")
-                          return -1;
-                        if (
-                          a === "Other" &&
-                          b !== "Other" &&
-                          b !== "Custom Models"
-                        )
-                          return 1;
-                        if (
-                          a !== "Other" &&
-                          a !== "Custom Models" &&
-                          b === "Other"
-                        )
-                          return -1;
-                        return a.localeCompare(b);
-                      })
-                      .map((providerName) => {
-                        const models = groupedModels[providerName];
-
-                        return (
-                          <div
-                            key={providerName}
-                            className="mb-2 last:mb-0 first:mt-2"
-                          >
-                            {/* Provider header */}
-                            <div
-                              className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}
-                            >
-                              {providerName !== "Other" &&
-                                providerName !== "Custom Models" &&
-                                getProviderIcon(providerName)}
-                              <span>{providerName}</span>
-                            </div>
-
-                            {/* Models in this provider */}
-                            {models.map((option) => {
-                              const isSelected =
-                                selectedModel === option.value &&
-                                selectedProviderId ===
-                                  (option.providerId || "");
-                              return (
-                                <button
-                                  key={`${option.value}-${
-                                    option.providerId || "system"
-                                  }`}
-                                  onClick={() => handleModelSelect(option)}
-                                  className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${
-                                    themes.sidebar.fgHoverAsFg
-                                  } ${
-                                    isSelected
-                                      ? `${themes.sidebar.bgHoverAsBg}`
-                                      : `${themes.sidebar.bgHover}`
-                                  }`}
-                                  title={option.label}
-                                >
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    {option.source === "custom" && (
-                                      <span
-                                        className={`px-2 py-1 rounded text-xs font-medium ${themes.special.bgGradient} ${themes.special.fg} flex-shrink-0`}
-                                      >
-                                        Custom
-                                      </span>
-                                    )}
-                                    <span className="truncate flex-1">
-                                      {option.label}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {getCapabilityIcons(option)}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      });
-                  })()}
-                  {modelOptions.filter((option) =>
-                    option.label
-                      .toLowerCase()
-                      .includes(modelSearchQuery.toLowerCase())
-                  ).length === 0 &&
-                    modelSearchQuery && (
-                      <div
-                        className={`px-3 flex justify-center items-center text-sm text-center ${themes.sidebar.fg}`}
-                        style={{ height: "inherit" }}
-                      >
-                        No results found
-                      </div>
-                    )}
-                </div>
+                    ).length === 0 &&
+                      modelSearchQuery && (
+                        <div
+                          className={`px-3 flex justify-center items-center text-sm text-center ${themes.sidebar.fg}`}
+                          style={{ height: "inherit" }}
+                        >
+                          No results found
+                        </div>
+                      )}
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     );
   }
