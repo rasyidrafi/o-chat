@@ -1003,9 +1003,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
         }
 
         // Clear loading state
-        setTimeout(() => {
-          setIsLoadingModelFromConversation(false);
-        }, 300); // Small delay to show loading state
+        setIsLoadingModelFromConversation(false);
       }
 
       // Update the processed conversation ID
@@ -1482,9 +1480,9 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
 
     const selectedModelLabel = useMemo(() => {
       return isLoadingModelFromConversation
-      ? "Loading model..."
-      : modelOptions.find((model) => model.value === selectedModel)?.label ||
-        "Gemini 1.5 Flash";
+        ? "Loading model..."
+        : modelOptions.find((model) => model.value === selectedModel)?.label ||
+            "Gemini 1.5 Flash";
     }, [isLoadingModelFromConversation, modelOptions, selectedModel]);
 
     // Animation transition class helper
