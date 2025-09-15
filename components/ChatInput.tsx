@@ -5,6 +5,7 @@ import React, {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  useMemo,
 } from "react";
 import {
   ChevronDown,
@@ -1479,10 +1480,12 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       };
     }, [inputMode, handleImageGenerateClick]);
 
-    const selectedModelLabel = isLoadingModelFromConversation
+    const selectedModelLabel = useMemo(() => {
+      return isLoadingModelFromConversation
       ? "Loading model..."
       : modelOptions.find((model) => model.value === selectedModel)?.label ||
         "Gemini 1.5 Flash";
+    }, [isLoadingModelFromConversation, modelOptions, selectedModel]);
 
     // Animation transition class helper
     const transitionClass = animationsDisabled
