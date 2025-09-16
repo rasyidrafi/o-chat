@@ -254,7 +254,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
       }
 
       // Calculate distance from bottom (use a larger threshold for mobile)
-      const threshold = 100;
+      const threshold = 65;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       const shouldShowButton = distanceFromBottom > threshold;
 
@@ -384,7 +384,10 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
             ))}
           </AnimatePresence>
           {/* Bottom padding + sentinel for scroll tracking */}
-          <div ref={sentinelRef} className={isMobile ? "h-24" : "h-40 md:h-45"}></div>
+          <div
+            ref={sentinelRef}
+            className={isMobile ? "h-22" : "h-38"}
+          ></div>
         </div>
       </div>
     );

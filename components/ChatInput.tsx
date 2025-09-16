@@ -1915,11 +1915,16 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                 onKeyPress={handleKeyPress}
                 onPaste={handleUnifiedPaste}
                 placeholder={"Type message..."}
-                className={`w-full bg-transparent resize-none focus:outline-none px-2 py-2 text-sm max-h-32 overflow-y-auto thin-scrollbar ${
+                className={`w-full bg-transparent resize-none focus:outline-none px-2 text-sm max-h-32 overflow-y-auto thin-scrollbar ${
                   isMobile ? "no-scrollbar pl-3 min-h-10" : "min-h-12"
                 } ${themes.sidebar.fgHoverAsFg} ${themes.sidebar.fgRaw(
                   "placeholder:"
                 )}`}
+                style={{
+                  lineHeight: "20px",
+                  paddingTop: "8px",
+                  paddingBottom: "12px",
+                }}
                 rows={1}
               />
             </div>

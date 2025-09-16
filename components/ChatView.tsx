@@ -406,8 +406,19 @@ const ChatView: React.FC<ChatViewProps> = ({
             </div>
           </div>
         ) : (
+          <>
           <div className="flex-1 relative overflow-hidden">
-            <div className={`${isDark ? "dark-fade-overlay" : "fade-overlay"} block md:hidden`}></div>
+            <AnimatePresence>
+              {showScrollButton && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`${isDark ? "dark-fade-overlay" : "fade-overlay"} block md:hidden`}
+              ></motion.div>
+              )}
+            </AnimatePresence>
             <MessageList
               ref={messageListRef}
               messages={currentConversation?.messages || []}
@@ -423,6 +434,7 @@ const ChatView: React.FC<ChatViewProps> = ({
               modelOptions={modelOptions}
             />
           </div>
+          </>
         )}
       </main>
 
