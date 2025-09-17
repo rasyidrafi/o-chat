@@ -12,31 +12,8 @@ import {
   Paperclip,
   ArrowUp,
   X,
-  Search,
-  Eye,
-  Edit,
-  Gallery,
   FullScreen,
-  Brain,
-  AI21,
-  OpenAI,
-  Gemini,
-  StabilityAI,
-  BlackForestLabs,
-  ByteDance,
-  Meta,
-  Anthropic,
-  Microsoft,
-  Cohere,
-  XAI,
-  DeepSeek,
-  Mistral,
-  MoonshotAI,
-  Zai,
-  Qwen,
-  Venice,
   CancelSquare,
-  Google,
 } from "./Icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { Popover } from "react-tiny-popover";
@@ -55,7 +32,7 @@ import { useSettingsContext } from "@/contexts/SettingsContext";
 import { useCloudStorage } from "../contexts/CloudStorageContext";
 import { themes } from "@/constants/themes";
 import LoadingState from "./ui/LoadingState";
-import { useSettings } from "@/hooks/useSettings";
+import ModelSelectorSlider from "./ui/ModelSelectorSlider";
 
 interface ModelOption {
   label: string;
@@ -144,9 +121,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const [selectedModel, setSelectedModel] =
       useState<string>(DEFAULT_MODEL_ID);
     const [selectedProviderId, setSelectedProviderId] = useState<string>("");
-    const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-    const [isModelSliderOpen, setIsModelSliderOpen] = useState(false);
-    const [modelSearchQuery, setModelSearchQuery] = useState("");
+    const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
     const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
     const [isLoadingSystemModels, setIsLoadingSystemModels] = useState(false);
     const [isLoadingModelFromConversation, setIsLoadingModelFromConversation] =
@@ -329,138 +304,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
       }
       return null;
     }, [modelOptions, selectedModel, selectedProviderId]);
-
-    // Get capability icons for a model (can return multiple icons)
-    const getCapabilityIcons = useCallback((option: ModelOption) => {
-      if (!option.supported_parameters) return [];
-
-      const capabilities = getModelCapabilities(option.supported_parameters);
-      const icons = [];
-
-      if (capabilities.hasImageEditing) {
-        icons.push(
-          <div
-            key="edit"
-            title="Image Editing"
-            className={`${themes.disabled.bg} rounded p-1`}
-          >
-            <Edit className="w-3 h-3" />
-          </div>
-        );
-      }
-
-      if (
-        capabilities.hasImageGeneration ||
-        capabilities.hasImageGenerationJobs
-      ) {
-        icons.push(
-          <div
-            key="generation"
-            title="Image Generation"
-            className={`${themes.disabled.bg} rounded p-1`}
-          >
-            <Gallery className="w-3 h-3" />
-          </div>
-        );
-      }
-
-      if (capabilities.hasVision) {
-        icons.push(
-          <div
-            key="vision"
-            title="Vision"
-            className={`${themes.disabled.bg} rounded p-1`}
-          >
-            <Eye className="w-3 h-3" />
-          </div>
-        );
-      }
-
-      if (capabilities.hasReasoning) {
-        icons.push(
-          <div
-            key="reasoning"
-            title="Reasoning"
-            className={`${themes.disabled.bg} rounded p-1`}
-          >
-            <Brain className="w-3 h-3" />
-          </div>
-        );
-      }
-
-      return icons;
-    }, []);
-
-    // Get provider icon for a provider name
-    const getProviderIcon = useCallback((providerName: string) => {
-      const lowerProviderName = providerName.toLowerCase();
-
-      if (lowerProviderName.includes("ai21")) {
-        return <AI21 size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("openai")) {
-        return <OpenAI size={18} className="text-current" />;
-      }
-      if (
-        lowerProviderName.includes("google") ||
-        lowerProviderName.includes("gemini")
-      ) {
-        return <Google size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("anthropic")) {
-        return <Anthropic size={18} className="text-current" />;
-      }
-      if (
-        lowerProviderName.includes("stability") ||
-        lowerProviderName.includes("stabilityai")
-      ) {
-        return <StabilityAI size={18} className="text-current" />;
-      }
-      if (
-        lowerProviderName.includes("black forest") ||
-        lowerProviderName.includes("flux")
-      ) {
-        return <BlackForestLabs size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("bytedance")) {
-        return <ByteDance size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("meta")) {
-        return <Meta size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("microsoft")) {
-        return <Microsoft size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("cohere")) {
-        return <Cohere size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("xai")) {
-        return <XAI size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("deepseek")) {
-        return <DeepSeek size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("mistral")) {
-        return <Mistral size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("moonshot")) {
-        return <MoonshotAI size={18} className="text-current" />;
-      }
-      if (
-        lowerProviderName.includes("zai") ||
-        lowerProviderName.includes("z.ai")
-      ) {
-        return <Zai size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("qwen")) {
-        return <Qwen size={18} className="text-current" />;
-      }
-      if (lowerProviderName.includes("venice")) {
-        return <Venice size={18} className="text-current" />;
-      }
-
-      return null; // No icon for unknown providers
-    }, []);
 
     // Check if current model supports image generation
     const checkCurrentModelCapabilities = useCallback(
@@ -1516,9 +1359,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const handleModelSelect = (option: ModelOption) => {
       setSelectedModel(option.value);
       setSelectedProviderId(option.providerId || "");
-      setIsModelDropdownOpen(false);
-      setIsModelSliderOpen(false);
-      setModelSearchQuery(""); // Clear search when selecting
+      setIsModelSelectorOpen(false);
 
       // Mark that user has manually selected a model
       userHasManuallySelectedModelRef.current = true;
@@ -1543,11 +1384,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
     const handleModelSelectorClick = () => {
       if (isLoadingSystemModels || isLoadingModelFromConversation) return;
 
-      if (isMobile) {
-        setIsModelSliderOpen(true);
-      } else {
-        setIsModelDropdownOpen(!isModelDropdownOpen);
-      }
+      setIsModelSelectorOpen(!isModelSelectorOpen);
     };
 
     const handleSendMessage = async () => {
@@ -1647,211 +1484,34 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               isDark ? "" : `${themes.chatview.border} border-1`
             } rounded-full min-h-10 mb-0.5 ml-3 ${themes.chatview.inputBg} `}
           >
-            <Popover
-              isOpen={isModelDropdownOpen && !isMobile}
-              positions={["top"]}
-              reposition={true}
-              containerClassName={`z-30`}
-              onClickOutside={() => setIsModelDropdownOpen(false)}
-              content={
-                <AnimatePresence>
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: animationsDisabled ? 0 : 0.15 }}
-                    className={`w-[calc(100vw-2rem)] ${
-                      isMobile
-                        ? themes.chatview.inputBg
-                        : themes.chatview.inputBgTransparent
-                    } ${
-                      isMobile ? "" : "backdrop-blur-md"
-                    } sm:w-80 max-w-80 rounded-lg shadow-sm border overflow-hidden ${
-                      themes.chatview.inputBg
-                    } ${themes.chatview.border}`}
-                  >
-                    {/* Search Input */}
-                    <div className={`p-3 ${themes.sidebar.fg}`}>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
-                        <input
-                          type="text"
-                          placeholder="Search models..."
-                          value={modelSearchQuery}
-                          onChange={(e) => setModelSearchQuery(e.target.value)}
-                          className={`w-full ${
-                            themes.chatview.inputBg
-                          } border ${
-                            themes.chatview.border
-                          } ${themes.sidebar.fgRaw("placeholder:")} ${
-                            themes.sidebar.fgHoverAsFg
-                          } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
-                          autoFocus={!isMobile}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Model Options */}
-                    <div className="h-76 overflow-y-auto thin-scrollbar scroll-fade">
-                      {isLoadingSystemModels &&
-                        modelOptions.filter((opt) => opt.source === "system")
-                          .length === 0 && (
-                          <div
-                            className={`px-3 py-2 ${themes.sidebar.fg} flex items-center gap-2 text-sm`}
-                          >
-                            <LoadingState />
-                          </div>
-                        )}
-                      {(() => {
-                        const filteredOptions = modelOptions.filter((option) =>
-                          option.label
-                            .toLowerCase()
-                            .includes(modelSearchQuery.toLowerCase())
-                        );
-
-                        // Group models by provider and source
-                        const groupedModels = filteredOptions.reduce(
-                          (
-                            groups: { [key: string]: ModelOption[] },
-                            option
-                          ) => {
-                            let groupName: string;
-
-                            if (option.source === "custom") {
-                              groupName = "Custom Models";
-                            } else {
-                              groupName =
-                                option.providerId && option.providerId.trim()
-                                  ? option.providerName || "Other"
-                                  : "Other";
-                            }
-
-                            if (!groups[groupName]) {
-                              groups[groupName] = [];
-                            }
-                            groups[groupName].push(option);
-                            return groups;
-                          },
-                          {}
-                        );
-
-                        // Sort providers alphabetically, but put "Other" and "Custom Models" at the end
-                        return Object.keys(groupedModels)
-                          .sort((a, b) => {
-                            if (a === "Custom Models" && b !== "Custom Models")
-                              return 1;
-                            if (a !== "Custom Models" && b === "Custom Models")
-                              return -1;
-                            if (
-                              a === "Other" &&
-                              b !== "Other" &&
-                              b !== "Custom Models"
-                            )
-                              return 1;
-                            if (
-                              a !== "Other" &&
-                              a !== "Custom Models" &&
-                              b === "Other"
-                            )
-                              return -1;
-                            return a.localeCompare(b);
-                          })
-                          .map((providerName) => {
-                            const models = groupedModels[providerName];
-
-                            return (
-                              <div
-                                key={providerName}
-                                className="mb-2 last:mb-0 first:mt-2"
-                              >
-                                {/* Provider header */}
-                                <div
-                                  className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}
-                                >
-                                  {providerName !== "Other" &&
-                                    providerName !== "Custom Models" &&
-                                    getProviderIcon(providerName)}
-                                  <span>{providerName}</span>
-                                </div>
-
-                                {/* Models in this provider */}
-                                {models.map((option) => {
-                                  const isSelected =
-                                    selectedModel === option.value &&
-                                    selectedProviderId ===
-                                      (option.providerId || "");
-                                  return (
-                                    <button
-                                      key={`${option.value}-${
-                                        option.providerId || "system"
-                                      }`}
-                                      onClick={() => handleModelSelect(option)}
-                                      className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${
-                                        themes.sidebar.fgHoverAsFg
-                                      } ${
-                                        isSelected
-                                          ? `${themes.sidebar.bgHoverAsBg}`
-                                          : `${themes.sidebar.bgHover}`
-                                      }`}
-                                      title={option.label}
-                                    >
-                                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        {option.source === "custom" && (
-                                          <span
-                                            className={`px-1.5 py-0.5 rounded text-xs font-medium ${themes.special.bgGradient} ${themes.special.fg} flex-shrink-0`}
-                                          >
-                                            Custom
-                                          </span>
-                                        )}
-                                        <span className="truncate flex-1">
-                                          {option.label}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {getCapabilityIcons(option)}
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            );
-                          });
-                      })()}
-                      {modelOptions.filter((option) =>
-                        option.label
-                          .toLowerCase()
-                          .includes(modelSearchQuery.toLowerCase())
-                      ).length === 0 &&
-                        modelSearchQuery && (
-                          <div
-                            className={`px-3 flex justify-center items-center text-sm text-center ${themes.sidebar.fg}`}
-                            style={{ height: "inherit" }}
-                          >
-                            No results found
-                          </div>
-                        )}
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+            <ModelSelectorSlider
+              modelOptions={modelOptions}
+              selectedModel={selectedModel}
+              selectedProviderId={selectedProviderId}
+              onModelSelect={handleModelSelect}
+              isOpen={isModelSelectorOpen}
+              onClose={() => setIsModelSelectorOpen(false)}
+              isLoadingSystemModels={isLoadingSystemModels}
+              animationsDisabled={animationsDisabled}
+              trigger={
+                <button
+                  onClick={handleModelSelectorClick}
+                  className={`flex items-center gap-2 p-3 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
+                >
+                  {isLoadingSystemModels || isLoadingModelFromConversation ? (
+                    <LoadingState size="xs" message="" />
+                  ) : (
+                    <ChevronDown
+                      className={`w-5 h-5 ${
+                        themes.sidebar.fgHoverAsFg
+                      } ${transitionClass} flex-shrink-0 ${
+                        isModelSelectorOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  )}
+                </button>
               }
-            >
-              <button
-                onClick={handleModelSelectorClick}
-                className={`flex items-center gap-2 p-3 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
-              >
-                {isLoadingSystemModels || isLoadingModelFromConversation ? (
-                  <LoadingState size="xs" message="" />
-                ) : (
-                  <ChevronDown
-                    className={`w-5 h-5 ${
-                      themes.sidebar.fgHoverAsFg
-                    } ${transitionClass} flex-shrink-0 ${
-                      isModelDropdownOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                )}
-              </button>
-            </Popover>
+            />
           </div>
         )}
         <div
@@ -1937,232 +1597,40 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               {!isMobile && (
                 <div className="flex items-stretch flex-wrap gap-2">
                   {/* Model Selector */}
-                  <Popover
-                    isOpen={isModelDropdownOpen && !isMobile}
-                    positions={["top"]}
-                    reposition={true}
-                    containerClassName={`z-30`}
-                    onClickOutside={() => setIsModelDropdownOpen(false)}
-                    content={
-                      <AnimatePresence>
-                        <motion.div
-                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          transition={{
-                            duration: animationsDisabled ? 0 : 0.15,
-                          }}
-                          className={`w-[calc(100vw-2rem)] ${
-                            isMobile
-                              ? themes.chatview.inputBg
-                              : themes.chatview.inputBgTransparent
-                          } ${
-                            isMobile ? "" : "backdrop-blur-md"
-                          } sm:w-80 max-w-80 rounded-lg shadow-sm border overflow-hidden ${
-                            themes.chatview.inputBg
-                          } ${themes.chatview.border}`}
-                        >
-                          {/* Search Input */}
-                          <div className={`p-3 ${themes.sidebar.fg}`}>
-                            <div className="relative">
-                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
-                              <input
-                                type="text"
-                                placeholder="Search models..."
-                                value={modelSearchQuery}
-                                onChange={(e) =>
-                                  setModelSearchQuery(e.target.value)
-                                }
-                                className={`w-full ${
-                                  themes.chatview.inputBg
-                                } border ${
-                                  themes.chatview.border
-                                } ${themes.sidebar.fgRaw("placeholder:")} ${
-                                  themes.sidebar.fgHoverAsFg
-                                } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
-                                autoFocus={!isMobile}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Model Options */}
-                          <div className="h-76 overflow-y-auto thin-scrollbar scroll-fade">
-                            {isLoadingSystemModels &&
-                              modelOptions.filter(
-                                (opt) => opt.source === "system"
-                              ).length === 0 && (
-                                <div
-                                  className={`px-3 py-2 ${themes.sidebar.fg} flex items-center gap-2 text-sm`}
-                                >
-                                  <LoadingState />
-                                </div>
-                              )}
-                            {(() => {
-                              const filteredOptions = modelOptions.filter(
-                                (option) =>
-                                  option.label
-                                    .toLowerCase()
-                                    .includes(modelSearchQuery.toLowerCase())
-                              );
-
-                              // Group models by provider and source
-                              const groupedModels = filteredOptions.reduce(
-                                (
-                                  groups: { [key: string]: ModelOption[] },
-                                  option
-                                ) => {
-                                  let groupName: string;
-
-                                  if (option.source === "custom") {
-                                    groupName = "Custom Models";
-                                  } else {
-                                    groupName =
-                                      option.providerId &&
-                                      option.providerId.trim()
-                                        ? option.providerName || "Other"
-                                        : "Other";
-                                  }
-
-                                  if (!groups[groupName]) {
-                                    groups[groupName] = [];
-                                  }
-                                  groups[groupName].push(option);
-                                  return groups;
-                                },
-                                {}
-                              );
-
-                              // Sort providers alphabetically, but put "Other" and "Custom Models" at the end
-                              return Object.keys(groupedModels)
-                                .sort((a, b) => {
-                                  if (
-                                    a === "Custom Models" &&
-                                    b !== "Custom Models"
-                                  )
-                                    return 1;
-                                  if (
-                                    a !== "Custom Models" &&
-                                    b === "Custom Models"
-                                  )
-                                    return -1;
-                                  if (
-                                    a === "Other" &&
-                                    b !== "Other" &&
-                                    b !== "Custom Models"
-                                  )
-                                    return 1;
-                                  if (
-                                    a !== "Other" &&
-                                    a !== "Custom Models" &&
-                                    b === "Other"
-                                  )
-                                    return -1;
-                                  return a.localeCompare(b);
-                                })
-                                .map((providerName) => {
-                                  const models = groupedModels[providerName];
-
-                                  return (
-                                    <div
-                                      key={providerName}
-                                      className="mb-2 last:mb-0 first:mt-2"
-                                    >
-                                      {/* Provider header */}
-                                      <div
-                                        className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}
-                                      >
-                                        {providerName !== "Other" &&
-                                          providerName !== "Custom Models" &&
-                                          getProviderIcon(providerName)}
-                                        <span>{providerName}</span>
-                                      </div>
-
-                                      {/* Models in this provider */}
-                                      {models.map((option) => {
-                                        const isSelected =
-                                          selectedModel === option.value &&
-                                          selectedProviderId ===
-                                            (option.providerId || "");
-                                        return (
-                                          <button
-                                            key={`${option.value}-${
-                                              option.providerId || "system"
-                                            }`}
-                                            onClick={() =>
-                                              handleModelSelect(option)
-                                            }
-                                            className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${
-                                              themes.sidebar.fgHoverAsFg
-                                            } ${
-                                              isSelected
-                                                ? `${themes.sidebar.bgHoverAsBg}`
-                                                : `${themes.sidebar.bgHover}`
-                                            }`}
-                                            title={option.label}
-                                          >
-                                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                              {option.source === "custom" && (
-                                                <span
-                                                  className={`px-1.5 py-0.5 rounded text-xs font-medium ${themes.special.bgGradient} ${themes.special.fg} flex-shrink-0`}
-                                                >
-                                                  Custom
-                                                </span>
-                                              )}
-                                              <span className="truncate flex-1">
-                                                {option.label}
-                                              </span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                              {getCapabilityIcons(option)}
-                                            </div>
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                });
-                            })()}
-                            {modelOptions.filter((option) =>
-                              option.label
-                                .toLowerCase()
-                                .includes(modelSearchQuery.toLowerCase())
-                            ).length === 0 &&
-                              modelSearchQuery && (
-                                <div
-                                  className={`px-3 flex justify-center items-center text-sm text-center ${themes.sidebar.fg}`}
-                                  style={{ height: "inherit" }}
-                                >
-                                  No results found
-                                </div>
-                              )}
-                          </div>
-                        </motion.div>
-                      </AnimatePresence>
-                    }
-                  >
-                    <button
-                      onClick={handleModelSelectorClick}
-                      className={`flex items-center gap-2 p-2 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
-                    >
-                      <span
-                        className={`${themes.sidebar.fgHoverAsFg} truncate flex-1 text-left`}
+                  <ModelSelectorSlider
+                    modelOptions={modelOptions}
+                    selectedModel={selectedModel}
+                    selectedProviderId={selectedProviderId}
+                    onModelSelect={handleModelSelect}
+                    isOpen={isModelSelectorOpen}
+                    onClose={() => setIsModelSelectorOpen(false)}
+                    isLoadingSystemModels={isLoadingSystemModels}
+                    animationsDisabled={animationsDisabled}
+                    trigger={
+                      <button
+                        onClick={handleModelSelectorClick}
+                        className={`flex items-center gap-2 p-2 rounded-lg bg-transparent transition-colors max-w-32 sm:max-w-48 text-sm cursor-pointer ${themes.sidebar.bgHover}`}
                       >
-                        {selectedModelLabel}
-                      </span>
-                      {isLoadingSystemModels ||
-                      isLoadingModelFromConversation ? (
-                        <LoadingState size="xs" message="" />
-                      ) : (
-                        <ChevronDown
-                          className={`w-5 h-5 ${
-                            themes.sidebar.fgHoverAsFg
-                          } ${transitionClass} flex-shrink-0 ${
-                            isModelDropdownOpen ? "rotate-180" : ""
-                          }`}
-                        />
-                      )}
-                    </button>
-                  </Popover>
+                        <span
+                          className={`${themes.sidebar.fgHoverAsFg} truncate flex-1 text-left`}
+                        >
+                          {selectedModelLabel}
+                        </span>
+                        {isLoadingSystemModels ||
+                        isLoadingModelFromConversation ? (
+                          <LoadingState size="xs" message="" />
+                        ) : (
+                          <ChevronDown
+                            className={`w-5 h-5 ${
+                              themes.sidebar.fgHoverAsFg
+                            } ${transitionClass} flex-shrink-0 ${
+                              isModelSelectorOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        )}
+                      </button>
+                    }
+                  />
                 </div>
               )}
 
@@ -2407,205 +1875,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
               </div>
             </div>
           </div>
-
-          {/* Mobile Model Slider */}
-          <AnimatePresence>
-            {isModelSliderOpen && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: animationsDisabled ? 0 : 0.2 }}
-                onClick={() => setIsModelSliderOpen(false)}
-                className={`fixed inset-0 z-[80] flex items-end justify-center bg-black/50`}
-              >
-                <motion.div
-                  initial={{ y: "100%" }}
-                  animate={{ y: 0 }}
-                  exit={{ y: "100%" }}
-                  transition={{
-                    duration: animationsDisabled ? 0 : 0.3,
-                    ease: "easeOut",
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className={`w-full rounded-t-2xl shadow-md border-t overflow-hidden ${themes.chatview.inputBg} ${themes.chatview.border}`}
-                >
-                  {/* Header */}
-                  <div
-                    className={`pt-4 pb-0 px-4 flex items-center justify-between`}
-                  >
-                    <h3
-                      className={`text-lg font-semibold ${themes.sidebar.fgHoverAsFg}`}
-                    >
-                      Select Model
-                    </h3>
-                    <button
-                      onClick={() => setIsModelSliderOpen(false)}
-                      className={`p-2 rounded-lg transition-colors ${themes.sidebar.fg} ${themes.sidebar.fgHover}`}
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  {/* Search Input */}
-                  <div className={`p-3 ${themes.sidebar.fg}`}>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" />
-                      <input
-                        type="text"
-                        placeholder="Search models..."
-                        value={modelSearchQuery}
-                        onChange={(e) => setModelSearchQuery(e.target.value)}
-                        className={`w-full ${themes.chatview.inputBg} border ${
-                          themes.chatview.border
-                        } ${themes.sidebar.fgRaw("placeholder:")} ${
-                          themes.sidebar.fgHoverAsFg
-                        } rounded-lg py-2 pl-10 pr-3 focus:outline-none transition-colors text-sm`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Model Options */}
-                  <div className="overflow-y-auto thin-scrollbar scroll-fade h-[60vh]">
-                    {isLoadingSystemModels &&
-                      modelOptions.filter((opt) => opt.source === "system")
-                        .length === 0 && (
-                        <div
-                          className={`px-3 py-2 ${themes.sidebar.fg} flex items-center gap-2 text-sm`}
-                        >
-                          <LoadingState />
-                        </div>
-                      )}
-                    {(() => {
-                      const filteredOptions = modelOptions.filter((option) =>
-                        option.label
-                          .toLowerCase()
-                          .includes(modelSearchQuery.toLowerCase())
-                      );
-
-                      // Group models by provider and source
-                      const groupedModels = filteredOptions.reduce(
-                        (groups: { [key: string]: ModelOption[] }, option) => {
-                          let groupName: string;
-
-                          if (option.source === "custom") {
-                            groupName = "Custom Models";
-                          } else {
-                            groupName =
-                              option.providerId && option.providerId.trim()
-                                ? option.providerName || "Other"
-                                : "Other";
-                          }
-
-                          if (!groups[groupName]) {
-                            groups[groupName] = [];
-                          }
-                          groups[groupName].push(option);
-                          return groups;
-                        },
-                        {}
-                      );
-
-                      // Sort providers alphabetically, but put "Other" and "Custom Models" at the end
-                      return Object.keys(groupedModels)
-                        .sort((a, b) => {
-                          if (a === "Custom Models" && b !== "Custom Models")
-                            return 1;
-                          if (a !== "Custom Models" && b === "Custom Models")
-                            return -1;
-                          if (
-                            a === "Other" &&
-                            b !== "Other" &&
-                            b !== "Custom Models"
-                          )
-                            return 1;
-                          if (
-                            a !== "Other" &&
-                            a !== "Custom Models" &&
-                            b === "Other"
-                          )
-                            return -1;
-                          return a.localeCompare(b);
-                        })
-                        .map((providerName) => {
-                          const models = groupedModels[providerName];
-
-                          return (
-                            <div
-                              key={providerName}
-                              className="mb-2 last:mb-0 first:mt-2"
-                            >
-                              {/* Provider header */}
-                              <div
-                                className={`px-3 py-1 text-xs font-medium ${themes.sidebar.fg} flex items-center gap-2`}
-                              >
-                                {providerName !== "Other" &&
-                                  providerName !== "Custom Models" &&
-                                  getProviderIcon(providerName)}
-                                <span>{providerName}</span>
-                              </div>
-
-                              {/* Models in this provider */}
-                              {models.map((option) => {
-                                const isSelected =
-                                  selectedModel === option.value &&
-                                  selectedProviderId ===
-                                    (option.providerId || "");
-                                return (
-                                  <button
-                                    key={`${option.value}-${
-                                      option.providerId || "system"
-                                    }`}
-                                    onClick={() => handleModelSelect(option)}
-                                    className={`cursor-pointer w-full text-left flex items-center justify-between px-3 py-2 transition-colors text-sm ${
-                                      themes.sidebar.fgHoverAsFg
-                                    } ${
-                                      isSelected
-                                        ? `${themes.sidebar.bgHoverAsBg}`
-                                        : `${themes.sidebar.bgHover}`
-                                    }`}
-                                    title={option.label}
-                                  >
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      {option.source === "custom" && (
-                                        <span
-                                          className={`px-2 py-1 rounded text-xs font-medium ${themes.special.bgGradient} ${themes.special.fg} flex-shrink-0`}
-                                        >
-                                          Custom
-                                        </span>
-                                      )}
-                                      <span className="truncate flex-1">
-                                        {option.label}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {getCapabilityIcons(option)}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          );
-                        });
-                    })()}
-                    {modelOptions.filter((option) =>
-                      option.label
-                        .toLowerCase()
-                        .includes(modelSearchQuery.toLowerCase())
-                    ).length === 0 &&
-                      modelSearchQuery && (
-                        <div
-                          className={`px-3 flex justify-center items-center text-sm text-center ${themes.sidebar.fg}`}
-                          style={{ height: "inherit" }}
-                        >
-                          No results found
-                        </div>
-                      )}
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
     );
