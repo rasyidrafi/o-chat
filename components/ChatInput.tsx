@@ -2428,7 +2428,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                     ease: "easeOut",
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className={`w-full max-h-[80vh] rounded-t-2xl shadow-md border-t overflow-hidden ${themes.chatview.inputBg} ${themes.chatview.border}`}
+                  className={`w-full rounded-t-2xl shadow-md border-t overflow-hidden ${themes.chatview.inputBg} ${themes.chatview.border}`}
                 >
                   {/* Header */}
                   <div
@@ -2466,7 +2466,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(
                   </div>
 
                   {/* Model Options */}
-                  <div className="h-76 overflow-y-auto thin-scrollbar scroll-fade">
+                  <div className="overflow-y-auto thin-scrollbar scroll-fade h-[60vh]">
                     {isLoadingSystemModels &&
                       modelOptions.filter((opt) => opt.source === "system")
                         .length === 0 && (

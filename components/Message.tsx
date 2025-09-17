@@ -14,7 +14,7 @@ import ReasoningDisplay from "./ReasoningDisplay";
 import { ImageUploadService } from "../services/imageUploadService";
 import { ImageGenerationService } from "../services/imageGenerationService";
 import { MemoizedMarkdown } from "./MemoizedMarkdown";
-import { Copy, GitBranch, Edit, Check } from "./Icons";
+import { Copy, Edit, Check } from "./Icons";
 import { RetryButton, VersionNavigation } from "./ui/RetryButton";
 import { themes } from "@/constants/themes";
 import "katex/dist/katex.min.css"; // Import KaTeX CSS
@@ -734,63 +734,67 @@ const Message: React.FC<MessageProps> = memo(
                   )}
 
                   {/* Retry button */}
-                  {onRetry && modelOptions.length > 0 && (
-                    <RetryButton
-                      onRetry={(
-                        model: string,
-                        source: string,
-                        providerId?: string
-                      ) => onRetry(message.id, model, source, providerId)}
-                      modelOptions={modelOptions}
+                  {onRetry &&
+                    modelOptions.length > 0 &&
+                    message.messageType !== "image_generation" && ( // Add this condition
+                      <RetryButton
+                        onRetry={(
+                          model: string,
+                          source: string,
+                          providerId?: string
+                        ) => onRetry(message.id, model, source, providerId)}
+                        modelOptions={modelOptions}
+                        disabled={
+                          isStreaming ||
+                          !!(
+                            message.isGeneratingImage ||
+                            message.generatedImageUrl ||
+                            message.imageGenerationParams
+                          )
+                        }
+                        currentModel={message.model}
+                        currentSource={
+                          message.source == "server" ? "system" : "custom"
+                        }
+                        currentProviderId={message.providerId}
+                      />
+                    )}
+
+                  {/* Copy button */}
+                  {message.messageType !== "image_generation" && ( // Add this condition
+                    <button
+                      onClick={copyMessageToClipboard}
                       disabled={
-                        isStreaming ||
                         !!(
                           message.isGeneratingImage ||
                           message.generatedImageUrl ||
-                          message.imageGenerationParams
+                          message.imageGenerationParams ||
+                          message.isError
                         )
                       }
-                      currentModel={message.model}
-                      currentSource={
-                        message.source == "server" ? "system" : "custom"
-                      }
-                      currentProviderId={message.providerId}
-                    />
-                  )}
-
-                  {/* Copy button */}
-                  <button
-                    onClick={copyMessageToClipboard}
-                    disabled={
-                      !!(
+                      className={`p-1.5 rounded transition-colors ${
                         message.isGeneratingImage ||
                         message.generatedImageUrl ||
                         message.imageGenerationParams ||
                         message.isError
-                      )
-                    }
-                    className={`p-1.5 rounded transition-colors ${
-                      message.isGeneratingImage ||
-                      message.generatedImageUrl ||
-                      message.imageGenerationParams ||
-                      message.isError
-                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                    }`}
-                    title={
-                      message.isError
-                        ? "Copy not available when there's an error"
-                        : message.isGeneratingImage ||
-                          message.generatedImageUrl ||
-                          message.imageGenerationParams
-                        ? "Copy not available for image generation"
-                        : copied
-                        ? "Copied!"
-                        : "Copy message"
-                    }
-                  >
-                    {copied ? <Check size={14} /> : <Copy size={14} />}
-                  </button>
+                          ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                      }`}
+                      title={
+                        message.isError
+                          ? "Copy not available when there's an error"
+                          : message.isGeneratingImage ||
+                            message.generatedImageUrl ||
+                            message.imageGenerationParams
+                          ? "Copy not available for image generation"
+                          : copied
+                          ? "Copied!"
+                          : "Copy message"
+                      }
+                    >
+                      {copied ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                  )}
                 </motion.div>
               </div>
             </div>
@@ -1093,63 +1097,46 @@ const Message: React.FC<MessageProps> = memo(
                       )}
 
                       {/* Retry button */}
-                      {onRetry && modelOptions.length > 0 && (
-                        <RetryButton
-                          onRetry={(
-                            model: string,
-                            source: string,
-                            providerId?: string
-                          ) => onRetry(message.id, model, source, providerId)}
-                          modelOptions={modelOptions}
-                          disabled={
-                            isStreaming ||
-                            !!(
-                              message.isGeneratingImage ||
-                              message.generatedImageUrl ||
-                              message.imageGenerationParams
-                            )
-                          }
-                          currentModel={message.model}
-                          currentSource={
-                            message.source == "server" ? "system" : "custom"
-                          }
-                          currentProviderId={message.providerId}
-                        />
-                      )}
+                      {onRetry &&
+                        modelOptions.length > 0 &&
+                        !message.isGeneratingImage &&
+                        !message.generatedImageUrl &&
+                        !message.imageGenerationParams && (
+                          <RetryButton
+                            onRetry={(
+                              model: string,
+                              source: string,
+                              providerId?: string
+                            ) => onRetry(message.id, model, source, providerId)}
+                            modelOptions={modelOptions}
+                            disabled={
+                              isStreaming ||
+                              !!(
+                                message.isGeneratingImage ||
+                                message.generatedImageUrl ||
+                                message.imageGenerationParams
+                              )
+                            }
+                            currentModel={message.model}
+                            currentSource={
+                              message.source == "server" ? "system" : "custom"
+                            }
+                            currentProviderId={message.providerId}
+                          />
+                        )}
 
                       {/* Copy button */}
-                      <button
-                        onClick={copyMessageToClipboard}
-                        disabled={
-                          !!(
-                            message.isGeneratingImage ||
-                            message.generatedImageUrl ||
-                            message.imageGenerationParams ||
-                            message.isError
-                          )
-                        }
-                        className={`p-1.5 rounded transition-colors ${
-                          message.isGeneratingImage ||
-                          message.generatedImageUrl ||
-                          message.imageGenerationParams ||
-                          message.isError
-                            ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                        }`}
-                        title={
-                          message.isError
-                            ? "Copy not available when there's an error"
-                            : message.isGeneratingImage ||
-                              message.generatedImageUrl ||
-                              message.imageGenerationParams
-                            ? "Copy not available for image generation"
-                            : copied
-                            ? "Copied!"
-                            : "Copy message"
-                        }
-                      >
-                        {copied ? <Check size={14} /> : <Copy size={14} />}
-                      </button>
+                      {!message.isGeneratingImage &&
+                        !message.generatedImageUrl &&
+                        !message.imageGenerationParams && (
+                          <button
+                            onClick={copyMessageToClipboard}
+                            className="p-1.5 rounded transition-colors text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                            title={copied ? "Copied!" : "Copy message"}
+                          >
+                            {copied ? <Check size={14} /> : <Copy size={14} />}
+                          </button>
+                        )}
                     </motion.div>
                   </div>
                 )}
@@ -1253,26 +1240,22 @@ const Message: React.FC<MessageProps> = memo(
                   )}
 
                   {/* Edit button */}
-                  <button
-                    onClick={() => {
-                      /* TODO: Implement edit */
-                    }}
-                    disabled={message.messageType === "image_generation"}
-                    className={`p-1.5 rounded transition-colors ${
-                      message.messageType === "image_generation"
-                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
-                    }`}
-                    title={
-                      message.messageType === "image_generation"
-                        ? "Edit not available for image generation"
-                        : "Edit message"
-                    }
-                  >
-                    <Edit size={14} />
-                  </button>
+                  {!message.isGeneratingImage &&
+                    !message.generatedImageUrl &&
+                    !message.imageGenerationParams && (
+                      <button
+                        onClick={() => {
+                          /* TODO: Implement edit */
+                        }}
+                        className="p-1.5 rounded transition-colors text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                        title="Edit message"
+                      >
+                        <Edit size={14} />
+                      </button>
+                    )}
 
                   {/* Copy button */}
+                 
                   <button
                     onClick={copyMessageToClipboard}
                     className="p-1.5 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
@@ -1280,9 +1263,9 @@ const Message: React.FC<MessageProps> = memo(
                   >
                     {copied ? <Check size={14} /> : <Copy size={14} />}
                   </button>
+                  <span className="">•</span>
                 </motion.div>
 
-                <span className="">•</span>
                 {/* Timestamp */}
                 <span>{formatTime(message.timestamp)}</span>
               </motion.div>
