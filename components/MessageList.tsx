@@ -70,11 +70,6 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
 
     // COMPLETELY REDESIGNED message filtering logic
     const visibleMessages = useMemo(() => {
-      // If no versions specified, return all messages
-      if (Object.keys(currentVersions).length === 0) {
-        return messages;
-      }
-
       // STEP 1: Build a message map for quick lookups
       const messageMap = new Map<string, ChatMessage>();
       messages.forEach((msg) => messageMap.set(msg.id, msg));
@@ -95,8 +90,8 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
         // Sort versions by timestamp
         versions.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-        // Get the selected version index
-        const versionIndex = currentVersions[groupId] ?? 0;
+        // Get the selected version index - default to the latest (last) version if not specified
+        const versionIndex = currentVersions[groupId] ?? versions.length - 1;
         // Get the selected version and store its ACTUAL ID for lookup
         const selectedVersion =
           versions[Math.min(versionIndex, versions.length - 1)];
@@ -384,10 +379,7 @@ const MessageList = React.forwardRef<MessageListRef, MessageListProps>(
             ))}
           </AnimatePresence>
           {/* Bottom padding + sentinel for scroll tracking */}
-          <div
-            ref={sentinelRef}
-            className={isMobile ? "h-22" : "h-38"}
-          ></div>
+          <div ref={sentinelRef} className={isMobile ? "h-22" : "h-38"}></div>
         </div>
       </div>
     );
